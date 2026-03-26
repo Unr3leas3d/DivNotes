@@ -295,7 +295,7 @@ export class CloudNotesService implements NotesService {
 
             if (error) throw error;
             if (data) {
-                const notes = data.map(this.dbToStored);
+                const notes = data.map(row => this.dbToStored(row));
                 // Update local cache
                 const allLocal = await this.local.getAll();
                 const otherPages = allLocal.filter(n => n.url !== url);
@@ -319,7 +319,7 @@ export class CloudNotesService implements NotesService {
 
             if (error) throw error;
             if (data) {
-                const notes = data.map(this.dbToStored);
+                const notes = data.map(row => this.dbToStored(row));
                 // Update full local cache
                 await chrome.storage.local.set({ divnotes_notes: notes });
                 return notes;
