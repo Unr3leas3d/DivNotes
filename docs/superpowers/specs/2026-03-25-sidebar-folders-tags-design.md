@@ -30,6 +30,7 @@ interface StoredFolder {
   parentId: string | null;  // null = root-level
   order: number;        // sort position among siblings
   color: string | null; // optional accent color
+  pinned: boolean;      // whether favorited
   createdAt: string;
   updatedAt: string;
 }
