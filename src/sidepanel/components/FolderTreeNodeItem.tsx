@@ -11,6 +11,7 @@ interface FolderTreeNodeItemProps {
   depth: number;
   tags: StoredTag[];
   expandedFolders: Set<string>;
+  focusedId?: string | null;
   onToggleExpand: (folderId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
@@ -27,6 +28,7 @@ export function FolderTreeNodeItem({
   depth,
   tags,
   expandedFolders,
+  focusedId,
   onToggleExpand,
   onDeleteNote,
   onNavigateNote,
@@ -41,6 +43,7 @@ export function FolderTreeNodeItem({
   const hasContent = node.children.length > 0 || node.notes.length > 0;
   const noteCount = countNotesInTree(node);
   const indent = Math.min(depth, 6) * 16 + 8;
+  const isFocused = focusedId === node.folder.id;
 
   return (
     <div>
@@ -51,7 +54,10 @@ export function FolderTreeNodeItem({
       >
         <button
           onClick={() => onToggleExpand(node.folder.id)}
-          className="flex-1 flex items-center gap-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left min-w-0"
+          className={cn(
+            "flex-1 flex items-center gap-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left min-w-0",
+            isFocused && "ring-2 ring-primary/50 bg-muted/30"
+          )}
         >
           {/* Chevron */}
           {hasContent ? (
@@ -112,6 +118,7 @@ export function FolderTreeNodeItem({
               depth={depth + 1}
               tags={tags}
               expandedFolders={expandedFolders}
+              focusedId={focusedId}
               onToggleExpand={onToggleExpand}
               onDeleteNote={onDeleteNote}
               onNavigateNote={onNavigateNote}

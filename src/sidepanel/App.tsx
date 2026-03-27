@@ -148,6 +148,7 @@ export default function App() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9 h-9 bg-muted/50 border-border/30"
+                            data-search-input
                         />
                     </div>
                 </div>

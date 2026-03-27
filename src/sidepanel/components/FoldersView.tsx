@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { FolderPlus, Inbox, ChevronDown, ChevronRight, Search, StickyNote } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PinnedSection } from './PinnedSection';
 import { FolderTreeNodeItem } from './FolderTreeNodeItem';
@@ -8,6 +9,7 @@ import { buildFolderTree, getUnfiledNotes, countNotesInTree } from '@/lib/tree-u
 import { getNextOrder } from '@/lib/tag-utils';
 import { getFoldersService } from '@/lib/folders-service';
 import { getNotesService } from '@/lib/notes-service';
+import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
 import type { StoredNote, StoredFolder, StoredTag, FolderTreeNode } from '@/lib/types';
 import { TAG_COLORS } from '@/lib/types';
 
@@ -32,6 +34,7 @@ export function FoldersView({
 }: FoldersViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [inboxExpanded, setInboxExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Build the folder tree
   const tree = useMemo(() => buildFolderTree(folders, notes), [folders, notes]);
@@ -205,8 +208,65 @@ export function FoldersView({
     onRefresh?.();
   }, [notes, onRefresh]);
 
+  // Build a flat list of visible tree items for keyboard navigation
+  const flatTreeItems = useMemo(() => {
+    const items: { id: string; type: 'folder' | 'note'; parentId?: string | null; hasChildren: boolean }[] = [];
+
+    // Inbox as a virtual folder
+    items.push({ id: '__inbox__', type: 'folder', parentId: null, hasChildren: filteredUnfiledNotes.length > 0 });
+    if (inboxExpanded) {
+      filteredUnfiledNotes.forEach(note => {
+        items.push({ id: note.id, type: 'note', parentId: '__inbox__', hasChildren: false });
+      });
+    }
+
+    // Recursively flatten the folder tree
+    const flattenNode = (node: FolderTreeNode) => {
+      const hasContent = node.children.length > 0 || node.notes.length > 0;
+      items.push({
+        id: node.folder.id,
+        type: 'folder',
+        parentId: node.folder.parentId,
+        hasChildren: hasContent,
+      });
+      if (expandedFolders.has(node.folder.id)) {
+        node.children.forEach(flattenNode);
+        node.notes.forEach(note => {
+          items.push({ id: note.id, type: 'note', parentId: node.folder.id, hasChildren: false });
+        });
+      }
+    };
+    filteredTree.forEach(flattenNode);
+
+    return items;
+  }, [filteredTree, filteredUnfiledNotes, expandedFolders, inboxExpanded]);
+
+  const handleKeyboardSelect = useCallback((id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (note) onNavigateNote(note);
+  }, [notes, onNavigateNote]);
+
+  const { focusedId } = useTreeKeyboard({
+    items: flatTreeItems,
+    expandedIds: expandedFolders,
+    onToggleExpand: (id: string) => {
+      if (id === '__inbox__') setInboxExpanded(prev => !prev);
+      else toggleExpand(id);
+    },
+    onSelect: handleKeyboardSelect,
+    onDelete: (id: string) => {
+      const note = notes.find(n => n.id === id);
+      if (note) onDeleteNote(note.id);
+      else handleDeleteFolder(id);
+    },
+    onRename: (id: string) => {
+      if (folders.find(f => f.id === id)) handleRenameFolder(id);
+    },
+    containerRef,
+  });
+
   return (
-    <div className="px-3 py-3">
+    <div ref={containerRef} tabIndex={0} className="px-3 py-3 outline-none">
       {/* Pinned Section */}
       <PinnedSection
         pinnedNotes={pinnedNotes}
@@ -237,7 +297,10 @@ export function FoldersView({
       <div className="mb-1">
         <button
           onClick={() => setInboxExpanded(!inboxExpanded)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left"
+          className={cn(
+            "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left",
+            focusedId === '__inbox__' && "ring-2 ring-primary/50 bg-muted/30"
+          )}
         >
           {filteredUnfiledNotes.length > 0 ? (
             inboxExpanded ? (
@@ -281,6 +344,7 @@ export function FoldersView({
           depth={0}
           tags={tags}
           expandedFolders={expandedFolders}
+          focusedId={focusedId}
           onToggleExpand={toggleExpand}
           onDeleteNote={onDeleteNote}
           onNavigateNote={onNavigateNote}
