@@ -1,7 +1,8 @@
 import React from 'react';
-import { ChevronDown, ChevronRight, Folder } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
+import { FolderContextMenu } from './ContextMenu';
 import { countNotesInTree } from '@/lib/tree-utils';
 import type { FolderTreeNode, StoredTag, StoredNote } from '@/lib/types';
 
@@ -15,6 +16,10 @@ interface FolderTreeNodeItemProps {
   onNavigateNote: (note: StoredNote) => void;
   onToggleNotePin?: (noteId: string) => void;
   onNewSubfolder?: (parentId: string) => void;
+  onRenameFolder?: (folderId: string) => void;
+  onChangeColor?: (folderId: string) => void;
+  onToggleFolderPin?: (folderId: string) => void;
+  onDeleteFolder?: (folderId: string) => void;
 }
 
 export function FolderTreeNodeItem({
@@ -27,6 +32,10 @@ export function FolderTreeNodeItem({
   onNavigateNote,
   onToggleNotePin,
   onNewSubfolder,
+  onRenameFolder,
+  onChangeColor,
+  onToggleFolderPin,
+  onDeleteFolder,
 }: FolderTreeNodeItemProps) {
   const isExpanded = expandedFolders.has(node.folder.id);
   const hasContent = node.children.length > 0 || node.notes.length > 0;
@@ -36,40 +45,61 @@ export function FolderTreeNodeItem({
   return (
     <div>
       {/* Folder row */}
-      <button
-        onClick={() => onToggleExpand(node.folder.id)}
-        className="w-full flex items-center gap-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left group"
+      <div
+        className="flex items-center group"
         style={{ paddingLeft: `${indent}px`, paddingRight: '8px' }}
       >
-        {/* Chevron */}
-        {hasContent ? (
-          isExpanded ? (
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <button
+          onClick={() => onToggleExpand(node.folder.id)}
+          className="flex-1 flex items-center gap-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left min-w-0"
+        >
+          {/* Chevron */}
+          {hasContent ? (
+            isExpanded ? (
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            )
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          )
-        ) : (
-          <span className="w-3.5 h-3.5 shrink-0" />
-        )}
+            <span className="w-3.5 h-3.5 shrink-0" />
+          )}
 
-        {/* Folder icon */}
-        <Folder
-          className="w-3.5 h-3.5 shrink-0"
-          style={{ color: node.folder.color || undefined }}
-        />
+          {/* Folder icon */}
+          <Folder
+            className="w-3.5 h-3.5 shrink-0"
+            style={{ color: node.folder.color || undefined }}
+          />
 
-        {/* Folder name */}
-        <span className="text-sm font-medium flex-1 truncate">
-          {node.folder.name}
-        </span>
-
-        {/* Note count badge */}
-        {noteCount > 0 && (
-          <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {noteCount}
+          {/* Folder name */}
+          <span className="text-sm font-medium flex-1 truncate">
+            {node.folder.name}
           </span>
-        )}
-      </button>
+
+          {/* Note count badge */}
+          {noteCount > 0 && (
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {noteCount}
+            </span>
+          )}
+        </button>
+
+        {/* More button with context menu */}
+        <FolderContextMenu
+          folder={node.folder}
+          onNewSubfolder={() => onNewSubfolder?.(node.folder.id)}
+          onRename={() => onRenameFolder?.(node.folder.id)}
+          onChangeColor={() => onChangeColor?.(node.folder.id)}
+          onTogglePin={() => onToggleFolderPin?.(node.folder.id)}
+          onDelete={() => onDeleteFolder?.(node.folder.id)}
+        >
+          <button
+            className="ml-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+        </FolderContextMenu>
+      </div>
 
       {/* Expanded content */}
       {isExpanded && hasContent && (
@@ -87,6 +117,10 @@ export function FolderTreeNodeItem({
               onNavigateNote={onNavigateNote}
               onToggleNotePin={onToggleNotePin}
               onNewSubfolder={onNewSubfolder}
+              onRenameFolder={onRenameFolder}
+              onChangeColor={onChangeColor}
+              onToggleFolderPin={onToggleFolderPin}
+              onDeleteFolder={onDeleteFolder}
             />
           ))}
 

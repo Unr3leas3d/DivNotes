@@ -7,7 +7,9 @@ import { NoteCard } from './NoteCard';
 import { buildFolderTree, getUnfiledNotes, countNotesInTree } from '@/lib/tree-utils';
 import { getNextOrder } from '@/lib/tag-utils';
 import { getFoldersService } from '@/lib/folders-service';
+import { getNotesService } from '@/lib/notes-service';
 import type { StoredNote, StoredFolder, StoredTag, FolderTreeNode } from '@/lib/types';
+import { TAG_COLORS } from '@/lib/types';
 
 interface FoldersViewProps {
   notes: StoredNote[];
@@ -16,6 +18,7 @@ interface FoldersViewProps {
   searchQuery: string;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
+  onRefresh?: () => void;
 }
 
 export function FoldersView({
@@ -25,6 +28,7 @@ export function FoldersView({
   searchQuery,
   onDeleteNote,
   onNavigateNote,
+  onRefresh,
 }: FoldersViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [inboxExpanded, setInboxExpanded] = useState(false);
@@ -108,6 +112,99 @@ export function FoldersView({
     toggleExpand(folderId);
   }, [toggleExpand]);
 
+  const handleNewSubfolder = useCallback(async (parentId: string) => {
+    const name = window.prompt('New subfolder name:');
+    if (!name || !name.trim()) return;
+
+    const siblings = folders.filter(f => f.parentId === parentId);
+    const order = getNextOrder(siblings);
+    const newFolder: StoredFolder = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      parentId,
+      order,
+      color: null,
+      pinned: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const service = await getFoldersService();
+    await service.create(newFolder);
+    // Expand parent so the new subfolder is visible
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      next.add(parentId);
+      return next;
+    });
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleRenameFolder = useCallback(async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const newName = window.prompt('Rename folder:', folder.name);
+    if (!newName || !newName.trim() || newName.trim() === folder.name) return;
+
+    const service = await getFoldersService();
+    await service.update(folderId, { name: newName.trim() });
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleChangeFolderColor = useCallback(async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const colorOptions = TAG_COLORS.map((c, i) => `${i + 1}: ${c}`).join('\n');
+    const choice = window.prompt(
+      `Choose a color (1-${TAG_COLORS.length}):\n${colorOptions}\n\nEnter 0 to remove color.`
+    );
+    if (choice === null) return;
+
+    const num = parseInt(choice, 10);
+    let color: string | null = null;
+    if (num >= 1 && num <= TAG_COLORS.length) {
+      color = TAG_COLORS[num - 1];
+    }
+
+    const service = await getFoldersService();
+    await service.update(folderId, { color });
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleToggleFolderPin = useCallback(async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const service = await getFoldersService();
+    await service.update(folderId, { pinned: !folder.pinned });
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const confirmed = window.confirm(
+      `Delete folder "${folder.name}"? Notes inside will be moved to Inbox.`
+    );
+    if (!confirmed) return;
+
+    const service = await getFoldersService();
+    await service.delete(folderId);
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleToggleNotePin = useCallback(async (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    const service = await getNotesService();
+    await service.update(noteId, { pinned: !note.pinned });
+    onRefresh?.();
+  }, [notes, onRefresh]);
+
   return (
     <div className="px-3 py-3">
       {/* Pinned Section */}
@@ -187,6 +284,12 @@ export function FoldersView({
           onToggleExpand={toggleExpand}
           onDeleteNote={onDeleteNote}
           onNavigateNote={onNavigateNote}
+          onToggleNotePin={handleToggleNotePin}
+          onNewSubfolder={handleNewSubfolder}
+          onRenameFolder={handleRenameFolder}
+          onChangeColor={handleChangeFolderColor}
+          onToggleFolderPin={handleToggleFolderPin}
+          onDeleteFolder={handleDeleteFolder}
         />
       ))}
 
