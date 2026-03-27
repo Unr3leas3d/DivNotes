@@ -21,6 +21,8 @@ interface FolderTreeNodeItemProps {
   onChangeColor?: (folderId: string) => void;
   onToggleFolderPin?: (folderId: string) => void;
   onDeleteFolder?: (folderId: string) => void;
+  selectedNoteIds?: Set<string>;
+  onNoteSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
 }
 
 export function FolderTreeNodeItem({
@@ -38,6 +40,8 @@ export function FolderTreeNodeItem({
   onChangeColor,
   onToggleFolderPin,
   onDeleteFolder,
+  selectedNoteIds,
+  onNoteSelectClick,
 }: FolderTreeNodeItemProps) {
   const isExpanded = expandedFolders.has(node.folder.id);
   const hasContent = node.children.length > 0 || node.notes.length > 0;
@@ -128,6 +132,8 @@ export function FolderTreeNodeItem({
               onChangeColor={onChangeColor}
               onToggleFolderPin={onToggleFolderPin}
               onDeleteFolder={onDeleteFolder}
+              selectedNoteIds={selectedNoteIds}
+              onNoteSelectClick={onNoteSelectClick}
             />
           ))}
 
@@ -145,6 +151,8 @@ export function FolderTreeNodeItem({
                   onDelete={onDeleteNote}
                   onNavigate={onNavigateNote}
                   onTogglePin={onToggleNotePin}
+                  selected={selectedNoteIds?.has(note.id)}
+                  onSelectClick={onNoteSelectClick}
                 />
               ))}
             </div>

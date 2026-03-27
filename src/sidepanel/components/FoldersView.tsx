@@ -1,15 +1,17 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { FolderPlus, Inbox, ChevronDown, ChevronRight, Search, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PinnedSection } from './PinnedSection';
 import { FolderTreeNodeItem } from './FolderTreeNodeItem';
 import { NoteCard } from './NoteCard';
+import { BulkActionBar } from './BulkActionBar';
 import { buildFolderTree, getUnfiledNotes, countNotesInTree } from '@/lib/tree-utils';
 import { getNextOrder } from '@/lib/tag-utils';
 import { getFoldersService } from '@/lib/folders-service';
 import { getNotesService } from '@/lib/notes-service';
 import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
+import { useMultiSelect } from '../hooks/useMultiSelect';
 import type { StoredNote, StoredFolder, StoredTag, FolderTreeNode } from '@/lib/types';
 import { TAG_COLORS } from '@/lib/types';
 
@@ -41,6 +43,86 @@ export function FoldersView({
   const unfiledNotes = useMemo(() => getUnfiledNotes(notes), [notes]);
   const pinnedNotes = useMemo(() => notes.filter(n => n.pinned), [notes]);
   const pinnedFolders = useMemo(() => folders.filter(f => f.pinned), [folders]);
+
+  // Multi-select support
+  const allNoteIds = useMemo(() => notes.map(n => n.id), [notes]);
+  const { selectedIds, toggleSelect, selectAll, clearSelection } = useMultiSelect(allNoteIds);
+
+  // Clear selection when note count changes (e.g., after bulk delete)
+  const prevNoteCount = useRef(notes.length);
+  useEffect(() => {
+    if (prevNoteCount.current !== notes.length) {
+      clearSelection();
+      prevNoteCount.current = notes.length;
+    }
+  }, [notes.length, clearSelection]);
+
+  const handleBulkMoveToFolder = useCallback(async () => {
+    const folderName = window.prompt('Enter folder name to move selected notes to:');
+    if (!folderName || !folderName.trim()) return;
+
+    const targetFolder = folders.find(f => f.name.toLowerCase() === folderName.trim().toLowerCase());
+    const folderId = targetFolder?.id;
+    if (!folderId) {
+      window.alert(`Folder "${folderName}" not found. Please create it first.`);
+      return;
+    }
+
+    const service = await getNotesService();
+    for (const noteId of selectedIds) {
+      await service.update(noteId, { folderId });
+    }
+    clearSelection();
+    onRefresh?.();
+  }, [selectedIds, folders, clearSelection, onRefresh]);
+
+  const handleBulkAddTags = useCallback(async () => {
+    const tagName = window.prompt('Enter tag name to add to selected notes:');
+    if (!tagName || !tagName.trim()) return;
+
+    const tag = tags.find(t => t.name.toLowerCase() === tagName.trim().toLowerCase());
+    if (!tag) {
+      window.alert(`Tag "${tagName}" not found. Please create it first in Tag Manager.`);
+      return;
+    }
+
+    const service = await getNotesService();
+    for (const noteId of selectedIds) {
+      const note = notes.find(n => n.id === noteId);
+      if (note) {
+        const currentTags = note.tags || [];
+        if (!currentTags.includes(tag.id)) {
+          await service.update(noteId, { tags: [...currentTags, tag.id] });
+        }
+      }
+    }
+    clearSelection();
+    onRefresh?.();
+  }, [selectedIds, tags, notes, clearSelection, onRefresh]);
+
+  const handleBulkPin = useCallback(async () => {
+    const service = await getNotesService();
+    for (const noteId of selectedIds) {
+      const note = notes.find(n => n.id === noteId);
+      if (note) {
+        await service.update(noteId, { pinned: !note.pinned });
+      }
+    }
+    clearSelection();
+    onRefresh?.();
+  }, [selectedIds, notes, clearSelection, onRefresh]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const confirmed = window.confirm(`Delete ${selectedIds.size} selected notes? This cannot be undone.`);
+    if (!confirmed) return;
+
+    const service = await getNotesService();
+    for (const noteId of selectedIds) {
+      await service.delete(noteId);
+    }
+    clearSelection();
+    onRefresh?.();
+  }, [selectedIds, clearSelection, onRefresh]);
 
   // Search filtering
   const filteredTree = useMemo(() => {
@@ -265,8 +347,19 @@ export function FoldersView({
     containerRef,
   });
 
+  const handleContainerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+      e.preventDefault();
+      selectAll();
+    }
+    if (e.key === 'Escape' && selectedIds.size > 0) {
+      e.preventDefault();
+      clearSelection();
+    }
+  }, [selectAll, clearSelection, selectedIds.size]);
+
   return (
-    <div ref={containerRef} tabIndex={0} className="px-3 py-3 outline-none">
+    <div ref={containerRef} tabIndex={0} className="px-3 py-3 outline-none" onKeyDown={handleContainerKeyDown}>
       {/* Pinned Section */}
       <PinnedSection
         pinnedNotes={pinnedNotes}
@@ -330,6 +423,8 @@ export function FoldersView({
                 tags={tags}
                 onDelete={onDeleteNote}
                 onNavigate={onNavigateNote}
+                selected={selectedIds.has(note.id)}
+                onSelectClick={toggleSelect}
               />
             ))}
           </div>
@@ -354,6 +449,8 @@ export function FoldersView({
           onChangeColor={handleChangeFolderColor}
           onToggleFolderPin={handleToggleFolderPin}
           onDeleteFolder={handleDeleteFolder}
+          selectedNoteIds={selectedIds}
+          onNoteSelectClick={toggleSelect}
         />
       ))}
 
@@ -375,6 +472,16 @@ export function FoldersView({
           <p className="text-sm text-muted-foreground">No notes match "{searchQuery}"</p>
         </div>
       )}
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selectedIds.size}
+        onMoveToFolder={handleBulkMoveToFolder}
+        onAddTags={handleBulkAddTags}
+        onPin={handleBulkPin}
+        onDelete={handleBulkDelete}
+        onClear={clearSelection}
+      />
     </div>
   );
 }

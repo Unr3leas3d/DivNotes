@@ -16,6 +16,8 @@ interface NoteCardProps {
   onTogglePin?: (noteId: string) => void;
   showFolderPath?: boolean;
   folderPath?: string;
+  selected?: boolean;
+  onSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
 }
 
 function stripMarkdown(text: string): string {
@@ -45,6 +47,8 @@ export function NoteCard({
   onTogglePin,
   showFolderPath,
   folderPath,
+  selected,
+  onSelectClick,
 }: NoteCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -78,8 +82,16 @@ export function NoteCard({
       className={cn(
         'group cursor-pointer transition-all hover:shadow-md border-border/50',
         expanded && 'ring-1 ring-primary/20',
+        selected && 'ring-2 ring-primary bg-primary/5',
       )}
-      onClick={() => setExpanded(!expanded)}
+      onClick={(e: React.MouseEvent) => {
+        if (onSelectClick && (e.metaKey || e.ctrlKey || e.shiftKey)) {
+          e.stopPropagation();
+          onSelectClick(note.id, { shift: e.shiftKey, cmd: e.metaKey || e.ctrlKey });
+          return;
+        }
+        setExpanded(!expanded);
+      }}
     >
       <CardContent className="p-3">
         {/* Header row: element tag + date + pin indicator */}
