@@ -11,6 +11,7 @@ import {
 import { SegmentedControl, type ViewMode } from './components/SegmentedControl';
 import { SitesView } from './components/SitesView';
 import { FoldersView } from './components/FoldersView';
+import { TagsView } from './components/TagsView';
 
 export default function App() {
     const [viewMode, setViewMode] = useState<ViewMode>('sites');
@@ -176,7 +177,14 @@ export default function App() {
             )}
 
             {viewMode === 'tags' && (
-                <div className="px-3 py-8 text-center text-sm text-muted-foreground">Tags view — coming soon</div>
+                <TagsView
+                    notes={notes}
+                    folders={folders}
+                    tags={tags}
+                    searchQuery={searchQuery}
+                    onDeleteNote={handleDelete}
+                    onNavigateNote={handleNavigate}
+                />
             )}
         </div>
     );
