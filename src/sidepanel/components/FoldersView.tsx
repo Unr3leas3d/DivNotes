@@ -12,6 +12,7 @@ import { getFoldersService } from '@/lib/folders-service';
 import { getNotesService } from '@/lib/notes-service';
 import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
 import { useMultiSelect } from '../hooks/useMultiSelect';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import type { StoredNote, StoredFolder, StoredTag, FolderTreeNode } from '@/lib/types';
 import { TAG_COLORS } from '@/lib/types';
 
@@ -56,6 +57,32 @@ export function FoldersView({
       prevNoteCount.current = notes.length;
     }
   }, [notes.length, clearSelection]);
+
+  // Drag and drop support
+  const handleMoveNote = useCallback(async (noteId: string, folderId: string | null) => {
+    const service = await getNotesService();
+    await service.update(noteId, { folderId });
+    onRefresh?.();
+  }, [onRefresh]);
+
+  const handleMoveFolder = useCallback(async (folderId: string, newParentId: string | null) => {
+    const service = await getFoldersService();
+    await service.update(folderId, { parentId: newParentId });
+    onRefresh?.();
+  }, [onRefresh]);
+
+  const {
+    dragItem,
+    dropTargetId,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+  } = useDragAndDrop({
+    onMoveNote: handleMoveNote,
+    onMoveFolder: handleMoveFolder,
+  });
 
   const handleBulkMoveToFolder = useCallback(async () => {
     const folderName = window.prompt('Enter folder name to move selected notes to:');
@@ -387,12 +414,18 @@ export function FoldersView({
       </div>
 
       {/* Inbox row */}
-      <div className="mb-1">
+      <div
+        className="mb-1"
+        onDragOver={(e) => handleDragOver(e, null)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, null)}
+      >
         <button
           onClick={() => setInboxExpanded(!inboxExpanded)}
           className={cn(
             "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left",
-            focusedId === '__inbox__' && "ring-2 ring-primary/50 bg-muted/30"
+            focusedId === '__inbox__' && "ring-2 ring-primary/50 bg-muted/30",
+            dropTargetId === null && dragItem !== null && "border-l-2 border-l-primary bg-primary/5"
           )}
         >
           {filteredUnfiledNotes.length > 0 ? (
@@ -425,6 +458,9 @@ export function FoldersView({
                 onNavigate={onNavigateNote}
                 selected={selectedIds.has(note.id)}
                 onSelectClick={toggleSelect}
+                draggable
+                onDragStart={(e) => handleDragStart(e, 'note', note.id)}
+                onDragEnd={handleDragEnd}
               />
             ))}
           </div>
@@ -451,6 +487,13 @@ export function FoldersView({
           onDeleteFolder={handleDeleteFolder}
           selectedNoteIds={selectedIds}
           onNoteSelectClick={toggleSelect}
+          dropTargetId={dropTargetId}
+          dragItem={dragItem}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         />
       ))}
 

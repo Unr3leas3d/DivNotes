@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { DragEvent } from 'react';
 import { ChevronDown, ChevronRight, Folder, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
@@ -23,6 +23,14 @@ interface FolderTreeNodeItemProps {
   onDeleteFolder?: (folderId: string) => void;
   selectedNoteIds?: Set<string>;
   onNoteSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
+  // Drag and drop
+  dropTargetId?: string | null;
+  dragItem?: { type: 'note' | 'folder'; id: string } | null;
+  onDragStart?: (e: DragEvent, type: 'note' | 'folder', id: string) => void;
+  onDragEnd?: (e: DragEvent) => void;
+  onDragOver?: (e: DragEvent, targetFolderId: string | null) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: DragEvent, targetFolderId: string | null) => void;
 }
 
 export function FolderTreeNodeItem({
@@ -42,19 +50,36 @@ export function FolderTreeNodeItem({
   onDeleteFolder,
   selectedNoteIds,
   onNoteSelectClick,
+  dropTargetId,
+  dragItem,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }: FolderTreeNodeItemProps) {
   const isExpanded = expandedFolders.has(node.folder.id);
   const hasContent = node.children.length > 0 || node.notes.length > 0;
   const noteCount = countNotesInTree(node);
   const indent = Math.min(depth, 6) * 16 + 8;
   const isFocused = focusedId === node.folder.id;
+  const isDropTarget = dropTargetId === node.folder.id;
 
   return (
     <div>
       {/* Folder row */}
       <div
-        className="flex items-center group"
+        className={cn(
+          "flex items-center group",
+          isDropTarget && "border-l-2 border-l-primary bg-primary/5"
+        )}
         style={{ paddingLeft: `${indent}px`, paddingRight: '8px' }}
+        draggable
+        onDragStart={(e) => onDragStart?.(e, 'folder', node.folder.id)}
+        onDragEnd={(e) => onDragEnd?.(e)}
+        onDragOver={(e) => onDragOver?.(e, node.folder.id)}
+        onDragLeave={() => onDragLeave?.()}
+        onDrop={(e) => onDrop?.(e, node.folder.id)}
       >
         <button
           onClick={() => onToggleExpand(node.folder.id)}
@@ -134,6 +159,13 @@ export function FolderTreeNodeItem({
               onDeleteFolder={onDeleteFolder}
               selectedNoteIds={selectedNoteIds}
               onNoteSelectClick={onNoteSelectClick}
+              dropTargetId={dropTargetId}
+              dragItem={dragItem}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
             />
           ))}
 
@@ -153,6 +185,9 @@ export function FolderTreeNodeItem({
                   onTogglePin={onToggleNotePin}
                   selected={selectedNoteIds?.has(note.id)}
                   onSelectClick={onNoteSelectClick}
+                  draggable
+                  onDragStart={(e) => onDragStart?.(e, 'note', note.id)}
+                  onDragEnd={onDragEnd}
                 />
               ))}
             </div>

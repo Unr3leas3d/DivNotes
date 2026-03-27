@@ -18,6 +18,10 @@ interface NoteCardProps {
   folderPath?: string;
   selected?: boolean;
   onSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
+  // Drag and drop
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 function stripMarkdown(text: string): string {
@@ -49,6 +53,9 @@ export function NoteCard({
   folderPath,
   selected,
   onSelectClick,
+  draggable: isDraggable,
+  onDragStart,
+  onDragEnd,
 }: NoteCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -84,6 +91,9 @@ export function NoteCard({
         expanded && 'ring-1 ring-primary/20',
         selected && 'ring-2 ring-primary bg-primary/5',
       )}
+      draggable={isDraggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={(e: React.MouseEvent) => {
         if (onSelectClick && (e.metaKey || e.ctrlKey || e.shiftKey)) {
           e.stopPropagation();
