@@ -81,6 +81,68 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'SYNC_NOTE_TAGS') {
+        const { noteId, tagNames } = message;
+        chrome.storage.local.get(['divnotes_tags', 'divnotes_notes'], (result) => {
+            const tags = result.divnotes_tags || [];
+            const notes = result.divnotes_notes || [];
+            const resolvedTagIds = [];
+
+            for (const name of tagNames) {
+                const normalized = name.toLowerCase();
+                let tag = tags.find(t => t.name.toLowerCase() === normalized);
+                if (!tag) {
+                    // Duplicated from src/lib/types.ts TAG_COLORS — keep in sync
+                    const TAG_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#a855f7','#ec4899'];
+                    tag = {
+                        id: crypto.randomUUID(),
+                        name: normalized,
+                        color: TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    };
+                    tags.push(tag);
+                }
+                resolvedTagIds.push(tag.id);
+            }
+
+            const noteIdx = notes.findIndex(n => n.id === noteId);
+            if (noteIdx > -1) {
+                notes[noteIdx].tags = resolvedTagIds;
+            }
+
+            chrome.storage.local.set({
+                divnotes_tags: tags,
+                divnotes_notes: notes,
+            }, () => sendResponse({ success: true, tagIds: resolvedTagIds }));
+        });
+        return true;
+    }
+
+    if (message.type === 'CREATE_FOLDER') {
+        const { name, parentId } = message;
+        chrome.storage.local.get(['divnotes_folders'], (result) => {
+            const folders = result.divnotes_folders || [];
+            const siblings = folders.filter(f => f.parentId === parentId);
+            const order = siblings.length > 0 ? Math.max(...siblings.map(f => f.order)) + 1 : 0;
+            const folder = {
+                id: crypto.randomUUID(),
+                name,
+                parentId: parentId || null,
+                order,
+                color: null,
+                pinned: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            folders.push(folder);
+            chrome.storage.local.set({ divnotes_folders: folders }, () => {
+                sendResponse({ success: true, folder });
+            });
+        });
+        return true;
+    }
+
     // Always send response for unhandled messages to avoid port closure errors
     sendResponse({ unhandled: true });
     return false;
