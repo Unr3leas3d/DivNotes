@@ -3,6 +3,7 @@ import { Tags, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NoteCard } from './NoteCard';
 import { TagPill } from './TagPill';
+import { TagManager } from './TagManager';
 import { getAncestorPath } from '@/lib/tree-utils';
 import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';
 
@@ -24,6 +25,7 @@ export function TagsView({
   onNavigateNote,
 }: TagsViewProps) {
   const [activeTagIds, setActiveTagIds] = useState<Set<string>>(new Set());
+  const [showManager, setShowManager] = useState(false);
 
   // Count notes per tag
   const tagNoteCounts = useMemo(() => {
@@ -123,7 +125,12 @@ export function TagsView({
   }
 
   return (
-    <div className="px-3 py-3 space-y-3">
+    <div className="relative px-3 py-3 space-y-3">
+      {/* Tag Manager overlay */}
+      {showManager && (
+        <TagManager tags={tags} onClose={() => setShowManager(false)} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
@@ -137,6 +144,7 @@ export function TagsView({
           size="icon"
           className="h-7 w-7 text-muted-foreground"
           title="Manage tags"
+          onClick={() => setShowManager(true)}
         >
           <Settings className="w-3.5 h-3.5" />
         </Button>
