@@ -136,30 +136,82 @@ export class CloudNotesService implements NotesService {
 
                 for (const item of migratedQueue) {
                     try {
-                        // Only handle notes for now — folder/tag handling added in later tasks
-                        if (item.entityType !== 'note') {
-                            failedQueue.push(item);
-                            continue;
-                        }
+                        const entityType = item.entityType || 'note';
 
-                        if (item.action === 'save' && item.payload) {
-                            const { error } = await supabase.from('notes').upsert(this.storedToDb(item.payload));
-                            if (error) throw error;
-                        } else if (item.action === 'update' && item.payload) {
-                            const { error } = await supabase.from('notes')
-                                .update(item.payload)
-                                .eq('id', item.entityId)
-                                .eq('user_id', this.userId);
-                            if (error) throw error;
-                        } else if (item.action === 'delete') {
-                            const { error } = await supabase.from('notes')
-                                .delete()
-                                .eq('id', item.entityId)
-                                .eq('user_id', this.userId);
-                            if (error) throw error;
+                        if (entityType === 'note') {
+                            if (item.action === 'save' && item.payload) {
+                                const { error } = await supabase.from('notes').upsert(this.storedToDb(item.payload));
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('notes')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('notes')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'folder') {
+                            if (item.action === 'save' && item.payload) {
+                                const f = item.payload;
+                                const { error } = await supabase.from('folders').upsert({
+                                    id: f.id, user_id: this.userId, name: f.name,
+                                    parent_id: f.parentId, color: f.color, pinned: f.pinned || false,
+                                    order: f.order, created_at: f.createdAt, updated_at: f.updatedAt,
+                                });
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('folders')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('folders')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'tag') {
+                            if (item.action === 'save' && item.payload) {
+                                const t = item.payload;
+                                const { error } = await supabase.from('tags').upsert({
+                                    id: t.id, user_id: this.userId, name: t.name,
+                                    color: t.color, created_at: t.createdAt, updated_at: t.updatedAt,
+                                });
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('tags')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('tags')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'note_tag') {
+                            if (item.action === 'save' && item.payload) {
+                                const { error } = await supabase.from('note_tags').upsert(item.payload);
+                                if (error) throw error;
+                            } else if (item.action === 'delete' && item.payload) {
+                                const { error } = await supabase.from('note_tags')
+                                    .delete()
+                                    .eq('note_id', item.payload.note_id)
+                                    .eq('tag_id', item.payload.tag_id);
+                                if (error) throw error;
+                            }
                         }
                     } catch (err) {
-                        console.warn(`[DivNotes] Sync operation [${item.action}] failed, keeping in queue`, err);
+                        console.warn(`[DivNotes] Sync operation [${item.entityType}:${item.action}] failed, keeping in queue`, err);
                         failedQueue.push(item);
                     }
                 }
