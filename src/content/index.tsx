@@ -16,6 +16,7 @@ interface SavedNote {
   elementTextHash?: string;
   elementPosition?: string;
   selectedText?: string;
+  folderId?: string | null;
   createdAt: string;
   badgeEl: HTMLElement | null;
   expandedEl: HTMLElement | null;
@@ -34,7 +35,20 @@ interface StoredNote {
   elementTextHash?: string;
   elementPosition?: string;
   selectedText?: string;
+  folderId?: string | null;
+  tags?: string[];
+  pinned?: boolean;
   createdAt: string;
+}
+
+function extractHashtagsFromContent(content: string): string[] {
+  const regex = /(?:^|(?<=\s))#([a-zA-Z0-9_-]{1,50})(?=\s|$)/g;
+  const tags = new Set<string>();
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    tags.add(match[1].toLowerCase());
+  }
+  return Array.from(tags);
 }
 
 // ==================== STYLES ====================
@@ -616,6 +630,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     fontFamily: "'Inter', system-ui, sans-serif",
   });
 
+  let selectedFolderId: string | null = existingNote?.folderId ?? null;
+
   const prefillContent = existingNote ? existingNote.content : '';
 
   noteEditorContainer.innerHTML = `
@@ -662,6 +678,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         "><span style="color:#52525b">Nothing to preview</span></div>
       </div>
 
+      <div id="divnotes-folder-picker" style="border-top:1px solid rgba(255,255,255,0.06);"></div>
+
       <div style="padding: 8px 12px 12px; display: flex; justify-content: flex-end; gap: 8px;">
         <button id="divnotes-cancel" style="
           padding:7px 16px;font-size:12px;font-weight:500;color:#a1a1aa;
@@ -682,6 +700,120 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   `;
 
   document.body.appendChild(noteEditorContainer);
+
+  // Load folders and auto-suggest
+  chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], (result) => {
+    const folders = result.divnotes_folders || [];
+    const allNotes = result.divnotes_notes || [];
+
+    // Auto-suggest: count notes per folder for current domain
+    const domainNotes = allNotes.filter((n: any) => n.hostname === window.location.hostname);
+    const folderCounts: Record<string, number> = {};
+    for (const n of domainNotes) {
+      if (n.folderId) {
+        folderCounts[n.folderId] = (folderCounts[n.folderId] || 0) + 1;
+      }
+    }
+
+    // Pick folder with >50% of domain notes
+    const total = domainNotes.length;
+    let suggestedFolderId: string | null = null;
+    if (total > 0) {
+      for (const [fId, count] of Object.entries(folderCounts)) {
+        if ((count as number) / total > 0.5) {
+          suggestedFolderId = fId;
+          break;
+        }
+      }
+    }
+
+    selectedFolderId = suggestedFolderId || (existingNote?.folderId ?? null);
+
+    // Build folder picker UI
+    const pickerContainer = document.getElementById('divnotes-folder-picker');
+    if (pickerContainer && folders.length > 0) {
+      const selectedFolder = folders.find((f: any) => f.id === selectedFolderId);
+      const displayName = selectedFolder ? selectedFolder.name : 'Inbox';
+
+      pickerContainer.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a1a1aa;flex-shrink:0;">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+          </svg>
+          <span id="divnotes-folder-name" style="font-size:11px;color:#d4d4d8;flex:1;">${displayName}</span>
+          <button id="divnotes-folder-change" style="font-size:10px;color:#7c3aed;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'Inter',sans-serif;">Change</button>
+        </div>
+      `;
+
+      // "Change" button opens folder tree dropdown
+      const changeBtn = document.getElementById('divnotes-folder-change');
+      changeBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const existing = document.getElementById('divnotes-folder-dropdown');
+        if (existing) { existing.remove(); return; }
+
+        const dropdown = document.createElement('div');
+        dropdown.id = 'divnotes-folder-dropdown';
+        Object.assign(dropdown.style, {
+          maxHeight: '200px', overflow: 'auto',
+          background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '6px', margin: '4px 12px',
+          padding: '4px 0',
+        });
+
+        // Inbox option
+        const inboxRow = document.createElement('button');
+        Object.assign(inboxRow.style, {
+          display: 'flex', alignItems: 'center', gap: '6px',
+          width: '100%', padding: '6px 10px', border: 'none',
+          background: selectedFolderId === null ? 'rgba(124,58,237,0.15)' : 'transparent',
+          color: '#d4d4d8', fontSize: '11px', cursor: 'pointer',
+          fontFamily: "'Inter',sans-serif", textAlign: 'left',
+        });
+        inboxRow.textContent = 'Inbox';
+        inboxRow.addEventListener('click', () => {
+          selectedFolderId = null;
+          const nameEl = document.getElementById('divnotes-folder-name');
+          if (nameEl) nameEl.textContent = 'Inbox';
+          dropdown.remove();
+        });
+        dropdown.appendChild(inboxRow);
+
+        // Render folders (flat, indented by parentId depth)
+        const renderFolder = (folder: any, depth: number) => {
+          const row = document.createElement('button');
+          Object.assign(row.style, {
+            display: 'flex', alignItems: 'center', gap: '6px',
+            width: '100%', padding: '6px 10px', border: 'none',
+            paddingLeft: `${10 + depth * 16}px`,
+            background: selectedFolderId === folder.id ? 'rgba(124,58,237,0.15)' : 'transparent',
+            color: '#d4d4d8', fontSize: '11px', cursor: 'pointer',
+            fontFamily: "'Inter',sans-serif", textAlign: 'left',
+          });
+          row.textContent = folder.name;
+          row.addEventListener('click', () => {
+            selectedFolderId = folder.id;
+            const nameEl = document.getElementById('divnotes-folder-name');
+            if (nameEl) nameEl.textContent = folder.name;
+            dropdown.remove();
+          });
+          dropdown.appendChild(row);
+
+          // Render children
+          const children = folders.filter((f: any) => f.parentId === folder.id);
+          children.sort((a: any, b: any) => a.order - b.order);
+          for (const child of children) renderFolder(child, depth + 1);
+        };
+
+        // Root folders
+        const roots = folders.filter((f: any) => !f.parentId);
+        roots.sort((a: any, b: any) => a.order - b.order);
+        for (const root of roots) renderFolder(root, 0);
+
+        pickerContainer.appendChild(dropdown);
+      });
+    }
+  });
 
   const textarea = document.getElementById('divnotes-textarea') as HTMLTextAreaElement;
   const saveBtn = document.getElementById('divnotes-save') as HTMLButtonElement;
@@ -768,6 +900,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       expandedEl: null,
     };
     note.content = val;
+    note.folderId = selectedFolderId;
 
     if (isNew) {
       savedNotes.push(note);
@@ -775,6 +908,16 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       if (note.selectedText) applyTextHighlight(note);
       saveNotesToStorage();
       console.log('[DivNotes] Note saved! Total:', savedNotes.length);
+
+      // Extract and sync hashtags
+      const hashtags = extractHashtagsFromContent(val);
+      if (hashtags.length > 0) {
+        chrome.runtime.sendMessage({
+          type: 'SYNC_NOTE_TAGS',
+          noteId: note.id,
+          tagNames: hashtags,
+        });
+      }
     } else {
       // update
       if (note.expandedEl) {
@@ -783,6 +926,16 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       }
       saveNotesToStorage();
       console.log('[DivNotes] Note updated');
+
+      // Extract and sync hashtags
+      const hashtags = extractHashtagsFromContent(val);
+      if (hashtags.length > 0) {
+        chrome.runtime.sendMessage({
+          type: 'SYNC_NOTE_TAGS',
+          noteId: note.id,
+          tagNames: hashtags,
+        });
+      }
     }
 
     closeNoteEditor();
@@ -951,6 +1104,9 @@ function saveNotesToStorage() {
     elementPosition: n.elementPosition,
     selectedText: n.selectedText,
     createdAt: n.createdAt,
+    folderId: n.folderId || null,
+    tags: [],
+    pinned: false,
   }));
 
   // Merge with notes from other pages
