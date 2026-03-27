@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { SegmentedControl, type ViewMode } from './components/SegmentedControl';
 import { SitesView } from './components/SitesView';
+import { FoldersView } from './components/FoldersView';
 
 export default function App() {
     const [viewMode, setViewMode] = useState<ViewMode>('sites');
@@ -164,7 +165,14 @@ export default function App() {
             )}
 
             {viewMode === 'folders' && (
-                <div className="px-3 py-8 text-center text-sm text-muted-foreground">Folders view — coming soon</div>
+                <FoldersView
+                    notes={notes}
+                    folders={folders}
+                    tags={tags}
+                    searchQuery={searchQuery}
+                    onDeleteNote={handleDelete}
+                    onNavigateNote={handleNavigate}
+                />
             )}
 
             {viewMode === 'tags' && (
