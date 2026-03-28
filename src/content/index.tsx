@@ -17,6 +17,9 @@ interface SavedNote {
   elementPosition?: string;
   selectedText?: string;
   createdAt: string;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
   badgeEl: HTMLElement | null;
   expandedEl: HTMLElement | null;
 }
@@ -35,6 +38,9 @@ interface StoredNote {
   elementPosition?: string;
   selectedText?: string;
   createdAt: string;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
 }
 
 // ==================== STYLES ====================
@@ -764,6 +770,9 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       content: '',
       selectedText: selectedText,
       createdAt: new Date().toISOString(),
+      folderId: null,
+      tags: [],
+      pinned: false,
       badgeEl: null,
       expandedEl: null,
     };
@@ -951,6 +960,9 @@ function saveNotesToStorage() {
     elementPosition: n.elementPosition,
     selectedText: n.selectedText,
     createdAt: n.createdAt,
+    folderId: n.folderId,
+    tags: n.tags,
+    pinned: n.pinned,
   }));
 
   // Merge with notes from other pages
@@ -988,6 +1000,9 @@ function loadNotesFromStorage() {
           elementPosition: stored.elementPosition,
           selectedText: stored.selectedText,
           createdAt: stored.createdAt,
+          folderId: stored.folderId ?? null,
+          tags: stored.tags ?? [],
+          pinned: stored.pinned ?? false,
           badgeEl: null,
           expandedEl: null,
         };

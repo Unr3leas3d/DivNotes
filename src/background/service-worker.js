@@ -1,21 +1,42 @@
 // DivNotes Service Worker (Background Script)
 // Plain JS — copied directly to dist (no build step)
 
+const ADD_NOTE_MENU_ID = 'divnotes-add-note';
+
+function registerSelectionContextMenu() {
+    chrome.contextMenus.removeAll(() => {
+        if (chrome.runtime.lastError) {
+            console.warn('Failed to clear DivNotes context menus:', chrome.runtime.lastError.message);
+        }
+
+        chrome.contextMenus.create(
+            {
+                id: ADD_NOTE_MENU_ID,
+                title: 'Add DivNote',
+                contexts: ['selection'],
+            },
+            () => {
+                if (chrome.runtime.lastError) {
+                    console.warn(
+                        'Failed to create DivNotes context menu:',
+                        chrome.runtime.lastError.message
+                    );
+                }
+            }
+        );
+    });
+}
+
 // Handle extension install — create context menu
 chrome.runtime.onInstalled.addListener(() => {
     console.log('DivNotes installed');
 
-    // Context menu for text selection
-    chrome.contextMenus.create({
-        id: 'divnotes-add-note',
-        title: 'Add DivNote',
-        contexts: ['selection'],
-    });
+    registerSelectionContextMenu();
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId === 'divnotes-add-note' && tab?.id) {
+    if (info.menuItemId === ADD_NOTE_MENU_ID && tab?.id) {
         chrome.tabs.sendMessage(tab.id, {
             type: 'ADD_SELECTION_NOTE',
             selectionText: info.selectionText || '',

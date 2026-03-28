@@ -25,6 +25,9 @@ export interface StoredNote {
     elementPosition?: string;
     selectedText?: string;
     createdAt: string;
+    folderId: string | null;
+    tags: string[];
+    pinned: boolean;
 }
 
 // ==================== INTERFACE ====================
@@ -178,6 +181,8 @@ export class CloudNotesService implements NotesService {
             element_position: note.elementPosition || null,
             selected_text: note.selectedText || null,
             created_at: note.createdAt,
+            folder_id: note.folderId || null,
+            pinned: note.pinned || false,
         };
     }
 
@@ -204,6 +209,8 @@ export class CloudNotesService implements NotesService {
                 element_position: note.elementPosition || null,
                 selected_text: note.selectedText || null,
                 created_at: note.createdAt,
+                folder_id: note.folderId || null,
+                pinned: note.pinned || false,
             });
             if (error) throw error;
             // Optionally flush queue if we just succeeded online
@@ -228,6 +235,8 @@ export class CloudNotesService implements NotesService {
         if (updates.elementTextHash !== undefined) dbUpdates.element_text_hash = updates.elementTextHash;
         if (updates.elementPosition !== undefined) dbUpdates.element_position = updates.elementPosition;
         if (updates.selectedText !== undefined) dbUpdates.selected_text = updates.selectedText;
+        if (updates.folderId !== undefined) dbUpdates.folder_id = updates.folderId;
+        if (updates.pinned !== undefined) dbUpdates.pinned = updates.pinned;
         dbUpdates.updated_at = new Date().toISOString();
 
         // Then sync to Supabase
@@ -268,7 +277,7 @@ export class CloudNotesService implements NotesService {
         try {
             const { data, error } = await supabase
                 .from('notes')
-                .select('*')
+                .select('*, note_tags(tag_id)')
                 .eq('user_id', this.userId)
                 .eq('page_url', url);
 
@@ -292,7 +301,7 @@ export class CloudNotesService implements NotesService {
         try {
             const { data, error } = await supabase
                 .from('notes')
-                .select('*')
+                .select('*, note_tags(tag_id)')
                 .eq('user_id', this.userId)
                 .order('created_at', { ascending: false });
 
@@ -310,6 +319,7 @@ export class CloudNotesService implements NotesService {
     }
 
     private dbToStored(row: Record<string, unknown>): StoredNote {
+        const noteTagRows = (row.note_tags as Array<{ tag_id: string }>) || [];
         return {
             id: row.id as string,
             url: row.page_url as string,
@@ -326,6 +336,9 @@ export class CloudNotesService implements NotesService {
             elementPosition: (row.element_position as string) || undefined,
             selectedText: (row.selected_text as string) || undefined,
             createdAt: row.created_at as string,
+            folderId: (row.folder_id as string) || null,
+            tags: noteTagRows.map(nt => nt.tag_id),
+            pinned: (row.pinned as boolean) || false,
         };
     }
 }
