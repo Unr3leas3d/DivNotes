@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What is DivNotes
+## What is Canopy
 
-DivNotes is a Chrome Extension (Manifest V3) that lets users select any DOM element on a webpage and attach rich markdown notes to it. It supports two modes: local-only (Chrome storage) and authenticated (Supabase cloud sync with offline fallback).
+Canopy is a Chrome Extension (Manifest V3) that lets users select any DOM element on a webpage and attach rich markdown notes to it. It supports two modes: local-only (Chrome storage) and authenticated (Supabase cloud sync with offline fallback).
 
 ## Build & Development
 
