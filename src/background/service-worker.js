@@ -108,13 +108,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             const noteIdx = notes.findIndex(n => n.id === noteId);
             if (noteIdx > -1) {
-                notes[noteIdx].tags = resolvedTagIds;
+                // Merge with existing tags (don't overwrite manually-added tags)
+                const existingTags = notes[noteIdx].tags || [];
+                const merged = [...new Set([...existingTags, ...resolvedTagIds])];
+                notes[noteIdx].tags = merged;
             }
 
             chrome.storage.local.set({
                 divnotes_tags: tags,
                 divnotes_notes: notes,
-            }, () => sendResponse({ success: true, tagIds: resolvedTagIds }));
+            }, () => {
+                // Enqueue cloud sync for new tags and note_tag associations
+                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                    const queue = syncRes.divnotes_sync_queue || [];
+                    for (const tag of tags) {
+                        // Queue save for any newly created tags
+                        if (resolvedTagIds.includes(tag.id)) {
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'tag',
+                                action: 'save',
+                                entityId: tag.id,
+                                payload: tag,
+                                timestamp: Date.now(),
+                            });
+                        }
+                    }
+                    for (const tagId of resolvedTagIds) {
+                        queue.push({
+                            id: crypto.randomUUID(),
+                            entityType: 'note_tag',
+                            action: 'save',
+                            entityId: `${noteId}:${tagId}`,
+                            payload: { note_id: noteId, tag_id: tagId },
+                            timestamp: Date.now(),
+                        });
+                    }
+                    chrome.storage.local.set({ divnotes_sync_queue: queue }, () => {
+                        sendResponse({ success: true, tagIds: resolvedTagIds });
+                    });
+                });
+            });
         });
         return true;
     }
@@ -137,7 +171,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             };
             folders.push(folder);
             chrome.storage.local.set({ divnotes_folders: folders }, () => {
-                sendResponse({ success: true, folder });
+                // Enqueue cloud sync for the new folder
+                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                    const queue = syncRes.divnotes_sync_queue || [];
+                    queue.push({
+                        id: crypto.randomUUID(),
+                        entityType: 'folder',
+                        action: 'save',
+                        entityId: folder.id,
+                        payload: folder,
+                        timestamp: Date.now(),
+                    });
+                    chrome.storage.local.set({ divnotes_sync_queue: queue }, () => {
+                        sendResponse({ success: true, folder });
+                    });
+                });
             });
         });
         return true;

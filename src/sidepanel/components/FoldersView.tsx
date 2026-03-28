@@ -82,6 +82,7 @@ export function FoldersView({
   } = useDragAndDrop({
     onMoveNote: handleMoveNote,
     onMoveFolder: handleMoveFolder,
+    folders,
   });
 
   const handleBulkMoveToFolder = useCallback(async () => {

@@ -1,4 +1,6 @@
 import { useState, useCallback, DragEvent } from 'react';
+import type { StoredFolder } from '@/lib/types';
+import { getDescendantFolderIds } from '@/lib/tree-utils';
 
 interface DragItem {
   type: 'note' | 'folder';
@@ -8,6 +10,7 @@ interface DragItem {
 export function useDragAndDrop(options: {
   onMoveNote: (noteId: string, folderId: string | null) => void;
   onMoveFolder: (folderId: string, newParentId: string | null) => void;
+  folders: StoredFolder[];
 }) {
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -49,8 +52,9 @@ export function useDragAndDrop(options: {
       if (data.type === 'note') {
         options.onMoveNote(data.id, targetFolderId);
       } else if (data.type === 'folder') {
-        // Prevent dropping folder onto itself or its descendants
-        if (data.id !== targetFolderId) {
+        // Prevent dropping folder onto itself or its descendants (would create cycle)
+        const descendantIds = getDescendantFolderIds(data.id, options.folders);
+        if (data.id !== targetFolderId && (!targetFolderId || !descendantIds.includes(targetFolderId))) {
           options.onMoveFolder(data.id, targetFolderId);
         }
       }

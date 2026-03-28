@@ -43,7 +43,8 @@ CREATE POLICY tags_user_policy ON tags FOR ALL USING (user_id = auth.uid());
 -- RLS for note_tags (user must own the note)
 ALTER TABLE note_tags ENABLE ROW LEVEL SECURITY;
 CREATE POLICY note_tags_user_policy ON note_tags FOR ALL
-  USING (note_id IN (SELECT id FROM notes WHERE user_id = auth.uid()));
+  USING (note_id IN (SELECT id FROM notes WHERE user_id = auth.uid()))
+  WITH CHECK (note_id IN (SELECT id FROM notes WHERE user_id = auth.uid()));
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);
