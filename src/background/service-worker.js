@@ -93,6 +93,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'OPEN_POPUP') {
+        if (chrome.action?.openPopup) {
+            chrome.action.openPopup();
+        }
+        sendResponse({ success: true });
+        return true;
+    }
+
     if (message.type === 'UPDATE_BADGE_COUNT') {
         const count = message.count || 0;
         chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
