@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StickyNote, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface LoginFormProps {
@@ -55,11 +55,19 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
         <div className="flex flex-col min-h-[500px]">
             {/* Header / Branding */}
             <div className="flex flex-col items-center pt-8 pb-6 px-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/90 to-primary/60 flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                    <StickyNote className="w-7 h-7 text-primary-foreground" />
+                <div className="w-14 h-14 rounded-2xl bg-[#052415] flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+                    <svg width="28" height="28" viewBox="0 0 68 68" fill="none">
+                        <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
+                        <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                        <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                        <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
+                        <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
+                        <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
+                        <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
+                    </svg>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    DivNotes
+                <h1 className="font-['Georgia',serif] text-2xl text-[#052415] tracking-[-0.3px]">
+                    Canopy
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />

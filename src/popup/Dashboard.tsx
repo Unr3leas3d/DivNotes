@@ -148,11 +148,19 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/90 to-primary/60 flex items-center justify-center shadow-sm">
-                        <StickyNote className="w-4 h-4 text-primary-foreground" />
+                    <div className="w-7 h-7 rounded-lg bg-[#052415] flex items-center justify-center flex-shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 68 68" fill="none">
+                            <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
+                            <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
+                            <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
+                            <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
+                            <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
+                        </svg>
                     </div>
                     <div>
-                        <h1 className="text-sm font-semibold">DivNotes</h1>
+                        <h1 className="font-['Georgia',serif] text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
                         <p className="text-[11px] text-muted-foreground truncate max-w-[180px] flex items-center gap-1">
                             {isLocalMode && <HardDrive className="w-3 h-3" />}
                             {email}
