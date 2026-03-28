@@ -80,5 +80,5 @@ test('re-registering the install menu does not recreate a duplicate context-menu
     installHandler();
 
     assert.doesNotThrow(() => installHandler());
-    assert.deepEqual([...menuIds], ['divnotes-add-note']);
+    assert.deepEqual([...menuIds], ['canopy-add-note']);
 });
