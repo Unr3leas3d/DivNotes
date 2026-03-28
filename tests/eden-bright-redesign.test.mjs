@@ -85,3 +85,13 @@ test('side panel segmented control uses themed active and inactive states', () =
   assert.ok(segmentedControl.includes("bg-primary text-primary-foreground font-semibold shadow-card"));
   assert.ok(segmentedControl.includes("bg-muted text-foreground hover:bg-secondary"));
 });
+
+test('background worker keeps OPEN_POPUP support alongside ACTIVATE_INSPECTOR messaging', () => {
+  const serviceWorker = read('src/background/service-worker.js');
+
+  assert.ok(serviceWorker.includes("if (message.type === 'OPEN_POPUP')"));
+  assert.ok(serviceWorker.includes('chrome.action?.openPopup'));
+  assert.ok(serviceWorker.includes('chrome.action.openPopup()'));
+  assert.ok(serviceWorker.includes("if (message.type === 'ACTIVATE_INSPECTOR')"));
+  assert.ok(serviceWorker.includes("{ type: 'ACTIVATE_INSPECTOR' }"));
+});

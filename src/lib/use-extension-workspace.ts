@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { getFoldersService, resetFoldersService } from './folders-service';
-import { getNotesService, resetNotesService } from './notes-service';
-import { getTagsService, resetTagsService } from './tags-service';
+import { getFoldersService } from './folders-service';
+import { getNotesService } from './notes-service';
+import { getTagsService } from './tags-service';
 import { supabase } from './supabase';
-import type { StoredFolder, StoredNote, StoredTag } from './types';
 import {
   buildFolderSummaries,
   buildTagSummaries,
@@ -12,96 +11,28 @@ import {
   groupNotesByHostname,
   selectThisPageNotes,
 } from './extension-selectors';
+import { createExtensionWorkspaceActions } from './extension-workspace-actions';
+import {
+  buildCurrentPageState,
+  emptyCurrentPageState,
+  emptyWorkspaceData,
+  getCurrentTab,
+  readExtensionWorkspaceStorage,
+} from './extension-workspace-helpers';
+import type {
+  AuthMode,
+  CurrentPageState,
+  ErrorState,
+  LoadingState,
+  ShellType,
+  ViewState,
+  WorkspaceAuth,
+  WorkspaceData,
+  WorkspaceDerived,
+  WorkspaceView,
+} from './extension-workspace-types';
 
-export type WorkspaceView = 'this-page' | 'all-notes' | 'folders' | 'tags' | 'settings';
-
-type ShellType = 'popup' | 'sidepanel';
-type AuthMode = 'loading' | 'login' | 'local' | 'authenticated';
-
-interface WorkspaceAuth {
-  mode: AuthMode;
-  email: string;
-  label: string;
-  isLocalMode: boolean;
-  isAuthenticated: boolean;
-}
-
-interface CurrentPageState {
-  url: string | null;
-  title: string;
-  hostname: string | null;
-}
-
-interface WorkspaceData {
-  notes: StoredNote[];
-  folders: StoredFolder[];
-  tags: StoredTag[];
-}
-
-interface WorkspaceDerived {
-  thisPageNotes: StoredNote[];
-  groupedNotes: ReturnType<typeof groupNotesByHostname>;
-  folderSummaries: ReturnType<typeof buildFolderSummaries>;
-  tagSummaries: ReturnType<typeof buildTagSummaries>;
-}
-
-interface LoadingState {
-  auth: boolean;
-  currentPage: boolean;
-  data: boolean;
-}
-
-interface ErrorState {
-  auth: string | null;
-  currentPage: string | null;
-  data: string | null;
-  actions: string | null;
-}
-
-interface ViewState {
-  active: WorkspaceView;
-  folderId: string | null;
-  tagId: string | null;
-}
-
-async function getCurrentTab(): Promise<chrome.tabs.Tab | null> {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tabs[0] ?? null;
-}
-
-function getHostname(url: string | null): string | null {
-  if (!url) {
-    return null;
-  }
-
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
-}
-
-function readLocalStorage(): Promise<WorkspaceData> {
-  return chrome.storage.local
-    .get(['divnotes_notes', 'divnotes_folders', 'divnotes_tags'])
-    .then((result) => ({
-      notes: result.divnotes_notes || [],
-      folders: result.divnotes_folders || [],
-      tags: result.divnotes_tags || [],
-    }));
-}
-
-function normalizeImportArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function dedupeById<T extends { id: string }>(items: T[]): T[] {
-  const map = new Map<string, T>();
-  for (const item of items) {
-    map.set(item.id, item);
-  }
-  return [...map.values()];
-}
+export type { WorkspaceView } from './extension-workspace-types';
 
 export function useExtensionWorkspace(options: { shell: ShellType }) {
   const [auth, setAuth] = useState<WorkspaceAuth>({
@@ -116,11 +47,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     title: '',
     hostname: null,
   });
-  const [data, setData] = useState<WorkspaceData>({
-    notes: [],
-    folders: [],
-    tags: [],
-  });
+  const [data, setData] = useState<WorkspaceData>(emptyWorkspaceData);
   const [loading, setLoading] = useState<LoadingState>({
     auth: true,
     currentPage: true,
@@ -276,22 +203,13 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
           return;
         }
 
-        const url = tab?.url || null;
-        setCurrentPage({
-          url,
-          title: tab?.title || '',
-          hostname: getHostname(url),
-        });
+        setCurrentPage(buildCurrentPageState(tab));
       } catch (caughtError) {
         if (cancelled) {
           return;
         }
 
-        setCurrentPage({
-          url: null,
-          title: '',
-          hostname: null,
-        });
+        setCurrentPage(emptyCurrentPageState());
         setError((current) => ({
           ...current,
           currentPage:
@@ -321,7 +239,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
 
       try {
         const [storageData, notesService, foldersService, tagsService] = await Promise.all([
-          readLocalStorage(),
+          readExtensionWorkspaceStorage(),
           getNotesService(),
           getFoldersService(),
           getTagsService(),
@@ -346,7 +264,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
           return;
         }
 
-        setData({ notes: [], folders: [], tags: [] });
+        setData(emptyWorkspaceData());
         setError((current) => ({
           ...current,
           data: caughtError instanceof Error ? caughtError.message : 'Failed to load workspace data',
@@ -401,163 +319,19 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     setActiveView(nextView);
   }, []);
 
-  const activateInspector = useCallback(async () => {
-    clearActionError();
-    try {
-      await chrome.runtime.sendMessage({ type: 'ACTIVATE_INSPECTOR' });
-    } catch (caughtError) {
-      setActionError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to activate inspector'
-      );
-      throw caughtError;
-    }
-  }, [clearActionError, setActionError]);
-
-  const openSidePanel = useCallback(async () => {
-    clearActionError();
-    try {
-      const tab = await getCurrentTab();
-      const windowId = tab?.windowId;
-      await chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL', windowId });
-    } catch (caughtError) {
-      setActionError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to open side panel'
-      );
-      throw caughtError;
-    }
-  }, [clearActionError, setActionError]);
-
-  const openPopup = useCallback(async () => {
-    clearActionError();
-    try {
-      await chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
-    } catch (caughtError) {
-      setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to open popup');
-      throw caughtError;
-    }
-  }, [clearActionError, setActionError]);
-
-  const exportNotes = useCallback(async () => {
-    clearActionError();
-    try {
-      const payload = {
-        version: 2,
-        exportedAt: new Date().toISOString(),
-        notes: data.notes,
-        folders: data.folders,
-        tags: data.tags,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: 'application/json',
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `canopy-export-${new Date().toISOString().slice(0, 10)}.json`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (caughtError) {
-      setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to export notes');
-      throw caughtError;
-    }
-  }, [clearActionError, data.folders, data.notes, data.tags, setActionError]);
-
-  const importNotes = useCallback(async () => {
-    clearActionError();
-
-    return new Promise<void>((resolve, reject) => {
-      try {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json,application/json';
-        input.onchange = () => {
-          const file = input.files?.[0];
-          if (!file) {
-            resolve();
-            return;
-          }
-
-          const reader = new FileReader();
-          reader.onload = async () => {
-            try {
-              const parsed = JSON.parse(String(reader.result || '{}'));
-              const existing = await readLocalStorage();
-              const mergedNotes = dedupeById([
-                ...existing.notes,
-                ...normalizeImportArray<StoredNote>(parsed.notes),
-              ]);
-              const mergedFolders = dedupeById([
-                ...existing.folders,
-                ...normalizeImportArray<StoredFolder>(parsed.folders),
-              ]);
-              const mergedTags = dedupeById([
-                ...existing.tags,
-                ...normalizeImportArray<StoredTag>(parsed.tags),
-              ]);
-
-              await chrome.storage.local.set({
-                divnotes_notes: mergedNotes,
-                divnotes_folders: mergedFolders,
-                divnotes_tags: mergedTags,
-              });
-              resolve();
-            } catch (caughtError) {
-              setActionError(
-                caughtError instanceof Error ? caughtError.message : 'Failed to import notes'
-              );
-              reject(caughtError);
-            }
-          };
-          reader.onerror = () => {
-            const fileError = reader.error || new Error('Failed to read import file');
-            setActionError(fileError.message);
-            reject(fileError);
-          };
-          reader.readAsText(file);
-        };
-        input.click();
-      } catch (caughtError) {
-        setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to import notes');
-        reject(caughtError);
-      }
-    });
-  }, [clearActionError, setActionError]);
-
-  const clearAllNotes = useCallback(async () => {
-    clearActionError();
-    try {
-      await chrome.storage.local.set({ divnotes_notes: [] });
-    } catch (caughtError) {
-      setActionError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to clear all notes'
-      );
-      throw caughtError;
-    }
-  }, [clearActionError, setActionError]);
-
-  const logout = useCallback(async () => {
-    clearActionError();
-
-    try {
-      if (auth.mode === 'authenticated') {
-        await supabase.auth.signOut();
-      }
-      await chrome.storage.local.remove('divnotes_auth');
-      resetNotesService();
-      resetFoldersService();
-      resetTagsService();
-      setAuth({
-        mode: 'login',
-        email: '',
-        label: '',
-        isLocalMode: false,
-        isAuthenticated: false,
-      });
-    } catch (caughtError) {
-      setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to logout');
-      throw caughtError;
-    }
-  }, [auth.mode, clearActionError, setActionError]);
+  const actions = useMemo(
+    () =>
+      createExtensionWorkspaceActions({
+        authMode: auth.mode,
+        data,
+        clearActionError,
+        setActionError,
+        setAuth,
+        setSelectedFolderId,
+        setSelectedTagId,
+      }),
+    [auth.mode, clearActionError, data, setActionError]
+  );
 
   return {
     auth,
@@ -573,20 +347,6 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
       tagId: selectedTagId,
     } satisfies ViewState,
     setView,
-    actions: {
-      activateInspector,
-      openSidePanel,
-      openPopup,
-      exportNotes,
-      importNotes,
-      clearAllNotes,
-      logout,
-      setFolderDetail: setSelectedFolderId,
-      setTagFilter: setSelectedTagId,
-      clearFilters: () => {
-        setSelectedFolderId(null);
-        setSelectedTagId(null);
-      },
-    },
+    actions,
   };
 }

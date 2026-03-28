@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildFolderSummaries,
   buildTagSummaries,
   buildViewCounts,
+  filterNotesBySearch,
   groupNotesByHostname,
   selectThisPageNotes,
 } from './extension-selectors';
@@ -126,6 +128,11 @@ test('selectThisPageNotes filters by normalized current page url and newest-firs
   assert.deepEqual(result.map((note) => note.id), ['note-2', 'note-1']);
 });
 
+test('selectThisPageNotes returns no notes when the current page url is invalid', () => {
+  const result = selectThisPageNotes(sampleNotes, 'not a valid url');
+  assert.deepEqual(result, []);
+});
+
 test('groupNotesByHostname returns compact grouped rows for the all-notes view', () => {
   const groups = groupNotesByHostname(sampleNotes);
   assert.equal(groups[0]?.hostname, 'app.example.com');
@@ -138,6 +145,23 @@ test('buildTagSummaries computes counts and filtered note ids', () => {
   const summaries = buildTagSummaries(sampleTags, sampleNotes);
   assert.equal(summaries[0]?.count, 3);
   assert.deepEqual(summaries[0]?.noteIds, ['note-2', 'note-1', 'note-3']);
+});
+
+test('buildFolderSummaries computes sorted counts and filtered note ids per folder', () => {
+  const summaries = buildFolderSummaries(sampleNotes, sampleFolders);
+  assert.equal(summaries[0]?.folder.id, 'folder-1');
+  assert.equal(summaries[0]?.count, 1);
+  assert.deepEqual(summaries[0]?.noteIds, ['note-1']);
+  assert.equal(summaries[1]?.folder.id, 'folder-2');
+  assert.deepEqual(summaries[1]?.noteIds, ['note-2']);
+});
+
+test('filterNotesBySearch matches note metadata and returns newest-first results', () => {
+  const byInfo = filterNotesBySearch(sampleNotes, 'second');
+  assert.deepEqual(byInfo.map((note) => note.id), ['note-2']);
+
+  const byPageTitle = filterNotesBySearch(sampleNotes, 'docs');
+  assert.deepEqual(byPageTitle.map((note) => note.id), ['note-2', 'note-1']);
 });
 
 test('buildViewCounts returns shared pill counts for popup and side panel', () => {
