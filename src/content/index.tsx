@@ -1,9 +1,9 @@
-// DivNotes Content Script
+// Canopy Content Script
 // Pure DOM for inspector, note editor, and note badges
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
-console.log('[DivNotes] Content script loaded');
+console.log('[Canopy] Content script loaded');
 
 // ==================== TYPES ====================
 interface SavedNote {
@@ -61,33 +61,33 @@ function extractHashtagsFromContent(content: string): string[] {
 
 // ==================== STYLES ====================
 const highlightStyle = document.createElement('style');
-highlightStyle.id = 'divnotes-styles';
+highlightStyle.id = 'canopy-styles';
 highlightStyle.textContent = `
-  .divnotes-highlight {
+  .canopy-highlight {
     outline: 2px solid rgba(139, 92, 246, 0.8) !important;
     outline-offset: 2px !important;
     background-color: rgba(139, 92, 246, 0.08) !important;
     transition: outline 0.15s ease, background-color 0.15s ease !important;
     cursor: crosshair !important;
   }
-  .divnotes-selected {
+  .canopy-selected {
     outline: 2px solid rgba(139, 92, 246, 1) !important;
     outline-offset: 2px !important;
     background-color: rgba(139, 92, 246, 0.12) !important;
   }
-  .divnotes-has-note {
+  .canopy-has-note {
     position: relative !important;
   }
-  ::highlight(divnotes-text-selection) {
+  ::highlight(canopy-text-selection) {
     background-color: rgba(139, 92, 246, 0.3) !important;
     border-bottom: 2px dashed rgba(139, 92, 246, 0.8);
     color: inherit;
   }
-  @keyframes divnotes-pulse {
+  @keyframes canopy-pulse {
     0%, 100% { box-shadow: 0 2px 12px rgba(124,58,237,0.4); }
     50% { box-shadow: 0 2px 16px rgba(124,58,237,0.7); }
   }
-  @keyframes divnotes-fadein {
+  @keyframes canopy-fadein {
     from { opacity: 0; transform: scale(0.8) translateY(4px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
@@ -95,13 +95,13 @@ highlightStyle.textContent = `
 document.head.appendChild(highlightStyle);
 
 // CSS highlights namespace
-const divNotesHighlight = typeof Highlight !== 'undefined' ? new Highlight() : null;
-if (divNotesHighlight && CSS.highlights) {
-  CSS.highlights.set('divnotes-text-selection', divNotesHighlight);
+const canopyHighlight = typeof Highlight !== 'undefined' ? new Highlight() : null;
+if (canopyHighlight && CSS.highlights) {
+  CSS.highlights.set('canopy-text-selection', canopyHighlight);
 }
 
 function applyTextHighlight(note: SavedNote) {
-  if (!note.selectedText || !divNotesHighlight) return;
+  if (!note.selectedText || !canopyHighlight) return;
   const text = note.selectedText.trim();
   if (!text) return;
 
@@ -114,7 +114,7 @@ function applyTextHighlight(note: SavedNote) {
       const range = new Range();
       range.setStart(node, idx);
       range.setEnd(node, idx + text.length);
-      divNotesHighlight.add(range);
+      canopyHighlight.add(range);
       idx = nodeText.indexOf(text, idx + text.length);
     }
     node = walker.nextNode();
@@ -125,8 +125,8 @@ function clearTextHighlight(note: SavedNote) {
   // To clear specifically for one note, we'd need a mapping of ranges.
   // For simplicity, we just rebuild all highlights or let them be.
   // A robust approach clears all and re-applies the remaining notes.
-  if (divNotesHighlight) {
-    divNotesHighlight.clear();
+  if (canopyHighlight) {
+    canopyHighlight.clear();
     savedNotes.forEach(applyTextHighlight);
   }
 }
@@ -172,7 +172,7 @@ function updateNoteBadgeCount() {
 function activateInspector() {
   if (isInspecting) return;
   isInspecting = true;
-  console.log('[DivNotes] Inspector activated');
+  console.log('[Canopy] Inspector activated');
   showStatusBanner();
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('click', onClick, true);
@@ -185,19 +185,19 @@ function deactivateInspector() {
   document.removeEventListener('mouseover', onMouseOver, true);
   document.removeEventListener('click', onClick, true);
   document.removeEventListener('keydown', onKeyDown, true);
-  document.querySelectorAll('.divnotes-highlight').forEach(el => {
-    el.classList.remove('divnotes-highlight');
+  document.querySelectorAll('.canopy-highlight').forEach(el => {
+    el.classList.remove('canopy-highlight');
   });
 }
 
 function onMouseOver(e: Event) {
   if (!isInspecting) return;
   const target = e.target as HTMLElement;
-  if (target.closest('#divnotes-root') || target.closest('#divnotes-banner') || target.closest('.divnotes-badge') || target.closest('.divnotes-note-card')) return;
-  document.querySelectorAll('.divnotes-highlight').forEach(el => {
-    el.classList.remove('divnotes-highlight');
+  if (target.closest('#canopy-root') || target.closest('#canopy-banner') || target.closest('.canopy-badge') || target.closest('.canopy-note-card')) return;
+  document.querySelectorAll('.canopy-highlight').forEach(el => {
+    el.classList.remove('canopy-highlight');
   });
-  target.classList.add('divnotes-highlight');
+  target.classList.add('canopy-highlight');
 }
 
 function onClick(e: Event) {
@@ -206,11 +206,11 @@ function onClick(e: Event) {
   e.stopPropagation();
   e.stopImmediatePropagation();
   const target = e.target as HTMLElement;
-  if (target.closest('#divnotes-root') || target.closest('#divnotes-banner') || target.closest('.divnotes-badge') || target.closest('.divnotes-note-card')) return;
-  document.querySelectorAll('.divnotes-highlight').forEach(el => {
-    el.classList.remove('divnotes-highlight');
+  if (target.closest('#canopy-root') || target.closest('#canopy-banner') || target.closest('.canopy-badge') || target.closest('.canopy-note-card')) return;
+  document.querySelectorAll('.canopy-highlight').forEach(el => {
+    el.classList.remove('canopy-highlight');
   });
-  target.classList.add('divnotes-selected');
+  target.classList.add('canopy-selected');
   selectedElement = target;
   deactivateInspector();
   showNoteEditor(target);
@@ -231,7 +231,7 @@ function onKeyDown(e: KeyboardEvent) {
 function showStatusBanner() {
   if (statusBanner) return;
   statusBanner = document.createElement('div');
-  statusBanner.id = 'divnotes-banner';
+  statusBanner.id = 'canopy-banner';
   statusBanner.innerHTML = `
     <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.6);display:inline-block;"></span>
     <span>Select an element · Press ESC to cancel</span>
@@ -275,7 +275,7 @@ function createNoteBadge(note: SavedNote) {
   const pos = getBadgePosition(note.element);
 
   const badge = document.createElement('div');
-  badge.className = 'divnotes-badge';
+  badge.className = 'canopy-badge';
   Object.assign(badge.style, {
     position: 'fixed',
     top: `${pos.top}px`,
@@ -288,11 +288,11 @@ function createNoteBadge(note: SavedNote) {
     cursor: 'pointer',
     zIndex: '2147483645',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-    animation: 'divnotes-pulse 2s infinite, divnotes-fadein 0.25s ease-out',
+    animation: 'canopy-pulse 2s infinite, canopy-fadein 0.25s ease-out',
     boxShadow: '0 0 8px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.3)',
     pointerEvents: 'auto',
   });
-  badge.title = 'DivNotes';
+  badge.title = 'Canopy';
 
   let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -344,7 +344,7 @@ function showNoteCard(note: SavedNote) {
   if (top < 8) top = 8;
 
   const card = document.createElement('div');
-  card.className = 'divnotes-note-card';
+  card.className = 'canopy-note-card';
   Object.assign(card.style, {
     position: 'fixed',
     top: `${top}px`,
@@ -352,7 +352,7 @@ function showNoteCard(note: SavedNote) {
     width: `${cardWidth}px`,
     zIndex: '2147483646',
     fontFamily: "'Inter', system-ui, sans-serif",
-    animation: 'divnotes-fadein 0.15s ease-out',
+    animation: 'canopy-fadein 0.15s ease-out',
     pointerEvents: 'auto',
   });
 
@@ -378,15 +378,15 @@ function showNoteCard(note: SavedNote) {
       </div>
 
       <div style="padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="divnotes-move-btn" style="
+        <button class="canopy-move-btn" style="
           font-size:11px; color:#71717a; background:transparent; border:none;
           cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif;
         ">Move</button>
-        <button class="divnotes-edit-btn" style="
+        <button class="canopy-edit-btn" style="
           font-size:11px; color:#71717a; background:transparent; border:none;
           cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif;
         ">Edit</button>
-        <button class="divnotes-delete-btn" style="
+        <button class="canopy-delete-btn" style="
           font-size:11px; color:#ef4444; background:transparent; border:none;
           cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif; opacity:0.7;
         ">Delete</button>
@@ -394,27 +394,27 @@ function showNoteCard(note: SavedNote) {
     </div>
   `;
 
-  card.querySelector('.divnotes-move-btn')!.addEventListener('click', (e) => {
+  card.querySelector('.canopy-move-btn')!.addEventListener('click', (e) => {
     e.stopPropagation();
     card.remove();
     note.expandedEl = null;
     moveNote(note);
   });
 
-  card.querySelector('.divnotes-edit-btn')!.addEventListener('click', (e) => {
+  card.querySelector('.canopy-edit-btn')!.addEventListener('click', (e) => {
     e.stopPropagation();
     card.remove();
     note.expandedEl = null;
     showNoteEditor(note.element, note);
   });
 
-  card.querySelector('.divnotes-delete-btn')!.addEventListener('click', (e) => {
+  card.querySelector('.canopy-delete-btn')!.addEventListener('click', (e) => {
     e.stopPropagation();
     deleteNote(note.id);
   });
 
   // Hover effects on buttons
-  card.querySelectorAll('.divnotes-move-btn, .divnotes-edit-btn').forEach(btn => {
+  card.querySelectorAll('.canopy-move-btn, .canopy-edit-btn').forEach(btn => {
     btn.addEventListener('mouseenter', (e) => {
       (e.target as HTMLElement).style.color = '#fafafa';
       (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
@@ -424,11 +424,11 @@ function showNoteCard(note: SavedNote) {
       (e.target as HTMLElement).style.background = 'transparent';
     });
   });
-  card.querySelector('.divnotes-delete-btn')!.addEventListener('mouseenter', (e) => {
+  card.querySelector('.canopy-delete-btn')!.addEventListener('mouseenter', (e) => {
     (e.target as HTMLElement).style.opacity = '1';
     (e.target as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
   });
-  card.querySelector('.divnotes-delete-btn')!.addEventListener('mouseleave', (e) => {
+  card.querySelector('.canopy-delete-btn')!.addEventListener('mouseleave', (e) => {
     (e.target as HTMLElement).style.opacity = '0.7';
     (e.target as HTMLElement).style.background = 'transparent';
   });
@@ -456,16 +456,16 @@ function deleteNote(id: string, skipStorage = false) {
     const note = savedNotes[idx];
     if (note.badgeEl) note.badgeEl.remove();
     if (note.expandedEl) note.expandedEl.remove();
-    note.element.classList.remove('divnotes-has-note');
+    note.element.classList.remove('canopy-has-note');
     clearTextHighlight(note);
     savedNotes.splice(idx, 1);
     if (!skipStorage) saveNotesToStorage();
-    console.log('[DivNotes] Note deleted');
+    console.log('[Canopy] Note deleted');
   }
 }
 
 function moveNote(note: SavedNote) {
-  console.log('[DivNotes] Move mode activated');
+  console.log('[Canopy] Move mode activated');
 
   // Show a move-specific banner
   const banner = document.createElement('div');
@@ -482,22 +482,22 @@ function moveNote(note: SavedNote) {
 
   const onHover = (e: Event) => {
     const t = e.target as HTMLElement;
-    if (t === banner || t.classList.contains('divnotes-badge')) return;
-    t.classList.add('divnotes-highlight');
+    if (t === banner || t.classList.contains('canopy-badge')) return;
+    t.classList.add('canopy-highlight');
   };
   const onOut = (e: Event) => {
-    (e.target as HTMLElement).classList.remove('divnotes-highlight');
+    (e.target as HTMLElement).classList.remove('canopy-highlight');
   };
   const onPick = (e: Event) => {
     e.preventDefault();
     e.stopPropagation();
     const newEl = e.target as HTMLElement;
-    if (newEl === banner || newEl.classList.contains('divnotes-badge')) return;
-    newEl.classList.remove('divnotes-highlight');
+    if (newEl === banner || newEl.classList.contains('canopy-badge')) return;
+    newEl.classList.remove('canopy-highlight');
     cleanup();
 
     // Re-attach note to new element
-    note.element.classList.remove('divnotes-has-note');
+    note.element.classList.remove('canopy-has-note');
     note.element = newEl;
     note.elementSelector = getCssSelector(newEl);
     const tag = newEl.tagName.toLowerCase();
@@ -511,7 +511,7 @@ function moveNote(note: SavedNote) {
     if (note.badgeEl) note.badgeEl.remove();
     createNoteBadge(note);
     saveNotesToStorage();
-    console.log('[DivNotes] Note moved to', note.elementSelector);
+    console.log('[Canopy] Note moved to', note.elementSelector);
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') { cleanup(); }
@@ -543,12 +543,12 @@ function toggleAllNotes() {
       note.expandedEl = null;
     }
   });
-  console.log('[DivNotes] Notes visibility:', notesVisible);
+  console.log('[Canopy] Notes visibility:', notesVisible);
 }
 
 function toggleScreenShareMode() {
   screenShareMode = !screenShareMode;
-  console.log('[DivNotes] Screen Share Mode:', screenShareMode ? 'ON' : 'OFF');
+  console.log('[Canopy] Screen Share Mode:', screenShareMode ? 'ON' : 'OFF');
 
   savedNotes.forEach(note => {
     if (note.badgeEl) {
@@ -571,11 +571,11 @@ function toggleScreenShareMode() {
 }
 
 function clearAllBadges() {
-  if (divNotesHighlight) divNotesHighlight.clear();
+  if (canopyHighlight) canopyHighlight.clear();
   savedNotes.forEach(note => {
     if (note.badgeEl) { note.badgeEl.remove(); note.badgeEl = null; }
     if (note.expandedEl) { note.expandedEl.remove(); note.expandedEl = null; }
-    note.element.classList.remove('divnotes-has-note');
+    note.element.classList.remove('canopy-has-note');
   });
   savedNotes.length = 0;
 }
@@ -585,7 +585,7 @@ let lastSpaUrl = getPageUrl();
 function checkUrlChange() {
   const currentUrl = getPageUrl();
   if (currentUrl !== lastSpaUrl) {
-    console.log('[DivNotes] SPA navigation:', lastSpaUrl, '→', currentUrl);
+    console.log('[Canopy] SPA navigation:', lastSpaUrl, '→', currentUrl);
     lastSpaUrl = currentUrl;
     clearAllBadges();
     loadNotesFromStorage();
@@ -610,7 +610,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   if (noteEditorContainer) noteEditorContainer.remove();
 
   selectedElement = element;
-  selectedElement.classList.add('divnotes-selected');
+  selectedElement.classList.add('canopy-selected');
 
   const rect = element.getBoundingClientRect();
   const editorWidth = 380;
@@ -631,7 +631,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   const elInfo = `<${tag}${id}${cls}>${selectedText ? ` — selection: "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"` : ''}`;
 
   noteEditorContainer = document.createElement('div');
-  noteEditorContainer.id = 'divnotes-root';
+  noteEditorContainer.id = 'canopy-root';
   Object.assign(noteEditorContainer.style, {
     position: 'fixed', top: `${top}px`, left: `${left}px`,
     width: `${editorWidth}px`, zIndex: '2147483647',
@@ -646,7 +646,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     <div style="
       background: #18181b; border: 1px solid rgba(255,255,255,0.1);
       border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(139,92,246,0.2);
-      overflow: hidden; animation: divnotes-fadein 0.15s ease-out;
+      overflow: hidden; animation: canopy-fadein 0.15s ease-out;
     ">
       <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;">
         <div style="width: 6px; height: 6px; border-radius: 50%; background: #8b5cf6; box-shadow: 0 0 8px rgba(139,92,246,0.5);"></div>
@@ -657,12 +657,12 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         <span style="font-size: 10px; color: #52525b;">${window.location.hostname}</span>
       </div>
       
-      <div style="display: flex; padding: 4px 12px 0; gap: 2px;" id="divnotes-tabs">
+      <div style="display: flex; padding: 4px 12px 0; gap: 2px;" id="canopy-tabs">
         <button data-tab="write" style="padding:6px 14px;font-size:12px;font-weight:500;color:#fafafa;background:rgba(255,255,255,0.08);border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:'Inter',sans-serif;">Write</button>
         <button data-tab="preview" style="padding:6px 14px;font-size:12px;font-weight:500;color:#71717a;background:transparent;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:'Inter',sans-serif;">Preview</button>
       </div>
 
-      <div style="padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 2px;" id="divnotes-toolbar">
+      <div style="padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 2px;" id="canopy-toolbar">
         <button data-md="**" title="Bold" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">B</button>
         <button data-md="_" title="Italic" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-style:italic;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">I</button>
         <button data-md="\`" title="Code" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'SF Mono',monospace;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">&lt;&gt;</button>
@@ -670,8 +670,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         <button data-md="- " data-prefix="true" title="List" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">•</button>
       </div>
 
-      <div style="padding: 12px;" id="divnotes-write">
-        <textarea id="divnotes-textarea" placeholder="Write your note in Markdown..." style="
+      <div style="padding: 12px;" id="canopy-write">
+        <textarea id="canopy-textarea" placeholder="Write your note in Markdown..." style="
           width:100%;min-height:140px;max-height:300px;background:rgba(255,255,255,0.03);
           border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;font-size:13px;
           font-family:'Inter',system-ui,sans-serif;color:#fafafa;outline:none;resize:vertical;
@@ -679,22 +679,22 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         ">${prefillContent}</textarea>
       </div>
 
-      <div style="padding: 12px; display: none;" id="divnotes-preview">
-        <div id="divnotes-preview-content" style="
+      <div style="padding: 12px; display: none;" id="canopy-preview">
+        <div id="canopy-preview-content" style="
           min-height:140px;padding:12px;font-size:13px;line-height:1.7;color:#e4e4e7;
           background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.08);
         "><span style="color:#52525b">Nothing to preview</span></div>
       </div>
 
-      <div id="divnotes-folder-picker" style="border-top:1px solid rgba(255,255,255,0.06);"></div>
+      <div id="canopy-folder-picker" style="border-top:1px solid rgba(255,255,255,0.06);"></div>
 
       <div style="padding: 8px 12px 12px; display: flex; justify-content: flex-end; gap: 8px;">
-        <button id="divnotes-cancel" style="
+        <button id="canopy-cancel" style="
           padding:7px 16px;font-size:12px;font-weight:500;color:#a1a1aa;
           background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
           border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;
         ">Cancel</button>
-        <button id="divnotes-save" style="
+        <button id="canopy-save" style="
           padding:7px 20px;font-size:12px;font-weight:600;color:white;
           background:${prefillContent ? 'linear-gradient(135deg,#7c3aed,#6d28d9)' : '#27272a'};
           border:none;border-radius:7px;
@@ -738,7 +738,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     selectedFolderId = suggestedFolderId || (existingNote?.folderId ?? null);
 
     // Build folder picker UI
-    const pickerContainer = document.getElementById('divnotes-folder-picker');
+    const pickerContainer = document.getElementById('canopy-folder-picker');
     if (pickerContainer && folders.length > 0) {
       const selectedFolder = folders.find((f: any) => f.id === selectedFolderId);
       const displayName = selectedFolder ? selectedFolder.name : 'Inbox';
@@ -748,20 +748,20 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a1a1aa;flex-shrink:0;">
             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
           </svg>
-          <span id="divnotes-folder-name" style="font-size:11px;color:#d4d4d8;flex:1;">${displayName}</span>
-          <button id="divnotes-folder-change" style="font-size:10px;color:#7c3aed;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'Inter',sans-serif;">Change</button>
+          <span id="canopy-folder-name" style="font-size:11px;color:#d4d4d8;flex:1;">${displayName}</span>
+          <button id="canopy-folder-change" style="font-size:10px;color:#7c3aed;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'Inter',sans-serif;">Change</button>
         </div>
       `;
 
       // "Change" button opens folder tree dropdown
-      const changeBtn = document.getElementById('divnotes-folder-change');
+      const changeBtn = document.getElementById('canopy-folder-change');
       changeBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const existing = document.getElementById('divnotes-folder-dropdown');
+        const existing = document.getElementById('canopy-folder-dropdown');
         if (existing) { existing.remove(); return; }
 
         const dropdown = document.createElement('div');
-        dropdown.id = 'divnotes-folder-dropdown';
+        dropdown.id = 'canopy-folder-dropdown';
         Object.assign(dropdown.style, {
           maxHeight: '200px', overflow: 'auto',
           background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)',
@@ -781,7 +781,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         inboxRow.textContent = 'Inbox';
         inboxRow.addEventListener('click', () => {
           selectedFolderId = null;
-          const nameEl = document.getElementById('divnotes-folder-name');
+          const nameEl = document.getElementById('canopy-folder-name');
           if (nameEl) nameEl.textContent = 'Inbox';
           dropdown.remove();
         });
@@ -801,7 +801,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           row.textContent = folder.name;
           row.addEventListener('click', () => {
             selectedFolderId = folder.id;
-            const nameEl = document.getElementById('divnotes-folder-name');
+            const nameEl = document.getElementById('canopy-folder-name');
             if (nameEl) nameEl.textContent = folder.name;
             dropdown.remove();
           });
@@ -823,14 +823,14 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     }
   });
 
-  const textarea = document.getElementById('divnotes-textarea') as HTMLTextAreaElement;
-  const saveBtn = document.getElementById('divnotes-save') as HTMLButtonElement;
-  const cancelBtn = document.getElementById('divnotes-cancel') as HTMLButtonElement;
-  const writeArea = document.getElementById('divnotes-write')!;
-  const previewArea = document.getElementById('divnotes-preview')!;
-  const previewContent = document.getElementById('divnotes-preview-content')!;
-  const toolbar = document.getElementById('divnotes-toolbar')!;
-  const tabsContainer = document.getElementById('divnotes-tabs')!;
+  const textarea = document.getElementById('canopy-textarea') as HTMLTextAreaElement;
+  const saveBtn = document.getElementById('canopy-save') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('canopy-cancel') as HTMLButtonElement;
+  const writeArea = document.getElementById('canopy-write')!;
+  const previewArea = document.getElementById('canopy-preview')!;
+  const previewContent = document.getElementById('canopy-preview-content')!;
+  const toolbar = document.getElementById('canopy-toolbar')!;
+  const tabsContainer = document.getElementById('canopy-tabs')!;
 
   setTimeout(() => textarea.focus(), 50);
 
@@ -921,7 +921,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       createNoteBadge(note);
       if (note.selectedText) applyTextHighlight(note);
       saveNotesToStorage();
-      console.log('[DivNotes] Note saved! Total:', savedNotes.length);
+      console.log('[Canopy] Note saved! Total:', savedNotes.length);
 
       // Extract and sync hashtags
       const hashtags = extractHashtagsFromContent(val);
@@ -939,7 +939,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         note.expandedEl = null;
       }
       saveNotesToStorage();
-      console.log('[DivNotes] Note updated');
+      console.log('[Canopy] Note updated');
 
       // Extract and sync hashtags
       const hashtags = extractHashtagsFromContent(val);
@@ -970,7 +970,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
 function closeNoteEditor() {
   if (noteEditorContainer) { noteEditorContainer.remove(); noteEditorContainer = null; }
-  if (selectedElement) { selectedElement.classList.remove('divnotes-selected'); selectedElement = null; }
+  if (selectedElement) { selectedElement.classList.remove('canopy-selected'); selectedElement = null; }
 }
 
 // Safely render markdown
@@ -982,7 +982,7 @@ function simpleMarkdown(text: string): string {
       ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class'],
     });
   } catch (e) {
-    console.error('[DivNotes] Markdown parsing error', e);
+    console.error('[Canopy] Markdown parsing error', e);
     return DOMPurify.sanitize(text); // Fallback to raw sanitized text
   }
 }
@@ -999,7 +999,7 @@ function getCssSelector(el: HTMLElement): string {
       break;
     }
     if (current.className && typeof current.className === 'string') {
-      const classes = current.className.trim().split(/\s+/).filter(c => !c.startsWith('divnotes')).slice(0, 2);
+      const classes = current.className.trim().split(/\s+/).filter(c => !c.startsWith('canopy')).slice(0, 2);
       if (classes.length) selector += '.' + classes.join('.');
     }
     const parent = current.parentElement;
@@ -1138,13 +1138,13 @@ function loadNotesFromStorage() {
   chrome.storage.local.get(['divnotes_notes'], (result) => {
     const allNotes: StoredNote[] = result.divnotes_notes || [];
     const pageNotes = allNotes.filter(n => n.url === pageUrl);
-    console.log('[DivNotes] Loading', pageNotes.length, 'notes for this page');
+    console.log('[Canopy] Loading', pageNotes.length, 'notes for this page');
 
     pageNotes.forEach(stored => {
       try {
         const el = findMatchingElement(stored);
         if (!el) {
-          console.warn('[DivNotes] Element not found for note (all strategies failed):', stored.id);
+          console.warn('[Canopy] Element not found for note (all strategies failed):', stored.id);
           return;
         }
         const note: SavedNote = {
@@ -1171,7 +1171,7 @@ function loadNotesFromStorage() {
         createNoteBadge(note);
         if (note.selectedText) applyTextHighlight(note);
       } catch (err) {
-        console.warn('[DivNotes] Error restoring note:', err);
+        console.warn('[Canopy] Error restoring note:', err);
       }
     });
     updateNoteBadgeCount();
@@ -1180,7 +1180,7 @@ function loadNotesFromStorage() {
 
 // ==================== MESSAGE LISTENER ====================
 chrome.runtime.onMessage.addListener((message) => {
-  console.log('[DivNotes] Message:', message.type);
+  console.log('[Canopy] Message:', message.type);
   if (message.type === 'ACTIVATE_INSPECTOR') activateInspector();
   if (message.type === 'TOGGLE_NOTES') toggleAllNotes();
   if (message.type === 'TOGGLE_SCREEN_SHARE') toggleScreenShareMode();
@@ -1221,7 +1221,7 @@ chrome.runtime.onMessage.addListener((message) => {
         }, 400);
       }
     } catch (err) {
-      console.warn('[DivNotes] Could not scroll to element:', err);
+      console.warn('[Canopy] Could not scroll to element:', err);
     }
   }
 });
@@ -1240,7 +1240,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     // For any note currently in DOM that is NOT in new storage, remove it
     savedNotes.forEach(note => {
       if (!newPageNoteIds.has(note.id)) {
-        console.log('[DivNotes] Note removed externally:', note.id);
+        console.log('[Canopy] Note removed externally:', note.id);
         deleteNote(note.id, true); // skip storage sync as storage is already updated
       }
     });
@@ -1253,4 +1253,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-console.log('[DivNotes] Content script ready');
+console.log('[Canopy] Content script ready');
