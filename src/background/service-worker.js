@@ -1,21 +1,42 @@
 // DivNotes Service Worker (Background Script)
 // Plain JS — copied directly to dist (no build step)
 
+const ADD_NOTE_MENU_ID = 'divnotes-add-note';
+
+function registerSelectionContextMenu() {
+    chrome.contextMenus.removeAll(() => {
+        if (chrome.runtime.lastError) {
+            console.warn('Failed to clear DivNotes context menus:', chrome.runtime.lastError.message);
+        }
+
+        chrome.contextMenus.create(
+            {
+                id: ADD_NOTE_MENU_ID,
+                title: 'Add DivNote',
+                contexts: ['selection'],
+            },
+            () => {
+                if (chrome.runtime.lastError) {
+                    console.warn(
+                        'Failed to create DivNotes context menu:',
+                        chrome.runtime.lastError.message
+                    );
+                }
+            }
+        );
+    });
+}
+
 // Handle extension install — create context menu
 chrome.runtime.onInstalled.addListener(() => {
     console.log('DivNotes installed');
 
-    // Context menu for text selection
-    chrome.contextMenus.create({
-        id: 'divnotes-add-note',
-        title: 'Add DivNote',
-        contexts: ['selection'],
-    });
+    registerSelectionContextMenu();
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId === 'divnotes-add-note' && tab?.id) {
+    if (info.menuItemId === ADD_NOTE_MENU_ID && tab?.id) {
         chrome.tabs.sendMessage(tab.id, {
             type: 'ADD_SELECTION_NOTE',
             selectionText: info.selectionText || '',
@@ -87,6 +108,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const tags = result.divnotes_tags || [];
             const notes = result.divnotes_notes || [];
             const resolvedTagIds = [];
+            const newlyCreatedTagIds = new Set();
 
             for (const name of tagNames) {
                 const normalized = name.toLowerCase();
@@ -102,47 +124,61 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         updatedAt: new Date().toISOString(),
                     };
                     tags.push(tag);
+                    newlyCreatedTagIds.add(tag.id);
                 }
                 resolvedTagIds.push(tag.id);
             }
 
             const noteIdx = notes.findIndex(n => n.id === noteId);
+            const existingTags = noteIdx > -1 ? (notes[noteIdx].tags || []) : [];
             if (noteIdx > -1) {
                 // Merge with existing tags (don't overwrite manually-added tags)
-                const existingTags = notes[noteIdx].tags || [];
                 const merged = [...new Set([...existingTags, ...resolvedTagIds])];
                 notes[noteIdx].tags = merged;
             }
+
+            // Compute which note_tag associations are actually new
+            const newAssociations = resolvedTagIds.filter(id => !existingTags.includes(id));
 
             chrome.storage.local.set({
                 divnotes_tags: tags,
                 divnotes_notes: notes,
             }, () => {
-                // Enqueue cloud sync for new tags and note_tag associations
+                // Enqueue cloud sync only for new items
                 chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
                     const queue = syncRes.divnotes_sync_queue || [];
-                    for (const tag of tags) {
-                        // Queue save for any newly created tags
-                        if (resolvedTagIds.includes(tag.id)) {
+
+                    // De-duplicate helper: skip if queue already has matching entry
+                    const hasEntry = (entityType, action, entityId) =>
+                        queue.some(q => q.entityType === entityType && q.action === action && q.entityId === entityId);
+
+                    // Only enqueue tag:save for newly created tags
+                    for (const tagId of newlyCreatedTagIds) {
+                        if (!hasEntry('tag', 'save', tagId)) {
+                            const tag = tags.find(t => t.id === tagId);
                             queue.push({
                                 id: crypto.randomUUID(),
                                 entityType: 'tag',
                                 action: 'save',
-                                entityId: tag.id,
+                                entityId: tagId,
                                 payload: tag,
                                 timestamp: Date.now(),
                             });
                         }
                     }
-                    for (const tagId of resolvedTagIds) {
-                        queue.push({
-                            id: crypto.randomUUID(),
-                            entityType: 'note_tag',
-                            action: 'save',
-                            entityId: `${noteId}:${tagId}`,
-                            payload: { note_id: noteId, tag_id: tagId },
-                            timestamp: Date.now(),
-                        });
+                    // Only enqueue note_tag:save for associations that didn't exist before
+                    for (const tagId of newAssociations) {
+                        const entityId = `${noteId}:${tagId}`;
+                        if (!hasEntry('note_tag', 'save', entityId)) {
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'note_tag',
+                                action: 'save',
+                                entityId,
+                                payload: { note_id: noteId, tag_id: tagId },
+                                timestamp: Date.now(),
+                            });
+                        }
                     }
                     chrome.storage.local.set({ divnotes_sync_queue: queue }, () => {
                         sendResponse({ success: true, tagIds: resolvedTagIds });

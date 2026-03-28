@@ -188,11 +188,12 @@ export class CloudTagsService implements TagsService {
     const tag = await this.local.findOrCreate(name);
     // If it was just created locally, sync to cloud
     try {
-      await supabase.from('tags').upsert({
+      const { error } = await supabase.from('tags').upsert({
         id: tag.id, user_id: this.userId,
         name: tag.name, color: tag.color,
         created_at: tag.createdAt, updated_at: tag.updatedAt,
       });
+      if (error) throw error;
     } catch {
       await this.queueOperation('save', tag.id, tag);
     }
@@ -215,15 +216,17 @@ export class CloudTagsService implements TagsService {
 
     for (const tagId of added) {
       try {
-        await supabase.from('note_tags').insert({ note_id: noteId, tag_id: tagId });
+        const { error } = await supabase.from('note_tags').insert({ note_id: noteId, tag_id: tagId });
+        if (error) throw error;
       } catch {
         await this.queueOperation('save', `${noteId}:${tagId}`, { note_id: noteId, tag_id: tagId }, 'note_tag');
       }
     }
     for (const tagId of removed) {
       try {
-        await supabase.from('note_tags').delete()
+        const { error } = await supabase.from('note_tags').delete()
           .eq('note_id', noteId).eq('tag_id', tagId);
+        if (error) throw error;
       } catch {
         await this.queueOperation('delete', `${noteId}:${tagId}`, { note_id: noteId, tag_id: tagId }, 'note_tag');
       }

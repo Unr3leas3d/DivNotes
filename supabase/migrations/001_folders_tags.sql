@@ -34,17 +34,35 @@ ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned boolean DEFAULT false;
 
 -- RLS policies for folders
 ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY folders_user_policy ON folders FOR ALL USING (user_id = auth.uid());
+CREATE POLICY folders_user_select ON folders FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY folders_user_insert ON folders FOR INSERT WITH CHECK (
+  user_id = auth.uid()
+  AND (parent_id IS NULL OR parent_id IN (SELECT id FROM folders WHERE user_id = auth.uid()))
+);
+CREATE POLICY folders_user_update ON folders FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (
+  user_id = auth.uid()
+  AND (parent_id IS NULL OR parent_id IN (SELECT id FROM folders WHERE user_id = auth.uid()))
+);
+CREATE POLICY folders_user_delete ON folders FOR DELETE USING (user_id = auth.uid());
 
 -- RLS policies for tags
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tags_user_policy ON tags FOR ALL USING (user_id = auth.uid());
 
--- RLS for note_tags (user must own the note)
+-- RLS for note_tags (user must own both the note and the tag)
 ALTER TABLE note_tags ENABLE ROW LEVEL SECURITY;
 CREATE POLICY note_tags_user_policy ON note_tags FOR ALL
-  USING (note_id IN (SELECT id FROM notes WHERE user_id = auth.uid()))
-  WITH CHECK (note_id IN (SELECT id FROM notes WHERE user_id = auth.uid()));
+  USING (
+    note_id IN (SELECT id FROM notes WHERE user_id = auth.uid())
+    AND tag_id IN (SELECT id FROM tags WHERE user_id = auth.uid())
+  )
+  WITH CHECK (
+    note_id IN (SELECT id FROM notes WHERE user_id = auth.uid())
+    AND tag_id IN (SELECT id FROM tags WHERE user_id = auth.uid())
+  );
+
+-- Prevent duplicate tag names per user
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_user_name ON tags(user_id, lower(name));
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);

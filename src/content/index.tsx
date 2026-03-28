@@ -16,7 +16,9 @@ interface SavedNote {
   elementTextHash?: string;
   elementPosition?: string;
   selectedText?: string;
-  folderId?: string | null;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
   createdAt: string;
   badgeEl: HTMLElement | null;
   expandedEl: HTMLElement | null;
@@ -895,6 +897,9 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       elementInfo: elInfo,
       content: '',
       selectedText: selectedText,
+      folderId: null,
+      tags: [],
+      pinned: false,
       createdAt: new Date().toISOString(),
       badgeEl: null,
       expandedEl: null,
@@ -1104,9 +1109,9 @@ function saveNotesToStorage() {
     elementPosition: n.elementPosition,
     selectedText: n.selectedText,
     createdAt: n.createdAt,
-    folderId: n.folderId || null,
-    tags: [],
-    pinned: false,
+    folderId: n.folderId,
+    tags: n.tags,
+    pinned: n.pinned,
   }));
 
   // Merge with notes from other pages
@@ -1143,6 +1148,9 @@ function loadNotesFromStorage() {
           elementTextHash: stored.elementTextHash,
           elementPosition: stored.elementPosition,
           selectedText: stored.selectedText,
+          folderId: stored.folderId ?? null,
+          tags: stored.tags ?? [],
+          pinned: stored.pinned ?? false,
           createdAt: stored.createdAt,
           badgeEl: null,
           expandedEl: null,

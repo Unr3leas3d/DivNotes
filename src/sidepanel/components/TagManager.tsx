@@ -131,27 +131,24 @@ export function TagManager({ tags, onClose }: TagManagerProps) {
     );
     if (!confirmed) return;
 
-    // Read notes and reassign tags
+    const service = await getTagsService();
+
+    // Read notes and reassign tags, syncing each change via TagsService
     const result = await chrome.storage.local.get(['divnotes_notes']);
     const notes = result.divnotes_notes || [];
-    let changed = false;
 
     for (const note of notes) {
       if (note.tags?.includes(removeId)) {
-        note.tags = note.tags.filter((t: string) => t !== removeId);
-        if (!note.tags.includes(keepId)) {
-          note.tags.push(keepId);
+        const newTags = note.tags.filter((t: string) => t !== removeId);
+        if (!newTags.includes(keepId)) {
+          newTags.push(keepId);
         }
-        changed = true;
+        // Sync via TagsService so Supabase note_tags are updated
+        await service.setNoteTags(note.id, newTags);
       }
     }
 
-    if (changed) {
-      await chrome.storage.local.set({ divnotes_notes: notes });
-    }
-
-    // Delete the merged-away tag
-    const service = await getTagsService();
+    // Delete the merged-away tag (also removes from Supabase)
     await service.delete(removeId);
 
     setLocalTags((prev) => prev.filter((t) => t.id !== removeId));

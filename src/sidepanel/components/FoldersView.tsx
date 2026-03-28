@@ -10,6 +10,7 @@ import { buildFolderTree, getUnfiledNotes, countNotesInTree } from '@/lib/tree-u
 import { getNextOrder } from '@/lib/tag-utils';
 import { getFoldersService } from '@/lib/folders-service';
 import { getNotesService } from '@/lib/notes-service';
+import { getTagsService } from '@/lib/tags-service';
 import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
@@ -114,13 +115,13 @@ export function FoldersView({
       return;
     }
 
-    const service = await getNotesService();
+    const tagsService = await getTagsService();
     for (const noteId of selectedIds) {
       const note = notes.find(n => n.id === noteId);
       if (note) {
         const currentTags = note.tags || [];
         if (!currentTags.includes(tag.id)) {
-          await service.update(noteId, { tags: [...currentTags, tag.id] });
+          await tagsService.setNoteTags(noteId, [...new Set([...currentTags, tag.id])]);
         }
       }
     }
