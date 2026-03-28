@@ -4,7 +4,6 @@ import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
-    StickyNote,
     Search,
     Download,
 } from 'lucide-react';
@@ -112,11 +111,19 @@ export default function App() {
             {/* Header */}
             <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border/50">
                 <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/90 to-primary/60 flex items-center justify-center shadow-md shadow-primary/20">
-                        <StickyNote className="w-4.5 h-4.5 text-primary-foreground" />
+                    <div className="w-7 h-7 rounded-lg bg-[#052415] flex items-center justify-center flex-shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 68 68" fill="none">
+                            <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
+                            <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
+                            <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
+                            <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
+                            <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
+                        </svg>
                     </div>
                     <div className="flex-1">
-                        <h1 className="text-base font-semibold">DivNotes</h1>
+                        <h1 className="font-['Georgia',serif] text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
                         <p className="text-[11px] text-muted-foreground">
                             {notes.length} {notes.length === 1 ? 'note' : 'notes'} across{' '}
                             {new Set(notes.map(n => n.hostname)).size} sites
