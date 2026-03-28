@@ -1,49 +1,24 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import DOMPurify from 'dompurify';
-import { marked } from 'marked';
+import React, { useState, useEffect, useRef } from 'react';
 import { getNotesService, type NotesService } from '@/lib/notes-service';
+import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
     StickyNote,
     Search,
-    Globe,
-    ExternalLink,
-    FileText,
-    Trash2,
-    ChevronDown,
-    ChevronRight,
     Download,
 } from 'lucide-react';
-
-interface StoredNote {
-    id: string;
-    url: string;
-    hostname: string;
-    pageTitle: string;
-    elementSelector: string;
-    elementTag: string;
-    elementInfo: string;
-    content: string;
-    createdAt: string;
-}
-
-interface GroupedDomain {
-    domain: string;
-    pages: {
-        url: string;
-        title: string;
-        notes: StoredNote[];
-    }[];
-}
+import { SegmentedControl, type ViewMode } from './components/SegmentedControl';
+import { SitesView } from './components/SitesView';
+import { FoldersView } from './components/FoldersView';
+import { TagsView } from './components/TagsView';
 
 export default function App() {
+    const [viewMode, setViewMode] = useState<ViewMode>('sites');
     const [notes, setNotes] = useState<StoredNote[]>([]);
+    const [folders, setFolders] = useState<StoredFolder[]>([]);
+    const [tags, setTags] = useState<StoredTag[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
-    const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
     const [screenShareMode, setScreenShareMode] = useState(false);
     const serviceRef = useRef<NotesService | null>(null);
 
@@ -52,20 +27,26 @@ export default function App() {
         getNotesService().then(s => { serviceRef.current = s; });
     }, []);
 
-    // Load notes and screen share state from storage
+    // Load notes, folders, tags and screen share state from storage
     useEffect(() => {
-        chrome.storage.local.get(['divnotes_notes', 'divnotes_screen_share'], (result) => {
+        chrome.storage.local.get(['divnotes_notes', 'divnotes_folders', 'divnotes_tags', 'divnotes_screen_share'], (result) => {
             const allNotes: StoredNote[] = result.divnotes_notes || [];
             setNotes(allNotes);
+            setFolders(result.divnotes_folders || []);
+            setTags(result.divnotes_tags || []);
             setScreenShareMode(!!result.divnotes_screen_share);
-            const domains = new Set(allNotes.map(n => n.hostname));
-            setExpandedDomains(domains);
         });
 
         const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
             if (changes.divnotes_notes) {
                 const updated: StoredNote[] = changes.divnotes_notes.newValue || [];
                 setNotes(updated);
+            }
+            if (changes.divnotes_folders) {
+                setFolders(changes.divnotes_folders.newValue || []);
+            }
+            if (changes.divnotes_tags) {
+                setTags(changes.divnotes_tags.newValue || []);
             }
             if (changes.divnotes_screen_share) {
                 setScreenShareMode(!!changes.divnotes_screen_share.newValue);
@@ -74,70 +55,6 @@ export default function App() {
         chrome.storage.onChanged.addListener(listener);
         return () => chrome.storage.onChanged.removeListener(listener);
     }, []);
-
-    // Group notes by domain → page
-    const groupedDomains: GroupedDomain[] = useMemo(() => {
-        const domainMap = new Map<string, Map<string, StoredNote[]>>();
-
-        notes.forEach(note => {
-            if (!domainMap.has(note.hostname)) {
-                domainMap.set(note.hostname, new Map());
-            }
-            const pageMap = domainMap.get(note.hostname)!;
-            if (!pageMap.has(note.url)) {
-                pageMap.set(note.url, []);
-            }
-            pageMap.get(note.url)!.push(note);
-        });
-
-        return Array.from(domainMap.entries()).map(([domain, pageMap]) => ({
-            domain,
-            pages: Array.from(pageMap.entries()).map(([url, pageNotes]) => ({
-                url,
-                title: pageNotes[0]?.pageTitle || domain,
-                notes: pageNotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-            })),
-        })).sort((a, b) => a.domain.localeCompare(b.domain));
-    }, [notes]);
-
-    // Filter by search
-    const filteredDomains = useMemo(() => {
-        if (!searchQuery) return groupedDomains;
-        const q = searchQuery.toLowerCase();
-        return groupedDomains
-            .map(d => ({
-                ...d,
-                pages: d.pages
-                    .map(p => ({
-                        ...p,
-                        notes: p.notes.filter(n =>
-                            n.content.toLowerCase().includes(q) ||
-                            n.elementInfo.toLowerCase().includes(q) ||
-                            n.pageTitle.toLowerCase().includes(q)
-                        ),
-                    }))
-                    .filter(p => p.notes.length > 0),
-            }))
-            .filter(d => d.pages.length > 0 || d.domain.includes(q));
-    }, [groupedDomains, searchQuery]);
-
-    const toggleDomain = (domain: string) => {
-        setExpandedDomains(prev => {
-            const next = new Set(prev);
-            if (next.has(domain)) next.delete(domain);
-            else next.add(domain);
-            return next;
-        });
-    };
-
-    const toggleNote = (noteId: string) => {
-        setExpandedNotes(prev => {
-            const next = new Set(prev);
-            if (next.has(noteId)) next.delete(noteId);
-            else next.add(noteId);
-            return next;
-        });
-    };
 
     const handleDelete = async (noteId: string) => {
         // Delete via service (handles cloud sync if authenticated)
@@ -182,19 +99,6 @@ export default function App() {
         URL.revokeObjectURL(url);
     };
 
-    const simpleMarkdown = (text: string): string => {
-        try {
-            const rawHtml = marked.parse(text, { async: false }) as string;
-            return DOMPurify.sanitize(rawHtml, {
-                ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'code', 'pre', 'br', 'span', 'div', 'blockquote'],
-                ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class'],
-            });
-        } catch (e) {
-            console.error('[DivNotes] Markdown parsing error', e);
-            return DOMPurify.sanitize(text); // Fallback to raw sanitized text
-        }
-    };
-
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Screen Share Mode Banner */}
@@ -230,6 +134,11 @@ export default function App() {
                     </Button>
                 </div>
 
+                {/* Segmented Control */}
+                <div className="px-5 pb-3">
+                    <SegmentedControl value={viewMode} onChange={setViewMode} />
+                </div>
+
                 {/* Search */}
                 <div className="px-5 pb-4">
                     <div className="relative">
@@ -239,138 +148,45 @@ export default function App() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9 h-9 bg-muted/50 border-border/30"
+                            data-search-input
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Notes List */}
-            <div className="px-3 py-3">
-                {notes.length === 0 && (
-                    <div className="text-center py-16">
-                        <StickyNote className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground">No notes yet</p>
-                        <p className="text-[11px] text-muted-foreground/50 mt-1">
-                            Click the DivNotes icon → Select Element to start
-                        </p>
-                    </div>
-                )}
+            {/* View Content */}
+            {viewMode === 'sites' && (
+                <SitesView
+                    notes={notes}
+                    folders={folders}
+                    tags={tags}
+                    searchQuery={searchQuery}
+                    onDeleteNote={handleDelete}
+                    onNavigateNote={handleNavigate}
+                />
+            )}
 
-                {filteredDomains.length === 0 && notes.length > 0 && (
-                    <div className="text-center py-12">
-                        <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground">No notes match "{searchQuery}"</p>
-                    </div>
-                )}
+            {viewMode === 'folders' && (
+                <FoldersView
+                    notes={notes}
+                    folders={folders}
+                    tags={tags}
+                    searchQuery={searchQuery}
+                    onDeleteNote={handleDelete}
+                    onNavigateNote={handleNavigate}
+                />
+            )}
 
-                {filteredDomains.map(({ domain, pages }) => (
-                    <div key={domain} className="mb-2">
-                        {/* Domain Header */}
-                        <button
-                            onClick={() => toggleDomain(domain)}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors text-left group"
-                        >
-                            {expandedDomains.has(domain) ? (
-                                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                            ) : (
-                                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                            )}
-                            <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-sm font-medium flex-1 truncate">{domain}</span>
-                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                {pages.reduce((s, p) => s + p.notes.length, 0)}
-                            </span>
-                        </button>
-
-                        {/* Pages & Notes */}
-                        {expandedDomains.has(domain) && (
-                            <div className="ml-4 pl-3 border-l border-border/30">
-                                {pages.map((page) => (
-                                    <div key={page.url} className="mb-1">
-                                        <div className="flex items-center gap-2 px-3 py-1.5">
-                                            <FileText className="w-3 h-3 text-muted-foreground/60 shrink-0" />
-                                            <span className="text-xs text-muted-foreground truncate flex-1">
-                                                {page.title}
-                                            </span>
-                                            <a
-                                                href={page.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                            >
-                                                <ExternalLink className="w-3 h-3 text-muted-foreground/40 hover:text-muted-foreground" />
-                                            </a>
-                                        </div>
-
-                                        <div className="space-y-1.5 px-2 pb-2">
-                                            {page.notes.map((note) => (
-                                                <Card
-                                                    key={note.id}
-                                                    className="border-border/30 bg-card/30 hover:bg-card/50 transition-colors overflow-hidden"
-                                                >
-                                                    <CardContent className="p-0">
-                                                        <button
-                                                            onClick={() => toggleNote(note.id)}
-                                                            className="w-full text-left p-3"
-                                                        >
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                                                                    &lt;{note.elementTag}&gt;
-                                                                </span>
-                                                                <span className="text-[10px] text-muted-foreground truncate">
-                                                                    {note.elementInfo}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-xs text-foreground/80 line-clamp-2">
-                                                                {note.content.replace(/[*`#\[\]]/g, '').slice(0, 80)}
-                                                            </p>
-                                                            <span className="text-[10px] text-muted-foreground/40 mt-1 block">
-                                                                {new Date(note.createdAt).toLocaleDateString()}
-                                                            </span>
-                                                        </button>
-
-                                                        {expandedNotes.has(note.id) && (
-                                                            <div className="px-3 pb-3">
-                                                                <Separator className="mb-3 opacity-30" />
-                                                                <div
-                                                                    className="text-xs leading-relaxed"
-                                                                    dangerouslySetInnerHTML={{
-                                                                        __html: simpleMarkdown(note.content),
-                                                                    }}
-                                                                />
-                                                                <div className="flex justify-end mt-3 gap-2">
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="h-7 text-[11px] text-primary"
-                                                                        onClick={() => handleNavigate(note)}
-                                                                    >
-                                                                        <ExternalLink className="w-3 h-3 mr-1" />
-                                                                        Go to note
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="h-7 text-[11px] text-destructive hover:text-destructive"
-                                                                        onClick={() => handleDelete(note.id)}
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3 mr-1" />
-                                                                        Delete
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
+            {viewMode === 'tags' && (
+                <TagsView
+                    notes={notes}
+                    folders={folders}
+                    tags={tags}
+                    searchQuery={searchQuery}
+                    onDeleteNote={handleDelete}
+                    onNavigateNote={handleNavigate}
+                />
+            )}
         </div>
     );
 }

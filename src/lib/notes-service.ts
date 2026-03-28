@@ -1,33 +1,14 @@
 import { supabase } from './supabase';
+import { StoredNote, SyncQueueItem } from './types';
+export type { StoredNote, SyncQueueItem };
 
-export interface SyncQueueItem {
-    id: string;
-    action: 'save' | 'update' | 'delete';
-    noteId: string;
-    payload?: any;
-    timestamp: number;
-}
-
-// Shared note type used by storage and UI
-export interface StoredNote {
-    id: string;
-    url: string;
-    hostname: string;
-    pageTitle: string;
-    elementSelector: string;
-    elementTag: string;
-    elementInfo: string;
-    content: string;
-    color?: string;
-    tagLabel?: string;
-    elementXPath?: string;
-    elementTextHash?: string;
-    elementPosition?: string;
-    selectedText?: string;
-    createdAt: string;
-    folderId: string | null;
-    tags: string[];
-    pinned: boolean;
+export function withNoteDefaults(note: Partial<StoredNote> & { id: string }): StoredNote {
+    return {
+        ...note,
+        folderId: note.folderId ?? null,
+        tags: note.tags ?? [],
+        pinned: note.pinned ?? false,
+    } as StoredNote;
 }
 
 // ==================== INTERFACE ====================
@@ -98,18 +79,31 @@ export class CloudNotesService implements NotesService {
         setTimeout(() => this.processSyncQueue(), 1000);
     }
 
-    private async queueOperation(action: 'save' | 'update' | 'delete', noteId: string, payload?: any) {
+    private async queueOperation(
+        action: 'save' | 'update' | 'delete',
+        entityId: string,
+        payload?: any,
+        entityType: SyncQueueItem['entityType'] = 'note'
+    ) {
         return new Promise<void>((resolve) => {
             chrome.storage.local.get(['divnotes_sync_queue'], (res) => {
                 const queue: SyncQueueItem[] = res.divnotes_sync_queue || [];
-                queue.push({
+                // Migrate legacy items
+                const migrated = queue.map(item => {
+                    if (!item.entityType) {
+                        return { ...item, entityType: 'note' as const, entityId: (item as any).noteId };
+                    }
+                    return item;
+                });
+                migrated.push({
                     id: crypto.randomUUID(),
+                    entityType,
                     action,
-                    noteId,
+                    entityId,
                     payload,
                     timestamp: Date.now()
                 });
-                chrome.storage.local.set({ divnotes_sync_queue: queue }, resolve);
+                chrome.storage.local.set({ divnotes_sync_queue: migrated }, resolve);
             });
         });
     }
@@ -125,29 +119,99 @@ export class CloudNotesService implements NotesService {
                     return resolve();
                 }
 
-                console.log(`[DivNotes] Processing ${queue.length} offline sync operations...`);
+                // Migrate legacy items that lack entityType
+                const migratedQueue = queue.map(item => {
+                    if (!item.entityType) {
+                        return {
+                            ...item,
+                            entityType: 'note' as const,
+                            entityId: (item as any).noteId || item.entityId,
+                        };
+                    }
+                    return item;
+                });
+
+                console.log(`[DivNotes] Processing ${migratedQueue.length} offline sync operations...`);
                 const failedQueue: SyncQueueItem[] = [];
 
-                for (const item of queue) {
+                for (const item of migratedQueue) {
                     try {
-                        if (item.action === 'save' && item.payload) {
-                            const { error } = await supabase.from('notes').upsert(this.storedToDb(item.payload));
-                            if (error) throw error;
-                        } else if (item.action === 'update' && item.payload) {
-                            const { error } = await supabase.from('notes')
-                                .update(item.payload)
-                                .eq('id', item.noteId)
-                                .eq('user_id', this.userId);
-                            if (error) throw error;
-                        } else if (item.action === 'delete') {
-                            const { error } = await supabase.from('notes')
-                                .delete()
-                                .eq('id', item.noteId)
-                                .eq('user_id', this.userId);
-                            if (error) throw error;
+                        const entityType = item.entityType || 'note';
+
+                        if (entityType === 'note') {
+                            if (item.action === 'save' && item.payload) {
+                                const { error } = await supabase.from('notes').upsert(this.storedToDb(item.payload));
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('notes')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('notes')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'folder') {
+                            if (item.action === 'save' && item.payload) {
+                                const f = item.payload;
+                                const { error } = await supabase.from('folders').upsert({
+                                    id: f.id, user_id: this.userId, name: f.name,
+                                    parent_id: f.parentId, color: f.color, pinned: f.pinned || false,
+                                    order: f.order, created_at: f.createdAt, updated_at: f.updatedAt,
+                                });
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('folders')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('folders')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'tag') {
+                            if (item.action === 'save' && item.payload) {
+                                const t = item.payload;
+                                const { error } = await supabase.from('tags').upsert({
+                                    id: t.id, user_id: this.userId, name: t.name,
+                                    color: t.color, created_at: t.createdAt, updated_at: t.updatedAt,
+                                });
+                                if (error) throw error;
+                            } else if (item.action === 'update' && item.payload) {
+                                const { error } = await supabase.from('tags')
+                                    .update(item.payload)
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            } else if (item.action === 'delete') {
+                                const { error } = await supabase.from('tags')
+                                    .delete()
+                                    .eq('id', item.entityId)
+                                    .eq('user_id', this.userId);
+                                if (error) throw error;
+                            }
+                        } else if (entityType === 'note_tag') {
+                            if (item.action === 'save' && item.payload) {
+                                const { error } = await supabase.from('note_tags').upsert(item.payload);
+                                if (error) throw error;
+                            } else if (item.action === 'delete' && item.payload) {
+                                const { error } = await supabase.from('note_tags')
+                                    .delete()
+                                    .eq('note_id', item.payload.note_id)
+                                    .eq('tag_id', item.payload.tag_id);
+                                if (error) throw error;
+                            }
                         }
                     } catch (err) {
-                        console.warn(`[DivNotes] Sync operation [${item.action}] failed, keeping in queue`, err);
+                        console.warn(`[DivNotes] Sync operation [${item.entityType}:${item.action}] failed, keeping in queue`, err);
                         failedQueue.push(item);
                     }
                 }
@@ -283,7 +347,7 @@ export class CloudNotesService implements NotesService {
 
             if (error) throw error;
             if (data) {
-                const notes = data.map(this.dbToStored);
+                const notes = data.map(row => this.dbToStored(row));
                 // Update local cache
                 const allLocal = await this.local.getAll();
                 const otherPages = allLocal.filter(n => n.url !== url);
@@ -307,7 +371,7 @@ export class CloudNotesService implements NotesService {
 
             if (error) throw error;
             if (data) {
-                const notes = data.map(this.dbToStored);
+                const notes = data.map(row => this.dbToStored(row));
                 // Update full local cache
                 await chrome.storage.local.set({ divnotes_notes: notes });
                 return notes;

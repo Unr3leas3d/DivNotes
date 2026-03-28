@@ -102,6 +102,131 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'SYNC_NOTE_TAGS') {
+        const { noteId, tagNames } = message;
+        chrome.storage.local.get(['divnotes_tags', 'divnotes_notes'], (result) => {
+            const tags = result.divnotes_tags || [];
+            const notes = result.divnotes_notes || [];
+            const resolvedTagIds = [];
+            const newlyCreatedTagIds = new Set();
+
+            for (const name of tagNames) {
+                const normalized = name.toLowerCase();
+                let tag = tags.find(t => t.name.toLowerCase() === normalized);
+                if (!tag) {
+                    // Duplicated from src/lib/types.ts TAG_COLORS — keep in sync
+                    const TAG_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#a855f7','#ec4899'];
+                    tag = {
+                        id: crypto.randomUUID(),
+                        name: normalized,
+                        color: TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    };
+                    tags.push(tag);
+                    newlyCreatedTagIds.add(tag.id);
+                }
+                resolvedTagIds.push(tag.id);
+            }
+
+            const noteIdx = notes.findIndex(n => n.id === noteId);
+            const existingTags = noteIdx > -1 ? (notes[noteIdx].tags || []) : [];
+            if (noteIdx > -1) {
+                // Merge with existing tags (don't overwrite manually-added tags)
+                const merged = [...new Set([...existingTags, ...resolvedTagIds])];
+                notes[noteIdx].tags = merged;
+            }
+
+            // Compute which note_tag associations are actually new
+            const newAssociations = resolvedTagIds.filter(id => !existingTags.includes(id));
+
+            chrome.storage.local.set({
+                divnotes_tags: tags,
+                divnotes_notes: notes,
+            }, () => {
+                // Enqueue cloud sync only for new items
+                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                    const queue = syncRes.divnotes_sync_queue || [];
+
+                    // De-duplicate helper: skip if queue already has matching entry
+                    const hasEntry = (entityType, action, entityId) =>
+                        queue.some(q => q.entityType === entityType && q.action === action && q.entityId === entityId);
+
+                    // Only enqueue tag:save for newly created tags
+                    for (const tagId of newlyCreatedTagIds) {
+                        if (!hasEntry('tag', 'save', tagId)) {
+                            const tag = tags.find(t => t.id === tagId);
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'tag',
+                                action: 'save',
+                                entityId: tagId,
+                                payload: tag,
+                                timestamp: Date.now(),
+                            });
+                        }
+                    }
+                    // Only enqueue note_tag:save for associations that didn't exist before
+                    for (const tagId of newAssociations) {
+                        const entityId = `${noteId}:${tagId}`;
+                        if (!hasEntry('note_tag', 'save', entityId)) {
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'note_tag',
+                                action: 'save',
+                                entityId,
+                                payload: { note_id: noteId, tag_id: tagId },
+                                timestamp: Date.now(),
+                            });
+                        }
+                    }
+                    chrome.storage.local.set({ divnotes_sync_queue: queue }, () => {
+                        sendResponse({ success: true, tagIds: resolvedTagIds });
+                    });
+                });
+            });
+        });
+        return true;
+    }
+
+    if (message.type === 'CREATE_FOLDER') {
+        const { name, parentId } = message;
+        chrome.storage.local.get(['divnotes_folders'], (result) => {
+            const folders = result.divnotes_folders || [];
+            const siblings = folders.filter(f => f.parentId === parentId);
+            const order = siblings.length > 0 ? Math.max(...siblings.map(f => f.order)) + 1 : 0;
+            const folder = {
+                id: crypto.randomUUID(),
+                name,
+                parentId: parentId || null,
+                order,
+                color: null,
+                pinned: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            folders.push(folder);
+            chrome.storage.local.set({ divnotes_folders: folders }, () => {
+                // Enqueue cloud sync for the new folder
+                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                    const queue = syncRes.divnotes_sync_queue || [];
+                    queue.push({
+                        id: crypto.randomUUID(),
+                        entityType: 'folder',
+                        action: 'save',
+                        entityId: folder.id,
+                        payload: folder,
+                        timestamp: Date.now(),
+                    });
+                    chrome.storage.local.set({ divnotes_sync_queue: queue }, () => {
+                        sendResponse({ success: true, folder });
+                    });
+                });
+            });
+        });
+        return true;
+    }
+
     // Always send response for unhandled messages to avoid port closure errors
     sendResponse({ unhandled: true });
     return false;
