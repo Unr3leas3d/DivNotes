@@ -20,6 +20,9 @@ interface SavedNote {
   tags: string[];
   pinned: boolean;
   createdAt: string;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
   badgeEl: HTMLElement | null;
   expandedEl: HTMLElement | null;
 }
@@ -41,6 +44,9 @@ interface StoredNote {
   tags?: string[];
   pinned?: boolean;
   createdAt: string;
+  folderId: string | null;
+  tags: string[];
+  pinned: boolean;
 }
 
 function extractHashtagsFromContent(content: string): string[] {
@@ -901,6 +907,9 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       tags: [],
       pinned: false,
       createdAt: new Date().toISOString(),
+      folderId: null,
+      tags: [],
+      pinned: false,
       badgeEl: null,
       expandedEl: null,
     };
@@ -1152,6 +1161,9 @@ function loadNotesFromStorage() {
           tags: stored.tags ?? [],
           pinned: stored.pinned ?? false,
           createdAt: stored.createdAt,
+          folderId: stored.folderId ?? null,
+          tags: stored.tags ?? [],
+          pinned: stored.pinned ?? false,
           badgeEl: null,
           expandedEl: null,
         };
