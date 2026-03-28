@@ -1,24 +1,24 @@
-// DivNotes Service Worker (Background Script)
+// Canopy Service Worker (Background Script)
 // Plain JS — copied directly to dist (no build step)
 
-const ADD_NOTE_MENU_ID = 'divnotes-add-note';
+const ADD_NOTE_MENU_ID = 'canopy-add-note';
 
 function registerSelectionContextMenu() {
     chrome.contextMenus.removeAll(() => {
         if (chrome.runtime.lastError) {
-            console.warn('Failed to clear DivNotes context menus:', chrome.runtime.lastError.message);
+            console.warn('Failed to clear Canopy context menus:', chrome.runtime.lastError.message);
         }
 
         chrome.contextMenus.create(
             {
                 id: ADD_NOTE_MENU_ID,
-                title: 'Add DivNote',
+                title: 'Add Canopy Note',
                 contexts: ['selection'],
             },
             () => {
                 if (chrome.runtime.lastError) {
                     console.warn(
-                        'Failed to create DivNotes context menu:',
+                        'Failed to create Canopy context menu:',
                         chrome.runtime.lastError.message
                     );
                 }
@@ -29,7 +29,7 @@ function registerSelectionContextMenu() {
 
 // Handle extension install — create context menu
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('DivNotes installed');
+    console.log('Canopy installed');
 
     registerSelectionContextMenu();
 });
