@@ -161,7 +161,7 @@ export class CloudFoldersService implements FoldersService {
         return folders;
       }
     } catch {
-      console.warn('[DivNotes] Offline — using local folder cache');
+      console.warn('[Canopy] Offline — using local folder cache');
     }
     return this.local.getAll();
   }

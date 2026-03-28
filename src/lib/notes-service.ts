@@ -131,7 +131,7 @@ export class CloudNotesService implements NotesService {
                     return item;
                 });
 
-                console.log(`[DivNotes] Processing ${migratedQueue.length} offline sync operations...`);
+                console.log(`[Canopy] Processing ${migratedQueue.length} offline sync operations...`);
                 const failedQueue: SyncQueueItem[] = [];
 
                 for (const item of migratedQueue) {
@@ -211,14 +211,14 @@ export class CloudNotesService implements NotesService {
                             }
                         }
                     } catch (err) {
-                        console.warn(`[DivNotes] Sync operation [${item.entityType}:${item.action}] failed, keeping in queue`, err);
+                        console.warn(`[Canopy] Sync operation [${item.entityType}:${item.action}] failed, keeping in queue`, err);
                         failedQueue.push(item);
                     }
                 }
 
                 await new Promise<void>(r => chrome.storage.local.set({ divnotes_sync_queue: failedQueue }, r));
                 if (failedQueue.length === 0 && queue.length > 0) {
-                    console.log('[DivNotes] Sync queue processed successfully.');
+                    console.log('[Canopy] Sync queue processed successfully.');
                 }
                 this.syncP = null;
                 resolve();
@@ -280,7 +280,7 @@ export class CloudNotesService implements NotesService {
             // Optionally flush queue if we just succeeded online
             this.processSyncQueue();
         } catch (err) {
-            console.warn('[DivNotes] Offline — queuing save for later');
+            console.warn('[Canopy] Offline — queuing save for later');
             await this.queueOperation('save', note.id, note);
         }
     }
@@ -313,7 +313,7 @@ export class CloudNotesService implements NotesService {
             if (error) throw error;
             this.processSyncQueue();
         } catch (err) {
-            console.warn('[DivNotes] Offline — queuing update for later');
+            console.warn('[Canopy] Offline — queuing update for later');
             // We just queue the dbUpdates payload
             await this.queueOperation('update', id, dbUpdates);
         }
@@ -332,7 +332,7 @@ export class CloudNotesService implements NotesService {
             if (error) throw error;
             this.processSyncQueue();
         } catch (err) {
-            console.warn('[DivNotes] Offline — queuing delete for later');
+            console.warn('[Canopy] Offline — queuing delete for later');
             await this.queueOperation('delete', id);
         }
     }
@@ -356,7 +356,7 @@ export class CloudNotesService implements NotesService {
                 return notes;
             }
         } catch {
-            console.warn('[DivNotes] Offline — using local cache');
+            console.warn('[Canopy] Offline — using local cache');
         }
         return this.local.getForPage(url);
     }
@@ -377,7 +377,7 @@ export class CloudNotesService implements NotesService {
                 return notes;
             }
         } catch {
-            console.warn('[DivNotes] Offline — using local cache');
+            console.warn('[Canopy] Offline — using local cache');
         }
         return this.local.getAll();
     }

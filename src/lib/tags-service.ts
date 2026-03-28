@@ -178,7 +178,7 @@ export class CloudTagsService implements TagsService {
         return tags;
       }
     } catch {
-      console.warn('[DivNotes] Offline — using local tag cache');
+      console.warn('[Canopy] Offline — using local tag cache');
     }
     return this.local.getAll();
   }
