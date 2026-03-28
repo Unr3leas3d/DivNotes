@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "DivNotes",
-    "description": "Select any element on a webpage and create rich notes against it. Your web annotations, everywhere.",
+    "name": "Canopy",
+    "description": "Select any element on a webpage and attach notes directly to it. Think on top of the web.",
     "version": "1.0.0",
     "icons": {
         "16": "icons/icon-16.png",
@@ -14,7 +14,7 @@
             "16": "icons/icon-16.png",
             "48": "icons/icon-48.png"
         },
-        "default_title": "DivNotes"
+        "default_title": "Canopy"
     },
     "side_panel": {
         "default_path": "src/sidepanel/index.html"
