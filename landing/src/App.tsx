@@ -8,11 +8,19 @@ function App() {
 
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Highlighter className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[9px] bg-[#052415] flex items-center justify-center">
+            <svg width="22" height="22" viewBox="0 0 68 68" fill="none">
+              <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3" strokeLinecap="round"/>
+              <circle cx="6" cy="6" r="4.5" fill="#ABFFC0"/>
+              <circle cx="62" cy="6" r="4.5" fill="#ABFFC0"/>
+              <circle cx="62" cy="18" r="4" fill="#ABFFC0"/>
+            </svg>
           </div>
-          <span className="text-xl font-bold tracking-tight">DivNotes</span>
+          <span className="font-['Georgia',serif] text-[17px] text-[#052415] tracking-[-0.3px]">Canopy</span>
         </div>
 
       </nav>
@@ -25,11 +33,8 @@ function App() {
             <span>Now available on the Chrome Web Store</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8">
-            Your web annotations, <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
-              everywhere.
-            </span>
+          <h1 className="text-5xl md:text-7xl font-['Georgia',serif] tracking-tight mb-8">
+            Think on top of the web.
           </h1>
 
           <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
@@ -81,7 +86,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Simulated DivNotes Side Panel */}
+              {/* Simulated Canopy Side Panel */}
               <div className="col-span-1 border-l border-border/50 pl-6 space-y-4">
                 <div className="flex items-center gap-2 mb-6">
                   <MessageSquare className="w-4 h-4 text-primary" />
