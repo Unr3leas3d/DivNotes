@@ -91,7 +91,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `divnotes-export-${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `canopy-export-${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
         });
@@ -121,11 +121,11 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                             });
                         });
                     } else {
-                        console.error('[DivNotes] Invalid import file format');
+                        console.error('[Canopy] Invalid import file format');
                         setImporting(false);
                     }
                 } catch (err) {
-                    console.error('[DivNotes] Import error:', err);
+                    console.error('[Canopy] Import error:', err);
                     setImporting(false);
                 }
             };

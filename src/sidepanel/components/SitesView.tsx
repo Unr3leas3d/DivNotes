@@ -127,7 +127,7 @@ export function SitesView({
           <StickyNote className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No notes yet</p>
           <p className="text-[11px] text-muted-foreground/50 mt-1">
-            Click the DivNotes icon &rarr; Select Element to start
+            Click the Canopy icon &rarr; Select Element to start
           </p>
         </div>
       )}
