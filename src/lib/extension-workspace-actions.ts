@@ -1,3 +1,5 @@
+import type { MutableRefObject } from 'react';
+
 import { resetFoldersService } from './folders-service';
 import { resetNotesService } from './notes-service';
 import { resetTagsService } from './tags-service';
@@ -10,8 +12,8 @@ import {
 import type { AuthMode, WorkspaceAuth, WorkspaceData } from './extension-workspace-types';
 
 interface CreateExtensionWorkspaceActionsInput {
-  authMode: AuthMode;
-  data: WorkspaceData;
+  authModeRef: MutableRefObject<AuthMode>;
+  dataRef: MutableRefObject<WorkspaceData>;
   clearActionError: () => void;
   setActionError: (message: string) => void;
   setAuth: (auth: WorkspaceAuth) => void;
@@ -23,8 +25,8 @@ export function createExtensionWorkspaceActions(
   input: CreateExtensionWorkspaceActionsInput
 ) {
   const {
-    authMode,
-    data,
+    authModeRef,
+    dataRef,
     clearActionError,
     setActionError,
     setAuth,
@@ -71,6 +73,7 @@ export function createExtensionWorkspaceActions(
     exportNotes: async () => {
       clearActionError();
       try {
+        const data = dataRef.current;
         const payload = {
           version: 2,
           exportedAt: new Date().toISOString(),
@@ -156,7 +159,7 @@ export function createExtensionWorkspaceActions(
       clearActionError();
 
       try {
-        if (authMode === 'authenticated') {
+        if (authModeRef.current === 'authenticated') {
           await supabase.auth.signOut();
         }
         await chrome.storage.local.remove('divnotes_auth');

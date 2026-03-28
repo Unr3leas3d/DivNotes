@@ -94,10 +94,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === 'OPEN_POPUP') {
-        if (chrome.action?.openPopup) {
-            chrome.action.openPopup();
+        if (!chrome.action?.openPopup) {
+            sendResponse({ success: false, error: 'Popup opening is not supported in this browser context.' });
+            return true;
         }
-        sendResponse({ success: true });
+
+        Promise.resolve(chrome.action.openPopup())
+            .then(() => {
+                sendResponse({ success: true });
+            })
+            .catch((error) => {
+                sendResponse({
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to open popup.',
+                });
+            });
         return true;
     }
 

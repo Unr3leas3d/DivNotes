@@ -65,6 +65,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const authModeRef = useRef<AuthMode>('loading');
+  const dataRef = useRef<WorkspaceData>(emptyWorkspaceData());
 
   const clearActionError = useCallback(() => {
     setError((current) => ({ ...current, actions: null }));
@@ -77,6 +78,10 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
   useEffect(() => {
     authModeRef.current = auth.mode;
   }, [auth.mode]);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   useEffect(() => {
     let cancelled = false;
@@ -322,15 +327,15 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
   const actions = useMemo(
     () =>
       createExtensionWorkspaceActions({
-        authMode: auth.mode,
-        data,
+        authModeRef,
+        dataRef,
         clearActionError,
         setActionError,
         setAuth,
         setSelectedFolderId,
         setSelectedTagId,
       }),
-    [auth.mode, clearActionError, data, setActionError]
+    [clearActionError, setActionError]
   );
 
   return {

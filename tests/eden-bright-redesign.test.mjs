@@ -90,8 +90,11 @@ test('background worker keeps OPEN_POPUP support alongside ACTIVATE_INSPECTOR me
   const serviceWorker = read('src/background/service-worker.js');
 
   assert.ok(serviceWorker.includes("if (message.type === 'OPEN_POPUP')"));
-  assert.ok(serviceWorker.includes('chrome.action?.openPopup'));
-  assert.ok(serviceWorker.includes('chrome.action.openPopup()'));
+  assert.ok(serviceWorker.includes("if (!chrome.action?.openPopup)"));
+  assert.ok(serviceWorker.includes("sendResponse({ success: false, error: 'Popup opening is not supported in this browser context.' })"));
+  assert.ok(serviceWorker.includes('Promise.resolve(chrome.action.openPopup())'));
+  assert.ok(serviceWorker.includes('sendResponse({ success: true });'));
+  assert.ok(serviceWorker.includes('success: false,'));
   assert.ok(serviceWorker.includes("if (message.type === 'ACTIVATE_INSPECTOR')"));
   assert.ok(serviceWorker.includes("{ type: 'ACTIVATE_INSPECTOR' }"));
 });
