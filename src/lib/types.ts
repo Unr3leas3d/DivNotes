@@ -59,8 +59,8 @@ export interface FolderTreeNode {
   notes: StoredNote[];
 }
 
-// Tag color palette
+// Tag color palette — Eden Bright green variants
 export const TAG_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e',
-  '#3b82f6', '#6366f1', '#a855f7', '#ec4899',
+  '#052415', '#1a5c2e', '#3d8b5e', '#6ead71',
+  '#ABFFC0', '#0d9488', '#65784c', '#84cc16',
 ] as const;

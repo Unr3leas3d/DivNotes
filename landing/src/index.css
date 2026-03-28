@@ -1,32 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* We map the standard root to the Dark theme to keep the landing page sleek by default */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 5.5%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 5.5%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 262 83% 68%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 262 83% 68%;
-    --accent-foreground: 0 0% 98%;
+    --background: 50 14% 97%;
+    --foreground: 152 75% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 152 75% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 152 75% 8%;
+    --primary: 152 75% 8%;
+    --primary-foreground: 34 28% 94%;
+    --secondary: 152 75% 8% / 0.04;
+    --secondary-foreground: 152 75% 8%;
+    --muted: 152 75% 8% / 0.04;
+    --muted-foreground: 140 7% 51%;
+    --accent: 140 100% 80%;
+    --accent-foreground: 152 75% 8%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 68%;
-    --radius: 0.625rem;
+    --border: 152 75% 8% / 0.06;
+    --input: 152 75% 8% / 0.1;
+    --ring: 147 55% 23%;
+    --radius: 0.875rem;
   }
 }
 

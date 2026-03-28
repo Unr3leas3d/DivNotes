@@ -64,28 +64,28 @@ const highlightStyle = document.createElement('style');
 highlightStyle.id = 'canopy-styles';
 highlightStyle.textContent = `
   .canopy-highlight {
-    outline: 2px solid rgba(139, 92, 246, 0.8) !important;
+    outline: 2px solid rgba(26, 92, 46, 0.8) !important;
     outline-offset: 2px !important;
-    background-color: rgba(139, 92, 246, 0.08) !important;
+    background-color: rgba(171, 255, 192, 0.08) !important;
     transition: outline 0.15s ease, background-color 0.15s ease !important;
     cursor: crosshair !important;
   }
   .canopy-selected {
-    outline: 2px solid rgba(139, 92, 246, 1) !important;
+    outline: 2px solid #1a5c2e !important;
     outline-offset: 2px !important;
-    background-color: rgba(139, 92, 246, 0.12) !important;
+    background-color: rgba(171, 255, 192, 0.12) !important;
   }
   .canopy-has-note {
     position: relative !important;
   }
   ::highlight(canopy-text-selection) {
-    background-color: rgba(139, 92, 246, 0.3) !important;
-    border-bottom: 2px dashed rgba(139, 92, 246, 0.8);
+    background-color: rgba(171, 255, 192, 0.3) !important;
+    border-bottom: 2px dashed rgba(26, 92, 46, 0.8);
     color: inherit;
   }
   @keyframes canopy-pulse {
-    0%, 100% { box-shadow: 0 2px 12px rgba(124,58,237,0.4); }
-    50% { box-shadow: 0 2px 16px rgba(124,58,237,0.7); }
+    0%, 100% { box-shadow: 0 2px 8px rgba(5,36,21,0.2); }
+    50% { box-shadow: 0 2px 12px rgba(5,36,21,0.4); }
   }
   @keyframes canopy-fadein {
     from { opacity: 0; transform: scale(0.8) translateY(4px); }
@@ -233,15 +233,15 @@ function showStatusBanner() {
   statusBanner = document.createElement('div');
   statusBanner.id = 'canopy-banner';
   statusBanner.innerHTML = `
-    <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.6);display:inline-block;"></span>
+    <span style="width:8px;height:8px;border-radius:50%;background:#ABFFC0;box-shadow:0 0 8px rgba(171,255,192,0.6);display:inline-block;"></span>
     <span>Select an element · Press ESC to cancel</span>
   `;
   Object.assign(statusBanner.style, {
     position: 'fixed', top: '16px', right: '16px',
-    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white',
+    background: '#052415', color: '#F5EFE9',
     padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500',
-    fontFamily: "'Inter', system-ui, sans-serif", display: 'flex', alignItems: 'center',
-    gap: '8px', boxShadow: '0 4px 20px rgba(124,58,237,0.4)', zIndex: '2147483647',
+    fontFamily: 'system-ui, sans-serif', display: 'flex', alignItems: 'center',
+    gap: '8px', boxShadow: '0 4px 20px rgba(5,36,21,0.3)', zIndex: '2147483647',
   });
   document.body.appendChild(statusBanner);
 }
@@ -280,30 +280,37 @@ function createNoteBadge(note: SavedNote) {
     position: 'fixed',
     top: `${pos.top}px`,
     left: `${pos.left}px`,
-    width: '14px',
-    height: '14px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, #a78bfa 0%, #7c3aed 50%, #6d28d9 100%)',
-    border: '2px solid rgba(255,255,255,0.9)',
+    width: '22px',
+    height: '22px',
+    borderRadius: '7px',
+    background: '#052415',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     cursor: 'pointer',
     zIndex: '2147483645',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
     animation: 'canopy-pulse 2s infinite, canopy-fadein 0.25s ease-out',
-    boxShadow: '0 0 8px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.3)',
+    boxShadow: '0 2px 8px rgba(5,36,21,0.2)',
     pointerEvents: 'auto',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#ABFFC0',
+    fontFamily: 'system-ui, sans-serif',
   });
+  badge.textContent = '1';
   badge.title = 'Canopy';
 
   let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
   badge.addEventListener('mouseenter', () => {
-    badge.style.transform = 'scale(1.4)';
-    badge.style.boxShadow = '0 0 12px rgba(139,92,246,0.8), 0 0 30px rgba(139,92,246,0.5)';
+    badge.style.transform = 'scale(1.1)';
+    badge.style.boxShadow = '0 4px 16px rgba(5,36,21,0.3)';
     hoverTimeout = setTimeout(() => showNoteCard(note), 150);
   });
   badge.addEventListener('mouseleave', () => {
     badge.style.transform = 'scale(1)';
-    badge.style.boxShadow = '0 0 8px rgba(139,92,246,0.6), 0 0 20px rgba(139,92,246,0.3)';
+    badge.style.boxShadow = '0 2px 8px rgba(5,36,21,0.2)';
     if (hoverTimeout) { clearTimeout(hoverTimeout); hoverTimeout = null; }
     // Grace period — don't close if cursor moves to the card
     setTimeout(() => {
@@ -351,7 +358,7 @@ function showNoteCard(note: SavedNote) {
     left: `${left}px`,
     width: `${cardWidth}px`,
     zIndex: '2147483646',
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: 'system-ui, sans-serif',
     animation: 'canopy-fadein 0.15s ease-out',
     pointerEvents: 'auto',
   });
@@ -362,33 +369,33 @@ function showNoteCard(note: SavedNote) {
 
   card.innerHTML = `
     <div style="
-      background: #18181b; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15);
+      background: #FAFAF7; border: 1px solid rgba(5,36,21,0.06);
+      border-radius: 14px; box-shadow: 0 8px 32px rgba(5,36,21,0.12);
       overflow: hidden; width: 340px;
     ">
-      <div style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-size:10px;font-family:'SF Mono',monospace;color:#71717a;background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:3px;">
+      <div style="padding: 10px 14px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size:10px;font-family:'SF Mono',monospace;color:#7a8a7d;background:rgba(5,36,21,0.04);padding:2px 6px;border-radius:3px;">
           ${DOMPurify.sanitize(note.elementInfo)}
         </span>
-        <span style="font-size:10px;color:#3f3f46;">${displayDate}</span>
+        <span style="font-size:10px;color:#7a8a7d;">${displayDate}</span>
       </div>
 
-      <div style="padding: 14px; font-size: 13px; line-height: 1.7; color: #e4e4e7; max-height: 200px; overflow-y: auto;">
+      <div style="padding: 14px; font-size: 13px; line-height: 1.7; color: #052415; max-height: 200px; overflow-y: auto;">
         ${simpleMarkdown(note.content)}
       </div>
 
-      <div style="padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px; justify-content: flex-end;">
+      <div style="padding: 8px 14px; border-top: 1px solid rgba(5,36,21,0.06); display: flex; gap: 8px; justify-content: flex-end;">
         <button class="canopy-move-btn" style="
-          font-size:11px; color:#71717a; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif;
+          font-size:11px; color:#7a8a7d; background:transparent; border:none;
+          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif;
         ">Move</button>
         <button class="canopy-edit-btn" style="
-          font-size:11px; color:#71717a; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif;
+          font-size:11px; color:#7a8a7d; background:transparent; border:none;
+          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif;
         ">Edit</button>
         <button class="canopy-delete-btn" style="
-          font-size:11px; color:#ef4444; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:'Inter',sans-serif; opacity:0.7;
+          font-size:11px; color:#dc2626; background:transparent; border:none;
+          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif; opacity:0.7;
         ">Delete</button>
       </div>
     </div>
@@ -416,17 +423,17 @@ function showNoteCard(note: SavedNote) {
   // Hover effects on buttons
   card.querySelectorAll('.canopy-move-btn, .canopy-edit-btn').forEach(btn => {
     btn.addEventListener('mouseenter', (e) => {
-      (e.target as HTMLElement).style.color = '#fafafa';
-      (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+      (e.target as HTMLElement).style.color = '#052415';
+      (e.target as HTMLElement).style.background = 'rgba(5,36,21,0.04)';
     });
     btn.addEventListener('mouseleave', (e) => {
-      (e.target as HTMLElement).style.color = '#71717a';
+      (e.target as HTMLElement).style.color = '#7a8a7d';
       (e.target as HTMLElement).style.background = 'transparent';
     });
   });
   card.querySelector('.canopy-delete-btn')!.addEventListener('mouseenter', (e) => {
     (e.target as HTMLElement).style.opacity = '1';
-    (e.target as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
+    (e.target as HTMLElement).style.background = 'rgba(220,38,38,0.08)';
   });
   card.querySelector('.canopy-delete-btn')!.addEventListener('mouseleave', (e) => {
     (e.target as HTMLElement).style.opacity = '0.7';
@@ -472,10 +479,10 @@ function moveNote(note: SavedNote) {
   Object.assign(banner.style, {
     position: 'fixed', top: '0', left: '0', right: '0',
     zIndex: '2147483647', padding: '10px 16px',
-    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-    color: '#fff', fontFamily: "'Inter', system-ui, sans-serif",
+    background: '#052415',
+    color: '#F5EFE9', fontFamily: 'system-ui, sans-serif',
     fontSize: '13px', fontWeight: '500', textAlign: 'center',
-    boxShadow: '0 4px 20px rgba(124,58,237,0.4)',
+    boxShadow: '0 4px 20px rgba(5,36,21,0.3)',
   });
   banner.textContent = '🔀 Move note — click a new element (ESC to cancel)';
   document.body.appendChild(banner);
@@ -635,7 +642,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   Object.assign(noteEditorContainer.style, {
     position: 'fixed', top: `${top}px`, left: `${left}px`,
     width: `${editorWidth}px`, zIndex: '2147483647',
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: 'system-ui, sans-serif',
   });
 
   let selectedFolderId: string | null = existingNote?.folderId ?? null;
@@ -644,64 +651,65 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
   noteEditorContainer.innerHTML = `
     <div style="
-      background: #18181b; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(139,92,246,0.2);
+      background: #FAFAF7; border: 1px solid rgba(5,36,21,0.06);
+      border-radius: 14px; box-shadow: 0 8px 32px rgba(5,36,21,0.12);
       overflow: hidden; animation: canopy-fadein 0.15s ease-out;
     ">
-      <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;">
-        <div style="width: 6px; height: 6px; border-radius: 50%; background: #8b5cf6; box-shadow: 0 0 8px rgba(139,92,246,0.5);"></div>
-        <span style="font-size: 11px; font-family: 'SF Mono','Fira Code',monospace; color: #a1a1aa; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">
+      <div style="padding: 12px 16px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; align-items: center; gap: 8px;">
+        <div style="width: 18px; height: 18px; border-radius: 6px; background: linear-gradient(135deg, #052415, #1a5c2e);"></div>
+        <span style="font-size: 12px; font-weight: 600; color: #052415; flex: 1;">
+          ${existingNote ? 'Edit Note' : 'New Note'}
+        </span>
+        <span style="font-size: 10px; font-family: 'SF Mono',monospace; color: #7a8a7d; background: rgba(5,36,21,0.04); padding: 2px 8px; border-radius: 4px;">
           ${elInfo}
         </span>
-        <span style="flex: 1;"></span>
-        <span style="font-size: 10px; color: #52525b;">${window.location.hostname}</span>
       </div>
       
       <div style="display: flex; padding: 4px 12px 0; gap: 2px;" id="canopy-tabs">
-        <button data-tab="write" style="padding:6px 14px;font-size:12px;font-weight:500;color:#fafafa;background:rgba(255,255,255,0.08);border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:'Inter',sans-serif;">Write</button>
-        <button data-tab="preview" style="padding:6px 14px;font-size:12px;font-weight:500;color:#71717a;background:transparent;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:'Inter',sans-serif;">Preview</button>
+        <button data-tab="write" style="padding:6px 14px;font-size:12px;font-weight:500;color:#052415;background:rgba(5,36,21,0.04);border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:system-ui,sans-serif;">Write</button>
+        <button data-tab="preview" style="padding:6px 14px;font-size:12px;font-weight:500;color:#7a8a7d;background:transparent;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:system-ui,sans-serif;">Preview</button>
       </div>
 
-      <div style="padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 2px;" id="canopy-toolbar">
-        <button data-md="**" title="Bold" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">B</button>
-        <button data-md="_" title="Italic" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-style:italic;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">I</button>
-        <button data-md="\`" title="Code" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'SF Mono',monospace;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">&lt;&gt;</button>
-        <button data-md="## " data-prefix="true" title="Heading" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">H</button>
-        <button data-md="- " data-prefix="true" title="List" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#a1a1aa;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">•</button>
+      <div style="padding: 6px 12px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; gap: 2px;" id="canopy-toolbar">
+        <button data-md="**" title="Bold" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">B</button>
+        <button data-md="_" title="Italic" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-style:italic;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">I</button>
+        <button data-md="\`" title="Code" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'SF Mono',monospace;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">&lt;&gt;</button>
+        <button data-md="## " data-prefix="true" title="Heading" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">H</button>
+        <button data-md="- " data-prefix="true" title="List" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">•</button>
       </div>
 
       <div style="padding: 12px;" id="canopy-write">
         <textarea id="canopy-textarea" placeholder="Write your note in Markdown..." style="
-          width:100%;min-height:140px;max-height:300px;background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;font-size:13px;
-          font-family:'Inter',system-ui,sans-serif;color:#fafafa;outline:none;resize:vertical;
+          width:100%;min-height:140px;max-height:300px;background:#FFFFFF;
+          border:1px solid rgba(5,36,21,0.1);border-radius:8px;padding:12px;font-size:13px;
+          font-family:system-ui,sans-serif;color:#052415;outline:none;resize:vertical;
           line-height:1.6;box-sizing:border-box;
         ">${prefillContent}</textarea>
       </div>
 
       <div style="padding: 12px; display: none;" id="canopy-preview">
         <div id="canopy-preview-content" style="
-          min-height:140px;padding:12px;font-size:13px;line-height:1.7;color:#e4e4e7;
-          background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.08);
-        "><span style="color:#52525b">Nothing to preview</span></div>
+          min-height:140px;padding:12px;font-size:13px;line-height:1.7;color:#052415;
+          background:#FFFFFF;border-radius:8px;border:1px solid rgba(5,36,21,0.1);
+        "><span style="color:#7a8a7d">Nothing to preview</span></div>
       </div>
 
-      <div id="canopy-folder-picker" style="border-top:1px solid rgba(255,255,255,0.06);"></div>
+      <div id="canopy-folder-picker" style="border-top:1px solid rgba(5,36,21,0.06);"></div>
 
       <div style="padding: 8px 12px 12px; display: flex; justify-content: flex-end; gap: 8px;">
         <button id="canopy-cancel" style="
-          padding:7px 16px;font-size:12px;font-weight:500;color:#a1a1aa;
-          background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
-          border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;
+          padding:7px 16px;font-size:12px;font-weight:500;color:#7a8a7d;
+          background:rgba(5,36,21,0.04);border:1px solid rgba(5,36,21,0.06);
+          border-radius:10px;cursor:pointer;font-family:system-ui,sans-serif;
         ">Cancel</button>
         <button id="canopy-save" style="
-          padding:7px 20px;font-size:12px;font-weight:600;color:white;
-          background:${prefillContent ? 'linear-gradient(135deg,#7c3aed,#6d28d9)' : '#27272a'};
-          border:none;border-radius:7px;
+          padding:7px 20px;font-size:12px;font-weight:600;color:#F5EFE9;
+          background:${prefillContent ? '#052415' : 'rgba(5,36,21,0.1)'};
+          border:none;border-radius:10px;
           cursor:${prefillContent ? 'pointer' : 'not-allowed'};
-          font-family:'Inter',sans-serif;
+          font-family:system-ui,sans-serif;
           opacity:${prefillContent ? '1' : '0.5'};
-          box-shadow:${prefillContent ? '0 2px 12px rgba(124,58,237,0.3)' : 'none'};
+          box-shadow:${prefillContent ? '0 2px 8px rgba(5,36,21,0.2)' : 'none'};
         ">${existingNote ? 'Update Note' : 'Save Note'}</button>
       </div>
     </div>
@@ -748,8 +756,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a1a1aa;flex-shrink:0;">
             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
           </svg>
-          <span id="canopy-folder-name" style="font-size:11px;color:#d4d4d8;flex:1;">${displayName}</span>
-          <button id="canopy-folder-change" style="font-size:10px;color:#7c3aed;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'Inter',sans-serif;">Change</button>
+          <span id="canopy-folder-name" style="font-size:11px;color:#052415;flex:1;">${displayName}</span>
+          <button id="canopy-folder-change" style="font-size:10px;color:#1a5c2e;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:system-ui,sans-serif;">Change</button>
         </div>
       `;
 
@@ -764,7 +772,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         dropdown.id = 'canopy-folder-dropdown';
         Object.assign(dropdown.style, {
           maxHeight: '200px', overflow: 'auto',
-          background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)',
+          background: '#FFFFFF', border: '1px solid rgba(5,36,21,0.1)',
           borderRadius: '6px', margin: '4px 12px',
           padding: '4px 0',
         });
@@ -774,9 +782,9 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         Object.assign(inboxRow.style, {
           display: 'flex', alignItems: 'center', gap: '6px',
           width: '100%', padding: '6px 10px', border: 'none',
-          background: selectedFolderId === null ? 'rgba(124,58,237,0.15)' : 'transparent',
-          color: '#d4d4d8', fontSize: '11px', cursor: 'pointer',
-          fontFamily: "'Inter',sans-serif", textAlign: 'left',
+          background: selectedFolderId === null ? 'rgba(171,255,192,0.15)' : 'transparent',
+          color: '#052415', fontSize: '11px', cursor: 'pointer',
+          fontFamily: 'system-ui,sans-serif', textAlign: 'left',
         });
         inboxRow.textContent = 'Inbox';
         inboxRow.addEventListener('click', () => {
@@ -794,9 +802,9 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
             display: 'flex', alignItems: 'center', gap: '6px',
             width: '100%', padding: '6px 10px', border: 'none',
             paddingLeft: `${10 + depth * 16}px`,
-            background: selectedFolderId === folder.id ? 'rgba(124,58,237,0.15)' : 'transparent',
-            color: '#d4d4d8', fontSize: '11px', cursor: 'pointer',
-            fontFamily: "'Inter',sans-serif", textAlign: 'left',
+            background: selectedFolderId === folder.id ? 'rgba(171,255,192,0.15)' : 'transparent',
+            color: '#052415', fontSize: '11px', cursor: 'pointer',
+            fontFamily: 'system-ui,sans-serif', textAlign: 'left',
           });
           row.textContent = folder.name;
           row.addEventListener('click', () => {
@@ -836,31 +844,32 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
   textarea.addEventListener('input', () => {
     const hasContent = textarea.value.trim().length > 0;
-    saveBtn.style.background = hasContent ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : '#27272a';
+    saveBtn.style.background = hasContent ? '#052415' : 'rgba(5,36,21,0.1)';
     saveBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
     saveBtn.style.opacity = hasContent ? '1' : '0.5';
-    saveBtn.style.boxShadow = hasContent ? '0 2px 12px rgba(124,58,237,0.3)' : 'none';
+    saveBtn.style.boxShadow = hasContent ? '0 2px 8px rgba(5,36,21,0.2)' : 'none';
+    saveBtn.style.color = hasContent ? '#F5EFE9' : '#7a8a7d';
   });
 
-  textarea.addEventListener('focus', () => { textarea.style.borderColor = 'rgba(139,92,246,0.5)'; });
-  textarea.addEventListener('blur', () => { textarea.style.borderColor = 'rgba(255,255,255,0.08)'; });
+  textarea.addEventListener('focus', () => { textarea.style.borderColor = 'rgba(26,92,46,0.5)'; });
+  textarea.addEventListener('blur', () => { textarea.style.borderColor = 'rgba(5,36,21,0.1)'; });
 
   tabsContainer.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button');
     if (!btn) return;
     const tab = btn.getAttribute('data-tab');
     tabsContainer.querySelectorAll('button').forEach(b => {
-      (b as HTMLElement).style.color = '#71717a';
+      (b as HTMLElement).style.color = '#7a8a7d';
       (b as HTMLElement).style.background = 'transparent';
     });
-    btn.style.color = '#fafafa';
-    btn.style.background = 'rgba(255,255,255,0.08)';
+    btn.style.color = '#052415';
+    btn.style.background = 'rgba(5,36,21,0.04)';
     if (tab === 'write') {
       writeArea.style.display = 'block'; previewArea.style.display = 'none'; toolbar.style.display = 'flex';
     } else {
       writeArea.style.display = 'none'; previewArea.style.display = 'block'; toolbar.style.display = 'none';
       const md = textarea.value;
-      previewContent.innerHTML = md.trim() ? simpleMarkdown(md) : '<span style="color:#52525b">Nothing to preview</span>';
+      previewContent.innerHTML = md.trim() ? simpleMarkdown(md) : '<span style="color:#7a8a7d">Nothing to preview</span>';
     }
   });
 
@@ -907,9 +916,6 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       tags: [],
       pinned: false,
       createdAt: new Date().toISOString(),
-      folderId: null,
-      tags: [],
-      pinned: false,
       badgeEl: null,
       expandedEl: null,
     };
@@ -1161,9 +1167,6 @@ function loadNotesFromStorage() {
           tags: stored.tags ?? [],
           pinned: stored.pinned ?? false,
           createdAt: stored.createdAt,
-          folderId: stored.folderId ?? null,
-          tags: stored.tags ?? [],
-          pinned: stored.pinned ?? false,
           badgeEl: null,
           expandedEl: null,
         };
@@ -1206,9 +1209,9 @@ chrome.runtime.onMessage.addListener((message) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Flash highlight
         el.style.transition = 'outline 0.3s ease, background-color 0.3s ease';
-        el.style.outline = '2px solid rgba(139, 92, 246, 0.9)';
+        el.style.outline = '2px solid rgba(26, 92, 46, 0.9)';
         el.style.outlineOffset = '3px';
-        el.style.backgroundColor = 'rgba(139, 92, 246, 0.08)';
+        el.style.backgroundColor = 'rgba(171, 255, 192, 0.08)';
         setTimeout(() => {
           el.style.outline = '';
           el.style.outlineOffset = '';

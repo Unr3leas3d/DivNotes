@@ -123,7 +123,7 @@ export default function App() {
                         </svg>
                     </div>
                     <div className="flex-1">
-                        <h1 className="font-['Georgia',serif] text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
+                        <h1 className="font-serif text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
                         <p className="text-[11px] text-muted-foreground">
                             {notes.length} {notes.length === 1 ? 'note' : 'notes'} across{' '}
                             {new Set(notes.map(n => n.hostname)).size} sites

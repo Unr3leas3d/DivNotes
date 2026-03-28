@@ -48,11 +48,12 @@ export default {
                 sm: 'calc(var(--radius) - 4px)',
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
+                sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                serif: ['Georgia', 'serif'],
             },
             keyframes: {
                 'fade-in': {
-                    '0%': { opacity: '0', transform: 'translateY(4px)' },
+                    '0%': { opacity: '0', transform: 'translateY(24px)' },
                     '100%': { opacity: '1', transform: 'translateY(0)' },
                 },
                 'scale-in': {
@@ -63,11 +64,31 @@ export default {
                     '0%': { opacity: '0', transform: 'translateY(8px)' },
                     '100%': { opacity: '1', transform: 'translateY(0)' },
                 },
+                'float-slow': {
+                    '0%, 100%': { transform: 'translateY(-20px) rotate(-1deg)' },
+                    '50%': { transform: 'translateY(20px) rotate(1deg)' },
+                },
+                'float-medium': {
+                    '0%, 100%': { transform: 'translateY(-14px)' },
+                    '50%': { transform: 'translateY(14px)' },
+                },
+                'float-fast': {
+                    '0%, 100%': { transform: 'translateY(-8px)' },
+                    '50%': { transform: 'translateY(8px)' },
+                },
             },
             animation: {
-                'fade-in': 'fade-in 0.2s ease-out',
+                'fade-in': 'fade-in 0.8s ease',
                 'scale-in': 'scale-in 0.15s ease-out',
                 'slide-up': 'slide-up 0.25s ease-out',
+                'float-slow': 'float-slow 8s ease-in-out infinite',
+                'float-medium': 'float-medium 6s ease-in-out infinite',
+                'float-fast': 'float-fast 4s ease-in-out infinite',
+            },
+            boxShadow: {
+                'card': '0 2px 8px rgba(5,36,21,0.04)',
+                'elevated': '0 8px 32px rgba(5,36,21,0.12)',
+                'hero': '0 16px 64px rgba(5,36,21,0.08)',
             },
         },
     },

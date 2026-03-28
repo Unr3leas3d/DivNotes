@@ -25,8 +25,8 @@ export function SegmentedControl({ value, onChange }: SegmentedControlProps) {
           className={cn(
             'flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-medium rounded-md transition-all',
             value === item.value
-              ? 'bg-primary/20 text-primary font-semibold'
-              : 'text-muted-foreground/40 hover:text-muted-foreground/60'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-card'
+              : 'bg-muted text-foreground hover:bg-secondary'
           )}
         >
           <item.icon className="w-3.5 h-3.5" />

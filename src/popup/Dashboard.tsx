@@ -160,7 +160,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         </svg>
                     </div>
                     <div>
-                        <h1 className="font-['Georgia',serif] text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
+                        <h1 className="font-serif text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
                         <p className="text-[11px] text-muted-foreground truncate max-w-[180px] flex items-center gap-1">
                             {isLocalMode && <HardDrive className="w-3 h-3" />}
                             {email}
