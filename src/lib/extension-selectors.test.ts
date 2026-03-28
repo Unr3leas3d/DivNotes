@@ -129,12 +129,15 @@ test('selectThisPageNotes filters by normalized current page url and newest-firs
 test('groupNotesByHostname returns compact grouped rows for the all-notes view', () => {
   const groups = groupNotesByHostname(sampleNotes);
   assert.equal(groups[0]?.hostname, 'app.example.com');
-  assert.equal(groups[0]?.notes.length, 2);
+  assert.equal(groups[0]?.count, 2);
+  assert.equal(groups[0]?.noteIds[0], 'note-2');
+  assert.equal('notes' in groups[0]!, false);
 });
 
 test('buildTagSummaries computes counts and filtered note ids', () => {
   const summaries = buildTagSummaries(sampleTags, sampleNotes);
   assert.equal(summaries[0]?.count, 3);
+  assert.deepEqual(summaries[0]?.noteIds, ['note-2', 'note-1', 'note-3']);
 });
 
 test('buildViewCounts returns shared pill counts for popup and side panel', () => {

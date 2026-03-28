@@ -2,7 +2,10 @@ import type { StoredFolder, StoredNote, StoredTag } from './types';
 
 export interface DomainGroup {
   hostname: string;
-  notes: StoredNote[];
+  count: number;
+  noteIds: string[];
+  pageTitle: string;
+  latestNoteAt: string;
 }
 
 export interface FolderSummary {
@@ -76,12 +79,18 @@ export function groupNotesByHostname(notes: StoredNote[]): DomainGroup[] {
   }
 
   return [...groups.entries()]
-    .map(([hostname, groupedNotes]) => ({
-      hostname,
-      notes: sortNotesNewestFirst(groupedNotes),
-    }))
+    .map(([hostname, groupedNotes]) => {
+      const sortedNotes = sortNotesNewestFirst(groupedNotes);
+      return {
+        hostname,
+        count: sortedNotes.length,
+        noteIds: sortedNotes.map((note) => note.id),
+        pageTitle: sortedNotes[0]?.pageTitle || hostname,
+        latestNoteAt: sortedNotes[0]?.createdAt || '',
+      };
+    })
     .sort((left, right) => {
-      const countDiff = right.notes.length - left.notes.length;
+      const countDiff = right.count - left.count;
       if (countDiff !== 0) {
         return countDiff;
       }
