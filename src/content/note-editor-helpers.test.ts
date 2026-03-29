@@ -3,7 +3,12 @@ import test from 'node:test';
 
 import {
   createFolderPickerHeader,
+  formatEditorContent,
+  getFolderChipLabel,
   getInitialSelectedFolderId,
+  getTagChipLabels,
+  hasMeaningfulEditorContent,
+  parseEditorDraft,
   savePageNotesToStorage,
 } from './note-editor-helpers.ts';
 
@@ -57,6 +62,43 @@ test('getInitialSelectedFolderId preserves an existing note folder over auto-sug
   );
 });
 
+test('hasMeaningfulEditorContent disables save when title and body are blank', () => {
+  assert.equal(
+    hasMeaningfulEditorContent({
+      title: '   ',
+      body: '\n\n  ',
+    }),
+    false
+  );
+  assert.equal(
+    hasMeaningfulEditorContent({
+      title: 'CTA follow-up',
+      body: '   ',
+    }),
+    true
+  );
+  assert.equal(
+    hasMeaningfulEditorContent({
+      title: '   ',
+      body: 'Body copy only',
+    }),
+    true
+  );
+});
+
+test('formatEditorContent and parseEditorDraft round-trip title and body', () => {
+  const content = formatEditorContent({
+    title: 'Launch checklist',
+    body: 'Tighten the hero copy before handoff.',
+  });
+
+  assert.equal(content, '# Launch checklist\n\nTighten the hero copy before handoff.');
+  assert.deepEqual(parseEditorDraft(content), {
+    title: 'Launch checklist',
+    body: 'Tighten the hero copy before handoff.',
+  });
+});
+
 test('getInitialSelectedFolderId allows auto-suggest for an unfiled existing note', () => {
   assert.equal(
     getInitialSelectedFolderId({
@@ -66,6 +108,47 @@ test('getInitialSelectedFolderId allows auto-suggest for an unfiled existing not
     }),
     'suggested-folder'
   );
+});
+
+test('getInitialSelectedFolderId uses the suggested folder for new notes', () => {
+  assert.equal(
+    getInitialSelectedFolderId({
+      isNew: true,
+      existingFolderId: 'existing-folder',
+      suggestedFolderId: 'suggested-folder',
+    }),
+    'suggested-folder'
+  );
+  assert.equal(
+    getInitialSelectedFolderId({
+      isNew: true,
+      existingFolderId: null,
+      suggestedFolderId: null,
+    }),
+    null
+  );
+});
+
+test('getFolderChipLabel returns the selected folder name and falls back to Inbox', () => {
+  assert.equal(
+    getFolderChipLabel(
+      [
+        { id: 'folder-1', name: 'Product' },
+        { id: 'folder-2', name: 'QA' },
+      ],
+      'folder-2'
+    ),
+    'QA'
+  );
+  assert.equal(
+    getFolderChipLabel([{ id: 'folder-1', name: 'Product' }], 'missing-folder'),
+    'Inbox'
+  );
+  assert.equal(getFolderChipLabel([], null), 'Inbox');
+});
+
+test('getTagChipLabels normalizes chip labels for display', () => {
+  assert.deepEqual(getTagChipLabels(['launch', '#copy', 'launch', '']), ['#launch', '#copy']);
 });
 
 test('createFolderPickerHeader uses textContent for the folder name', () => {
@@ -156,5 +239,69 @@ test('savePageNotesToStorage resolves only after the storage write completes', a
   assert.deepEqual(
     storageState.divnotes_notes.map((note: { id: string }) => note.id),
     ['other-note', 'page-note']
+  );
+});
+
+test('savePageNotesToStorage preserves notes from other pages when the current page is cleared', async () => {
+  const storageState = {
+    divnotes_notes: [
+      {
+        id: 'other-page-note',
+        url: 'https://example.com/other',
+        hostname: 'example.com',
+        pageTitle: 'Other',
+        elementSelector: '.other',
+        elementTag: 'div',
+        elementInfo: 'Other',
+        content: 'Keep me',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        folderId: 'folder-2',
+        tags: ['tag-9'],
+        pinned: false,
+      },
+      {
+        id: 'current-page-note',
+        url: 'https://example.com/current',
+        hostname: 'example.com',
+        pageTitle: 'Current',
+        elementSelector: '.current',
+        elementTag: 'article',
+        elementInfo: 'Current',
+        content: 'Remove me',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        folderId: null,
+        tags: [],
+        pinned: false,
+      },
+    ],
+  };
+
+  const merged = await savePageNotesToStorage({
+    savedNotes: [],
+    pageUrl: 'https://example.com/current',
+    hostname: 'example.com',
+    pageTitle: 'Current',
+    storage: {
+      get(_keys, callback) {
+        callback({ ...storageState });
+      },
+      set(
+        items: { divnotes_notes: typeof storageState.divnotes_notes },
+        callback?: () => void
+      ) {
+        Object.assign(storageState, items);
+        callback?.();
+      },
+    },
+    updateBadgeCount() {},
+  });
+
+  assert.deepEqual(
+    merged.map((note) => note.id),
+    ['other-page-note']
+  );
+  assert.deepEqual(
+    storageState.divnotes_notes.map((note: { id: string }) => note.id),
+    ['other-page-note']
   );
 });

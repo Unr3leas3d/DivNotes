@@ -1,4 +1,4 @@
-import type { StoredNote } from '../lib/types.ts';
+import type { StoredFolder, StoredNote } from '../lib/types.ts';
 
 type DomainNoteLike = Pick<StoredNote, 'hostname' | 'folderId'>;
 
@@ -39,6 +39,11 @@ type StorageLike = {
     callback: (items: { divnotes_notes?: StoredNote[] }) => void
   ): void;
   set(items: { divnotes_notes: StoredNote[] }, callback?: () => void): void;
+};
+
+type EditorDraft = {
+  title: string;
+  body: string;
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -87,6 +92,75 @@ export function getInitialSelectedFolderId({
   }
 
   return existingFolderId ?? suggestedFolderId ?? null;
+}
+
+export function hasMeaningfulEditorContent({ title, body }: EditorDraft): boolean {
+  return title.trim().length > 0 || body.trim().length > 0;
+}
+
+export function formatEditorContent({ title, body }: EditorDraft): string {
+  const trimmedTitle = title.trim();
+  const trimmedBody = body.trim();
+
+  if (!trimmedTitle) {
+    return trimmedBody;
+  }
+
+  if (!trimmedBody) {
+    return `# ${trimmedTitle}`;
+  }
+
+  return `# ${trimmedTitle}\n\n${trimmedBody}`;
+}
+
+export function parseEditorDraft(content: string): EditorDraft {
+  const normalized = content.replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    return { title: '', body: '' };
+  }
+
+  const [firstLine, ...remainingLines] = normalized.split('\n');
+  if (!firstLine) {
+    return { title: '', body: normalized };
+  }
+
+  const titleMatch = firstLine.match(/^#\s+(.+)$/);
+  if (!titleMatch) {
+    return { title: '', body: normalized };
+  }
+
+  return {
+    title: titleMatch[1]?.trim() ?? '',
+    body: remainingLines.join('\n').replace(/^\n+/, '').trim(),
+  };
+}
+
+export function getFolderChipLabel(
+  folders: ReadonlyArray<Pick<StoredFolder, 'id' | 'name'>>,
+  selectedFolderId: string | null
+): string {
+  if (!selectedFolderId) {
+    return 'Inbox';
+  }
+
+  return folders.find((folder) => folder.id === selectedFolderId)?.name ?? 'Inbox';
+}
+
+export function getTagChipLabels(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  for (const tag of tags) {
+    const normalized = tag.trim().replace(/^#+/, '').toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    labels.push(`#${normalized}`);
+  }
+
+  return labels;
 }
 
 export function createFolderPickerHeader(
@@ -179,6 +253,7 @@ export function savePageNotesToStorage({
   pageTitle,
   storage,
   updateBadgeCount,
+  getLastError,
 }: {
   savedNotes: readonly SavedNoteForStorage[];
   pageUrl: string;
@@ -186,6 +261,7 @@ export function savePageNotesToStorage({
   pageTitle: string;
   storage: StorageLike;
   updateBadgeCount: () => void;
+  getLastError?: () => Error | undefined;
 }): Promise<StoredNote[]> {
   const storedNotes = mapSavedNotesToStoredNotes({
     savedNotes,
@@ -194,13 +270,25 @@ export function savePageNotesToStorage({
     pageTitle,
   });
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     storage.get(['divnotes_notes'], (result) => {
+      const readError = getLastError?.();
+      if (readError) {
+        reject(readError);
+        return;
+      }
+
       const allNotes: StoredNote[] = result.divnotes_notes || [];
       const otherPageNotes = allNotes.filter((note) => note.url !== pageUrl);
       const merged = [...otherPageNotes, ...storedNotes];
 
       storage.set({ divnotes_notes: merged }, () => {
+        const writeError = getLastError?.();
+        if (writeError) {
+          reject(writeError);
+          return;
+        }
+
         updateBadgeCount();
         resolve(merged);
       });

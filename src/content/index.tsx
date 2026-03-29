@@ -2,6 +2,18 @@
 // Pure DOM for inspector, note editor, and note badges
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import type { StoredFolder } from '../lib/types.ts';
+import { createEditorSurface, createTagRow } from './editor-surface.ts';
+import {
+  formatEditorContent,
+  getFolderChipLabel,
+  getInitialSelectedFolderId,
+  getSuggestedFolderIdForDomain,
+  getTagChipLabels,
+  hasMeaningfulEditorContent,
+  parseEditorDraft,
+  savePageNotesToStorage,
+} from './note-editor-helpers.ts';
 import {
   createHoverSelectorPill,
   createNotePreviewCardShell,
@@ -148,6 +160,7 @@ let selectorGuide: HTMLElement | null = null;
 let selectorPill: HTMLElement | null = null;
 let pageNoteCountPill: HTMLElement | null = null;
 let noteEditorContainer: HTMLElement | null = null;
+let noteEditorKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 const savedNotes: SavedNote[] = [];
 let notesVisible = true;
 let screenShareMode = false;
@@ -680,15 +693,60 @@ history.replaceState = function (...args: Parameters<typeof history.replaceState
 window.addEventListener('popstate', () => setTimeout(checkUrlChange, 0));
 
 // ==================== NOTE EDITOR (Pure DOM) ====================
+function normalizeTagName(tag: string): string {
+  return tag.trim().replace(/^#+/, '').toLowerCase();
+}
+
+function buildEditorTagNames(
+  manualTags: readonly string[],
+  draft: { title: string; body: string }
+): string[] {
+  return Array.from(
+    new Set([
+      ...manualTags.map(normalizeTagName).filter(Boolean),
+      ...extractHashtagsFromContent(formatEditorContent(draft)),
+    ])
+  );
+}
+
+function applySaveButtonState(button: HTMLButtonElement, enabled: boolean) {
+  button.disabled = !enabled;
+  button.style.background = enabled ? '#052415' : 'rgba(5,36,21,0.1)';
+  button.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  button.style.opacity = enabled ? '1' : '0.5';
+  button.style.color = enabled ? '#F5EFE9' : '#7a8a7d';
+}
+
+function getStorageRuntimeError(): Error | undefined {
+  const runtimeError = chrome.runtime.lastError;
+  if (!runtimeError) {
+    return undefined;
+  }
+
+  return new Error(runtimeError.message);
+}
+
+function persistSavedNotes(notesToSave: readonly SavedNote[]) {
+  return savePageNotesToStorage({
+    savedNotes: notesToSave,
+    pageUrl: getPageUrl(),
+    hostname: window.location.hostname,
+    pageTitle: document.title,
+    storage: chrome.storage.local,
+    updateBadgeCount() {},
+    getLastError: getStorageRuntimeError,
+  });
+}
+
 function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selectedText?: string) {
-  if (noteEditorContainer) noteEditorContainer.remove();
+  closeNoteEditor();
 
   selectedElement = element;
   selectedElement.classList.add('canopy-selected');
 
   const rect = element.getBoundingClientRect();
   const editorWidth = 380;
-  const editorHeight = 380;
+  const editorHeight = 430;
 
   let top = rect.bottom + 8;
   let left = rect.left;
@@ -697,353 +755,398 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   if (left < 8) left = 8;
   if (top < 8) top = 8;
 
-  const tag = element.tagName.toLowerCase();
-  const id = element.id ? `#${element.id}` : '';
-  const cls = element.className && typeof element.className === 'string'
-    ? '.' + element.className.split(' ').filter(Boolean).slice(0, 2).join('.')
-    : '';
-  const elInfo = `<${tag}${id}${cls}>${selectedText ? ` — selection: "${selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}"` : ''}`;
+  const draft = existingNote ? parseEditorDraft(existingNote.content) : { title: '', body: '' };
+  let selectedFolderId: string | null = existingNote?.folderId ?? null;
+  let availableFolders: StoredFolder[] = [];
+  let folderSelectionTouched = false;
+  let manualTags = Array.from(
+    new Set(
+      (existingNote?.tags ?? [])
+        .map(normalizeTagName)
+        .filter(Boolean)
+    )
+  );
 
-  noteEditorContainer = document.createElement('div');
-  noteEditorContainer.id = 'canopy-root';
+  const elInfo = `${getElementInfo(element)}${
+    selectedText
+      ? ` - selection: "${selectedText.length > 20 ? `${selectedText.substring(0, 20)}...` : selectedText}"`
+      : ''
+  }`;
+
+  noteEditorContainer = createEditorSurface(document as unknown as Parameters<typeof createEditorSurface>[0], {
+    isNew: !existingNote,
+    title: draft.title,
+    body: draft.body,
+    elementInfo: elInfo,
+    folderLabel: 'Inbox',
+    tagLabels: getTagChipLabels(buildEditorTagNames(manualTags, draft)),
+    pinned: existingNote?.pinned ?? false,
+    errorMessage: '',
+    saveDisabled: !hasMeaningfulEditorContent(draft),
+  }) as unknown as HTMLElement;
+
   Object.assign(noteEditorContainer.style, {
-    position: 'fixed', top: `${top}px`, left: `${left}px`,
-    width: `${editorWidth}px`, zIndex: '2147483647',
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${editorWidth}px`,
+    zIndex: '2147483647',
     fontFamily: 'system-ui, sans-serif',
   });
 
-  let selectedFolderId: string | null = existingNote?.folderId ?? null;
-
-  const prefillContent = existingNote ? existingNote.content : '';
-
-  noteEditorContainer.innerHTML = `
-    <div style="
-      background: #FAFAF7; border: 1px solid rgba(5,36,21,0.06);
-      border-radius: 14px; box-shadow: 0 8px 32px rgba(5,36,21,0.12);
-      overflow: hidden; animation: canopy-fadein 0.15s ease-out;
-    ">
-      <div style="padding: 12px 16px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; align-items: center; gap: 8px;">
-        <div style="width: 18px; height: 18px; border-radius: 6px; background: linear-gradient(135deg, #052415, #1a5c2e);"></div>
-        <span style="font-size: 12px; font-weight: 600; color: #052415; flex: 1;">
-          ${existingNote ? 'Edit Note' : 'New Note'}
-        </span>
-        <span style="font-size: 10px; font-family: 'SF Mono',monospace; color: #7a8a7d; background: rgba(5,36,21,0.04); padding: 2px 8px; border-radius: 4px;">
-          ${elInfo}
-        </span>
-      </div>
-      
-      <div style="display: flex; padding: 4px 12px 0; gap: 2px;" id="canopy-tabs">
-        <button data-tab="write" style="padding:6px 14px;font-size:12px;font-weight:500;color:#052415;background:rgba(5,36,21,0.04);border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:system-ui,sans-serif;">Write</button>
-        <button data-tab="preview" style="padding:6px 14px;font-size:12px;font-weight:500;color:#7a8a7d;background:transparent;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-family:system-ui,sans-serif;">Preview</button>
-      </div>
-
-      <div style="padding: 6px 12px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; gap: 2px;" id="canopy-toolbar">
-        <button data-md="**" title="Bold" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">B</button>
-        <button data-md="_" title="Italic" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-style:italic;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">I</button>
-        <button data-md="\`" title="Code" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'SF Mono',monospace;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">&lt;&gt;</button>
-        <button data-md="## " data-prefix="true" title="Heading" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">H</button>
-        <button data-md="- " data-prefix="true" title="List" style="width:30px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7a8a7d;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;">•</button>
-      </div>
-
-      <div style="padding: 12px;" id="canopy-write">
-        <textarea id="canopy-textarea" placeholder="Write your note in Markdown..." style="
-          width:100%;min-height:140px;max-height:300px;background:#FFFFFF;
-          border:1px solid rgba(5,36,21,0.1);border-radius:8px;padding:12px;font-size:13px;
-          font-family:system-ui,sans-serif;color:#052415;outline:none;resize:vertical;
-          line-height:1.6;box-sizing:border-box;
-        ">${prefillContent}</textarea>
-      </div>
-
-      <div style="padding: 12px; display: none;" id="canopy-preview">
-        <div id="canopy-preview-content" style="
-          min-height:140px;padding:12px;font-size:13px;line-height:1.7;color:#052415;
-          background:#FFFFFF;border-radius:8px;border:1px solid rgba(5,36,21,0.1);
-        "><span style="color:#7a8a7d">Nothing to preview</span></div>
-      </div>
-
-      <div id="canopy-folder-picker" style="border-top:1px solid rgba(5,36,21,0.06);"></div>
-
-      <div style="padding: 8px 12px 12px; display: flex; justify-content: flex-end; gap: 8px;">
-        <button id="canopy-cancel" style="
-          padding:7px 16px;font-size:12px;font-weight:500;color:#7a8a7d;
-          background:rgba(5,36,21,0.04);border:1px solid rgba(5,36,21,0.06);
-          border-radius:10px;cursor:pointer;font-family:system-ui,sans-serif;
-        ">Cancel</button>
-        <button id="canopy-save" style="
-          padding:7px 20px;font-size:12px;font-weight:600;color:#F5EFE9;
-          background:${prefillContent ? '#052415' : 'rgba(5,36,21,0.1)'};
-          border:none;border-radius:10px;
-          cursor:${prefillContent ? 'pointer' : 'not-allowed'};
-          font-family:system-ui,sans-serif;
-          opacity:${prefillContent ? '1' : '0.5'};
-          box-shadow:${prefillContent ? '0 2px 8px rgba(5,36,21,0.2)' : 'none'};
-        ">${existingNote ? 'Update Note' : 'Save Note'}</button>
-      </div>
-    </div>
-  `;
-
   document.body.appendChild(noteEditorContainer);
 
-  // Load folders and auto-suggest
-  chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], (result) => {
-    const folders = result.divnotes_folders || [];
-    const allNotes = result.divnotes_notes || [];
+  const currentEditor = noteEditorContainer;
+  const titleInput = currentEditor.querySelector(
+    '[data-canopy-editor-title]'
+  ) as HTMLInputElement | null;
+  const bodyTextarea = currentEditor.querySelector(
+    '[data-canopy-editor-body]'
+  ) as HTMLTextAreaElement | null;
+  const folderControl = currentEditor.querySelector(
+    '[data-canopy-folder-control]'
+  ) as HTMLElement | null;
+  const folderLabel = currentEditor.querySelector(
+    '[data-canopy-folder-label]'
+  ) as HTMLElement | null;
+  const folderChangeButton = currentEditor.querySelector(
+    '[data-canopy-folder-change]'
+  ) as HTMLButtonElement | null;
+  const pinnedInput = currentEditor.querySelector(
+    '[data-canopy-pinned-input]'
+  ) as HTMLInputElement | null;
+  const errorEl = currentEditor.querySelector('[data-canopy-error]') as HTMLElement | null;
+  const saveBtn = currentEditor.querySelector('[data-canopy-save]') as HTMLButtonElement | null;
+  const cancelBtn = currentEditor.querySelector('[data-canopy-cancel]') as HTMLButtonElement | null;
+  const deleteBtn = currentEditor.querySelector('[data-canopy-delete]') as HTMLButtonElement | null;
 
-    // Auto-suggest: count notes per folder for current domain
-    const domainNotes = allNotes.filter((n: any) => n.hostname === window.location.hostname);
-    const folderCounts: Record<string, number> = {};
-    for (const n of domainNotes) {
-      if (n.folderId) {
-        folderCounts[n.folderId] = (folderCounts[n.folderId] || 0) + 1;
-      }
+  if (!titleInput || !bodyTextarea || !folderControl || !folderLabel || !folderChangeButton || !pinnedInput || !errorEl || !saveBtn || !cancelBtn) {
+    closeNoteEditor();
+    return;
+  }
+
+  let tagRow = currentEditor.querySelector('[data-canopy-tag-row]') as HTMLElement | null;
+  let folderDropdown: HTMLElement | null = null;
+  const defaultSaveLabel = existingNote ? 'Update Note' : 'Save Note';
+
+  const updateFolderLabel = () => {
+    folderLabel.textContent = getFolderChipLabel(availableFolders, selectedFolderId);
+  };
+
+  const updateSaveState = () => {
+    applySaveButtonState(
+      saveBtn,
+      hasMeaningfulEditorContent({
+        title: titleInput.value,
+        body: bodyTextarea.value,
+      })
+    );
+  };
+
+  const closeFolderDropdown = () => {
+    if (folderDropdown) {
+      folderDropdown.remove();
+      folderDropdown = null;
     }
+  };
 
-    // Pick folder with >50% of domain notes
-    const total = domainNotes.length;
-    let suggestedFolderId: string | null = null;
-    if (total > 0) {
-      for (const [fId, count] of Object.entries(folderCounts)) {
-        if ((count as number) / total > 0.5) {
-          suggestedFolderId = fId;
-          break;
-        }
-      }
-    }
+  const selectFolder = (folderId: string | null) => {
+    folderSelectionTouched = true;
+    selectedFolderId = folderId;
+    updateFolderLabel();
+    closeFolderDropdown();
+  };
 
-    selectedFolderId = suggestedFolderId || (existingNote?.folderId ?? null);
-
-    // Build folder picker UI
-    const pickerContainer = document.getElementById('canopy-folder-picker');
-    if (pickerContainer && folders.length > 0) {
-      const selectedFolder = folders.find((f: any) => f.id === selectedFolderId);
-      const displayName = selectedFolder ? selectedFolder.name : 'Inbox';
-
-      pickerContainer.innerHTML = `
-        <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a1a1aa;flex-shrink:0;">
-            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
-          </svg>
-          <span id="canopy-folder-name" style="font-size:11px;color:#052415;flex:1;">${displayName}</span>
-          <button id="canopy-folder-change" style="font-size:10px;color:#1a5c2e;background:none;border:none;cursor:pointer;padding:2px 6px;font-family:system-ui,sans-serif;">Change</button>
-        </div>
-      `;
-
-      // "Change" button opens folder tree dropdown
-      const changeBtn = document.getElementById('canopy-folder-change');
-      changeBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const existing = document.getElementById('canopy-folder-dropdown');
-        if (existing) { existing.remove(); return; }
-
-        const dropdown = document.createElement('div');
-        dropdown.id = 'canopy-folder-dropdown';
-        Object.assign(dropdown.style, {
-          maxHeight: '200px', overflow: 'auto',
-          background: '#FFFFFF', border: '1px solid rgba(5,36,21,0.1)',
-          borderRadius: '6px', margin: '4px 12px',
-          padding: '4px 0',
-        });
-
-        // Inbox option
-        const inboxRow = document.createElement('button');
-        Object.assign(inboxRow.style, {
-          display: 'flex', alignItems: 'center', gap: '6px',
-          width: '100%', padding: '6px 10px', border: 'none',
-          background: selectedFolderId === null ? 'rgba(171,255,192,0.15)' : 'transparent',
-          color: '#052415', fontSize: '11px', cursor: 'pointer',
-          fontFamily: 'system-ui,sans-serif', textAlign: 'left',
-        });
-        inboxRow.textContent = 'Inbox';
-        inboxRow.addEventListener('click', () => {
-          selectedFolderId = null;
-          const nameEl = document.getElementById('canopy-folder-name');
-          if (nameEl) nameEl.textContent = 'Inbox';
-          dropdown.remove();
-        });
-        dropdown.appendChild(inboxRow);
-
-        // Render folders (flat, indented by parentId depth)
-        const renderFolder = (folder: any, depth: number) => {
-          const row = document.createElement('button');
-          Object.assign(row.style, {
-            display: 'flex', alignItems: 'center', gap: '6px',
-            width: '100%', padding: '6px 10px', border: 'none',
-            paddingLeft: `${10 + depth * 16}px`,
-            background: selectedFolderId === folder.id ? 'rgba(171,255,192,0.15)' : 'transparent',
-            color: '#052415', fontSize: '11px', cursor: 'pointer',
-            fontFamily: 'system-ui,sans-serif', textAlign: 'left',
-          });
-          row.textContent = folder.name;
-          row.addEventListener('click', () => {
-            selectedFolderId = folder.id;
-            const nameEl = document.getElementById('canopy-folder-name');
-            if (nameEl) nameEl.textContent = folder.name;
-            dropdown.remove();
-          });
-          dropdown.appendChild(row);
-
-          // Render children
-          const children = folders.filter((f: any) => f.parentId === folder.id);
-          children.sort((a: any, b: any) => a.order - b.order);
-          for (const child of children) renderFolder(child, depth + 1);
-        };
-
-        // Root folders
-        const roots = folders.filter((f: any) => !f.parentId);
-        roots.sort((a: any, b: any) => a.order - b.order);
-        for (const root of roots) renderFolder(root, 0);
-
-        pickerContainer.appendChild(dropdown);
-      });
-    }
-  });
-
-  const textarea = document.getElementById('canopy-textarea') as HTMLTextAreaElement;
-  const saveBtn = document.getElementById('canopy-save') as HTMLButtonElement;
-  const cancelBtn = document.getElementById('canopy-cancel') as HTMLButtonElement;
-  const writeArea = document.getElementById('canopy-write')!;
-  const previewArea = document.getElementById('canopy-preview')!;
-  const previewContent = document.getElementById('canopy-preview-content')!;
-  const toolbar = document.getElementById('canopy-toolbar')!;
-  const tabsContainer = document.getElementById('canopy-tabs')!;
-
-  setTimeout(() => textarea.focus(), 50);
-
-  textarea.addEventListener('input', () => {
-    const hasContent = textarea.value.trim().length > 0;
-    saveBtn.style.background = hasContent ? '#052415' : 'rgba(5,36,21,0.1)';
-    saveBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
-    saveBtn.style.opacity = hasContent ? '1' : '0.5';
-    saveBtn.style.boxShadow = hasContent ? '0 2px 8px rgba(5,36,21,0.2)' : 'none';
-    saveBtn.style.color = hasContent ? '#F5EFE9' : '#7a8a7d';
-  });
-
-  textarea.addEventListener('focus', () => { textarea.style.borderColor = 'rgba(26,92,46,0.5)'; });
-  textarea.addEventListener('blur', () => { textarea.style.borderColor = 'rgba(5,36,21,0.1)'; });
-
-  tabsContainer.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('button');
-    if (!btn) return;
-    const tab = btn.getAttribute('data-tab');
-    tabsContainer.querySelectorAll('button').forEach(b => {
-      (b as HTMLElement).style.color = '#7a8a7d';
-      (b as HTMLElement).style.background = 'transparent';
+  const createFolderOption = (label: string, folderId: string | null, depth = 0) => {
+    const option = document.createElement('button');
+    Object.assign(option.style, {
+      display: 'block',
+      width: '100%',
+      padding: '6px 10px',
+      paddingLeft: `${10 + depth * 16}px`,
+      border: 'none',
+      background: selectedFolderId === folderId ? 'rgba(171,255,192,0.15)' : 'transparent',
+      color: '#052415',
+      fontSize: '11px',
+      cursor: 'pointer',
+      fontFamily: 'system-ui,sans-serif',
+      textAlign: 'left',
     });
-    btn.style.color = '#052415';
-    btn.style.background = 'rgba(5,36,21,0.04)';
-    if (tab === 'write') {
-      writeArea.style.display = 'block'; previewArea.style.display = 'none'; toolbar.style.display = 'flex';
-    } else {
-      writeArea.style.display = 'none'; previewArea.style.display = 'block'; toolbar.style.display = 'none';
-      const md = textarea.value;
-      previewContent.innerHTML = md.trim() ? simpleMarkdown(md) : '<span style="color:#7a8a7d">Nothing to preview</span>';
-    }
-  });
+    option.textContent = label;
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectFolder(folderId);
+    });
+    return option;
+  };
 
-  toolbar.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('button');
-    if (!btn) return;
-    const md = btn.getAttribute('data-md') || '';
-    const isPrefix = btn.getAttribute('data-prefix') === 'true';
-    if (isPrefix) {
-      textarea.value += '\n' + md;
-    } else {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const sel = textarea.value.substring(start, end);
-      textarea.value = textarea.value.substring(0, start) + md + sel + md + textarea.value.substring(end);
-    }
-    textarea.focus();
-    textarea.dispatchEvent(new Event('input'));
-  });
-
-  cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); closeNoteEditor(); });
-
-  saveBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    // Save note
-    const val = textarea.value.trim();
-    if (!val) {
-      closeNoteEditor();
+  const openFolderDropdown = () => {
+    if (folderDropdown) {
+      closeFolderDropdown();
       return;
     }
 
-    const isNew = !existingNote;
-    const hashtags = extractHashtagsFromContent(val);
-    const note: SavedNote = existingNote || {
-      id: crypto.randomUUID(),
-      element,
-      elementSelector: getCssSelector(element),
-      elementXPath: getXPath(element),
-      elementTextHash: getTextHash(element),
-      elementPosition: getPosition(element),
-      elementInfo: elInfo,
-      content: '',
-      selectedText: selectedText,
-      folderId: null,
-      tags: [],
-      pinned: false,
-      createdAt: new Date().toISOString(),
-      badgeEl: null,
-      expandedEl: null,
+    folderDropdown = document.createElement('div');
+    folderDropdown.id = 'canopy-folder-dropdown';
+    Object.assign(folderDropdown.style, {
+      maxHeight: '200px',
+      overflow: 'auto',
+      background: '#FFFFFF',
+      border: '1px solid rgba(5,36,21,0.1)',
+      borderRadius: '6px',
+      marginTop: '8px',
+      padding: '4px 0',
+      width: '100%',
+    });
+
+    folderDropdown.appendChild(createFolderOption('Inbox', null));
+
+    const appendFolders = (parentId: string | null, depth: number) => {
+      const children = availableFolders
+        .filter((folder) => folder.parentId === parentId)
+        .sort((a, b) => a.order - b.order);
+
+      children.forEach((folder) => {
+        folderDropdown?.appendChild(createFolderOption(folder.name, folder.id, depth));
+        appendFolders(folder.id, depth + 1);
+      });
     };
-    note.content = val;
-    note.folderId = selectedFolderId;
-    note.tags = hashtags;
 
-    if (isNew) {
-      savedNotes.push(note);
-      createNoteBadge(note);
-      if (note.selectedText) applyTextHighlight(note);
-      updateNoteBadgeCount();
-      saveNotesToStorage();
-      console.log('[Canopy] Note saved! Total:', savedNotes.length);
+    appendFolders(null, 0);
+    folderControl.appendChild(folderDropdown);
+  };
 
-      // Extract and sync hashtags
-      if (hashtags.length > 0) {
-        chrome.runtime.sendMessage({
-          type: 'SYNC_NOTE_TAGS',
-          noteId: note.id,
-          tagNames: hashtags,
-        });
+  const bindTagRow = () => {
+    const addTagButton = tagRow?.querySelector('[data-canopy-add-tag]') as HTMLButtonElement | null;
+    addTagButton?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const nextTag = window.prompt('Add a tag', '');
+      if (!nextTag) {
+        return;
       }
-    } else {
-      // update
-      if (note.expandedEl) {
-        note.expandedEl.remove();
-        note.expandedEl = null;
-      }
-      saveNotesToStorage();
-      console.log('[Canopy] Note updated');
 
-      // Extract and sync hashtags
-      if (hashtags.length > 0) {
-        chrome.runtime.sendMessage({
-          type: 'SYNC_NOTE_TAGS',
-          noteId: note.id,
-          tagNames: hashtags,
-        });
+      const normalized = normalizeTagName(nextTag);
+      if (!normalized) {
+        return;
       }
+
+      if (!manualTags.includes(normalized)) {
+        manualTags = [...manualTags, normalized];
+      }
+      renderTagRow();
+    });
+  };
+
+  const renderTagRow = () => {
+    if (!tagRow) {
+      return;
     }
 
+    const nextTagRow = createTagRow(
+      document as unknown as Parameters<typeof createTagRow>[0],
+      getTagChipLabels(
+        buildEditorTagNames(manualTags, {
+          title: titleInput.value,
+          body: bodyTextarea.value,
+        })
+      )
+    ) as unknown as HTMLElement;
+    tagRow.replaceWith(nextTagRow);
+    tagRow = nextTagRow;
+    bindTagRow();
+  };
+
+  updateFolderLabel();
+  bindTagRow();
+  updateSaveState();
+
+  chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], (result) => {
+    if (noteEditorContainer !== currentEditor) {
+      return;
+    }
+
+    const storageError = getStorageRuntimeError();
+    if (storageError) {
+      errorEl.textContent = 'Could not load folders.';
+      return;
+    }
+
+    availableFolders = (result.divnotes_folders || []) as StoredFolder[];
+    const allNotes = (result.divnotes_notes || []) as StoredNote[];
+    const suggestedFolderId = getSuggestedFolderIdForDomain(
+      allNotes,
+      window.location.hostname
+    );
+
+    if (!folderSelectionTouched) {
+      selectedFolderId = getInitialSelectedFolderId({
+        isNew: !existingNote,
+        existingFolderId: existingNote?.folderId,
+        suggestedFolderId,
+      });
+    }
+
+    updateFolderLabel();
+  });
+
+  [titleInput, bodyTextarea].forEach((field) => {
+    field.addEventListener('input', () => {
+      errorEl.textContent = '';
+      updateSaveState();
+      renderTagRow();
+    });
+  });
+
+  folderChangeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openFolderDropdown();
+  });
+
+  cancelBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
     closeNoteEditor();
   });
 
-  noteEditorContainer.addEventListener('click', (e) => e.stopPropagation());
-  noteEditorContainer.addEventListener('mousedown', (e) => e.stopPropagation());
+  deleteBtn?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (!existingNote) {
+      return;
+    }
 
-  const editorKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
+    deleteNote(existingNote.id);
+    closeNoteEditor();
+  });
+
+  saveBtn.addEventListener('click', async (event) => {
+    event.stopPropagation();
+
+    const nextDraft = {
+      title: titleInput.value,
+      body: bodyTextarea.value,
+    };
+
+    if (!hasMeaningfulEditorContent(nextDraft)) {
+      updateSaveState();
+      return;
+    }
+
+    const formattedContent = formatEditorContent(nextDraft);
+    const nextTags = buildEditorTagNames(manualTags, nextDraft);
+    const nextPinned = pinnedInput.checked;
+
+    errorEl.textContent = '';
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      if (!existingNote) {
+        const note: SavedNote = {
+          id: crypto.randomUUID(),
+          element,
+          elementSelector: getCssSelector(element),
+          elementXPath: getXPath(element),
+          elementTextHash: getTextHash(element),
+          elementPosition: getPosition(element),
+          elementInfo: elInfo,
+          content: formattedContent,
+          selectedText,
+          folderId: selectedFolderId,
+          tags: nextTags,
+          pinned: nextPinned,
+          createdAt: new Date().toISOString(),
+          badgeEl: null,
+          expandedEl: null,
+        };
+
+        await persistSavedNotes([...savedNotes, note]);
+        savedNotes.push(note);
+        createNoteBadge(note);
+        if (note.selectedText) {
+          applyTextHighlight(note);
+        }
+        updateNoteBadgeCount();
+        console.log('[Canopy] Note saved! Total:', savedNotes.length);
+
+        if (nextTags.length > 0) {
+          chrome.runtime.sendMessage({
+            type: 'SYNC_NOTE_TAGS',
+            noteId: note.id,
+            tagNames: nextTags,
+          });
+        }
+      } else {
+        const nextSavedNotes = savedNotes.map((note) =>
+          note.id === existingNote.id
+            ? {
+                ...note,
+                content: formattedContent,
+                folderId: selectedFolderId,
+                tags: nextTags,
+                pinned: nextPinned,
+              }
+            : note
+        );
+
+        await persistSavedNotes(nextSavedNotes);
+        existingNote.content = formattedContent;
+        existingNote.folderId = selectedFolderId;
+        existingNote.tags = nextTags;
+        existingNote.pinned = nextPinned;
+        if (existingNote.expandedEl) {
+          existingNote.expandedEl.remove();
+          existingNote.expandedEl = null;
+        }
+        updateNoteBadgeCount();
+        console.log('[Canopy] Note updated');
+
+        if (nextTags.length > 0) {
+          chrome.runtime.sendMessage({
+            type: 'SYNC_NOTE_TAGS',
+            noteId: existingNote.id,
+            tagNames: nextTags,
+          });
+        }
+      }
+
       closeNoteEditor();
-      document.removeEventListener('keydown', editorKeyDown, true);
+    } catch (error) {
+      console.error('[Canopy] Failed to save note', error);
+      errorEl.textContent = 'Could not save note. Try again.';
+      saveBtn.textContent = defaultSaveLabel;
+      updateSaveState();
+    }
+  });
+
+  currentEditor.addEventListener('click', (event) => event.stopPropagation());
+  currentEditor.addEventListener('mousedown', (event) => event.stopPropagation());
+
+  if (noteEditorKeydownHandler) {
+    document.removeEventListener('keydown', noteEditorKeydownHandler, true);
+  }
+  noteEditorKeydownHandler = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeNoteEditor();
     }
   };
-  document.addEventListener('keydown', editorKeyDown, true);
+  document.addEventListener('keydown', noteEditorKeydownHandler, true);
+
+  setTimeout(() => {
+    if (document.activeElement === document.body) {
+      (titleInput.value ? bodyTextarea : titleInput).focus();
+    }
+  }, 50);
 }
 
 function closeNoteEditor() {
-  if (noteEditorContainer) { noteEditorContainer.remove(); noteEditorContainer = null; }
+  if (noteEditorKeydownHandler) {
+    document.removeEventListener('keydown', noteEditorKeydownHandler, true);
+    noteEditorKeydownHandler = null;
+  }
+  if (noteEditorContainer) {
+    noteEditorContainer.remove();
+    noteEditorContainer = null;
+  }
   clearSelectedElement();
 }
 
@@ -1177,34 +1280,7 @@ function findMatchingElement(stored: Readonly<StoredNote>): HTMLElement | null {
 
 // ==================== STORAGE ====================
 function saveNotesToStorage() {
-  const pageUrl = getPageUrl();
-  const storedNotes: StoredNote[] = savedNotes.map(n => ({
-    id: n.id,
-    url: pageUrl,
-    hostname: window.location.hostname,
-    pageTitle: document.title,
-    elementSelector: n.elementSelector,
-    elementTag: n.element.tagName.toLowerCase(),
-    elementInfo: n.elementInfo,
-    content: n.content,
-    elementXPath: n.elementXPath,
-    elementTextHash: n.elementTextHash,
-    elementPosition: n.elementPosition,
-    selectedText: n.selectedText,
-    createdAt: n.createdAt,
-    folderId: n.folderId,
-    tags: n.tags,
-    pinned: n.pinned,
-  }));
-
-  // Merge with notes from other pages
-  chrome.storage.local.get(['divnotes_notes'], (result) => {
-    const allNotes: StoredNote[] = result.divnotes_notes || [];
-    const otherPageNotes = allNotes.filter(n => n.url !== pageUrl);
-    const merged = [...otherPageNotes, ...storedNotes];
-    chrome.storage.local.set({ divnotes_notes: merged });
-    updateNoteBadgeCount();
-  });
+  return persistSavedNotes(savedNotes);
 }
 
 function loadNotesFromStorage() {
