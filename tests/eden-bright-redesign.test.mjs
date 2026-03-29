@@ -93,12 +93,19 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
 
 test('content script styles switch from purple to Eden Bright green and cream treatments', () => {
   const contentScript = read('src/content/index.tsx');
+  const overlayUi = read('src/content/overlay-ui.ts');
 
   assert.ok(contentScript.includes("outline: 2px solid rgba(26, 92, 46, 0.8) !important;"));
-  assert.ok(contentScript.includes("background: '#052415', color: '#F5EFE9'"));
-  assert.ok(contentScript.includes("width: '22px'"));
-  assert.ok(contentScript.includes("height: '22px'"));
-  assert.ok(contentScript.includes('background: #FAFAF7; border: 1px solid rgba(5,36,21,0.06);'));
+  assert.ok(contentScript.includes('Click to add a note · ESC to cancel'));
+  assert.ok(contentScript.includes('Element selected · Opening note editor…'));
+  assert.ok(contentScript.includes('createPlacedNoteBadge'));
+  assert.ok(contentScript.includes('createPageNoteCountPill'));
+  assert.ok(overlayUi.includes("background: '#052415'"));
+  assert.ok(overlayUi.includes("width: '22px'"));
+  assert.ok(overlayUi.includes("height: '22px'"));
+  assert.ok(overlayUi.includes("background: '#FAFAF7'"));
+  assert.ok(overlayUi.includes("border: '1px solid rgba(5,36,21,0.06)'"));
+  assert.ok(overlayUi.includes("setDataAttribute(pill, 'canopyOverlay', 'selector-guide')"));
 });
 
 test('side panel segmented control uses themed active and inactive states', () => {

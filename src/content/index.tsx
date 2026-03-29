@@ -2,6 +2,14 @@
 // Pure DOM for inspector, note editor, and note badges
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import {
+  createHoverSelectorPill,
+  createNotePreviewCardShell,
+  createPageNoteCountPill,
+  createPlacedNoteBadge,
+  createSelectionConfirmationPill,
+  createSelectorGuide,
+} from './overlay-ui.ts';
 
 console.log('[Canopy] Content script loaded');
 
@@ -134,11 +142,17 @@ function clearTextHighlight(note: SavedNote) {
 // ==================== STATE ====================
 let isInspecting = false;
 let selectedElement: HTMLElement | null = null;
-let statusBanner: HTMLElement | null = null;
+let selectorGuide: HTMLElement | null = null;
+let selectorPill: HTMLElement | null = null;
+let pageNoteCountPill: HTMLElement | null = null;
 let noteEditorContainer: HTMLElement | null = null;
 const savedNotes: SavedNote[] = [];
 let notesVisible = true;
 let screenShareMode = false;
+let pendingEditorOpenTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const INSPECTOR_GUIDE_TEXT = 'Click to add a note · ESC to cancel';
+const SELECTED_CONFIRMATION_TEXT = 'Element selected · Opening note editor…';
 
 // ==================== URL NORMALIZATION ====================
 function getPageUrl(): string {
@@ -160,6 +174,7 @@ window.addEventListener('resize', updateAllBadgePositions, { passive: true });
 
 // ==================== NOTE COUNT BADGE ====================
 function updateNoteBadgeCount() {
+  syncPageNoteCountPill();
   try {
     chrome.runtime.sendMessage({
       type: 'UPDATE_BADGE_COUNT',
@@ -168,12 +183,91 @@ function updateNoteBadgeCount() {
   } catch { /* extension context may be invalid */ }
 }
 
+function syncPageNoteCountPill() {
+  if (pageNoteCountPill) {
+    pageNoteCountPill.remove();
+    pageNoteCountPill = null;
+  }
+
+  if (!notesVisible || screenShareMode || savedNotes.length === 0) {
+    return;
+  }
+
+  pageNoteCountPill = createPageNoteCountPill(document, savedNotes.length);
+  document.body.appendChild(pageNoteCountPill);
+}
+
+function isCanopyUiTarget(target: HTMLElement) {
+  return Boolean(target.closest('#canopy-root') || target.closest('[data-canopy-overlay]'));
+}
+
+function getSelectorOverlayPosition(element: HTMLElement, overlay: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  const overlayWidth = overlay.offsetWidth || 220;
+  const overlayHeight = overlay.offsetHeight || 34;
+  let top = rect.top - overlayHeight - 10;
+  let left = rect.left;
+
+  if (top < 8) {
+    top = rect.bottom + 10;
+  }
+
+  if (left + overlayWidth > window.innerWidth - 8) {
+    left = window.innerWidth - overlayWidth - 8;
+  }
+
+  if (left < 8) {
+    left = 8;
+  }
+
+  return { top, left };
+}
+
+function removeSelectorPill() {
+  if (selectorPill) {
+    selectorPill.remove();
+    selectorPill = null;
+  }
+}
+
+function showSelectorGuide(text = INSPECTOR_GUIDE_TEXT, confirmation = false) {
+  if (selectorGuide) {
+    selectorGuide.remove();
+  }
+
+  selectorGuide = confirmation
+    ? createSelectionConfirmationPill(document, text)
+    : createSelectorGuide(document, text);
+
+  document.body.appendChild(selectorGuide);
+}
+
+function hideSelectorGuide() {
+  if (selectorGuide) {
+    selectorGuide.remove();
+    selectorGuide = null;
+  }
+}
+
+function showHoverSelectorPill(target: HTMLElement) {
+  removeSelectorPill();
+  selectorPill = createHoverSelectorPill(document, {
+    tagLabel: target.tagName.toLowerCase(),
+    selectorLabel: getCssSelector(target),
+  });
+  document.body.appendChild(selectorPill);
+
+  const pos = getSelectorOverlayPosition(target, selectorPill);
+  selectorPill.style.top = `${pos.top}px`;
+  selectorPill.style.left = `${pos.left}px`;
+}
+
 // ==================== INSPECTOR ====================
 function activateInspector() {
   if (isInspecting) return;
   isInspecting = true;
   console.log('[Canopy] Inspector activated');
-  showStatusBanner();
+  showSelectorGuide();
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeyDown, true);
@@ -181,7 +275,8 @@ function activateInspector() {
 
 function deactivateInspector() {
   isInspecting = false;
-  hideStatusBanner();
+  hideSelectorGuide();
+  removeSelectorPill();
   document.removeEventListener('mouseover', onMouseOver, true);
   document.removeEventListener('click', onClick, true);
   document.removeEventListener('keydown', onKeyDown, true);
@@ -193,11 +288,12 @@ function deactivateInspector() {
 function onMouseOver(e: Event) {
   if (!isInspecting) return;
   const target = e.target as HTMLElement;
-  if (target.closest('#canopy-root') || target.closest('#canopy-banner') || target.closest('.canopy-badge') || target.closest('.canopy-note-card')) return;
+  if (isCanopyUiTarget(target)) return;
   document.querySelectorAll('.canopy-highlight').forEach(el => {
     el.classList.remove('canopy-highlight');
   });
   target.classList.add('canopy-highlight');
+  showHoverSelectorPill(target);
 }
 
 function onClick(e: Event) {
@@ -206,48 +302,41 @@ function onClick(e: Event) {
   e.stopPropagation();
   e.stopImmediatePropagation();
   const target = e.target as HTMLElement;
-  if (target.closest('#canopy-root') || target.closest('#canopy-banner') || target.closest('.canopy-badge') || target.closest('.canopy-note-card')) return;
+  if (isCanopyUiTarget(target)) return;
   document.querySelectorAll('.canopy-highlight').forEach(el => {
     el.classList.remove('canopy-highlight');
   });
   target.classList.add('canopy-selected');
   selectedElement = target;
-  deactivateInspector();
-  showNoteEditor(target);
+  isInspecting = false;
+  document.removeEventListener('mouseover', onMouseOver, true);
+  document.removeEventListener('click', onClick, true);
+  document.removeEventListener('keydown', onKeyDown, true);
+  removeSelectorPill();
+  showSelectorGuide(SELECTED_CONFIRMATION_TEXT, true);
+  if (pendingEditorOpenTimeout) {
+    clearTimeout(pendingEditorOpenTimeout);
+  }
+  pendingEditorOpenTimeout = setTimeout(() => {
+    hideSelectorGuide();
+    pendingEditorOpenTimeout = null;
+    showNoteEditor(target);
+  }, 120);
 }
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault();
+    if (pendingEditorOpenTimeout) {
+      clearTimeout(pendingEditorOpenTimeout);
+      pendingEditorOpenTimeout = null;
+    }
     if (noteEditorContainer) {
       closeNoteEditor();
     } else {
       deactivateInspector();
     }
   }
-}
-
-// ==================== STATUS BANNER ====================
-function showStatusBanner() {
-  if (statusBanner) return;
-  statusBanner = document.createElement('div');
-  statusBanner.id = 'canopy-banner';
-  statusBanner.innerHTML = `
-    <span style="width:8px;height:8px;border-radius:50%;background:#ABFFC0;box-shadow:0 0 8px rgba(171,255,192,0.6);display:inline-block;"></span>
-    <span>Select an element · Press ESC to cancel</span>
-  `;
-  Object.assign(statusBanner.style, {
-    position: 'fixed', top: '16px', right: '16px',
-    background: '#052415', color: '#F5EFE9',
-    padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '500',
-    fontFamily: 'system-ui, sans-serif', display: 'flex', alignItems: 'center',
-    gap: '8px', boxShadow: '0 4px 20px rgba(5,36,21,0.3)', zIndex: '2147483647',
-  });
-  document.body.appendChild(statusBanner);
-}
-
-function hideStatusBanner() {
-  if (statusBanner) { statusBanner.remove(); statusBanner = null; }
 }
 
 // ==================== NOTE BADGES ====================
@@ -268,38 +357,21 @@ function getBadgePosition(element: HTMLElement) {
   };
 }
 
+function getNotePreviewTitle(note: SavedNote) {
+  const source = note.selectedText?.trim() || note.content.trim().split('\n').find(Boolean) || 'Untitled note';
+  const plainText = source.replace(/[#*_`>\-\[\]\(\)]/g, '').replace(/\s+/g, ' ').trim();
+  return plainText.length > 56 ? `${plainText.slice(0, 53)}...` : plainText;
+}
+
 function createNoteBadge(note: SavedNote) {
   if (note.badgeEl) note.badgeEl.remove();
   if (note.expandedEl) note.expandedEl.remove();
 
   const pos = getBadgePosition(note.element);
-
-  const badge = document.createElement('div');
-  badge.className = 'canopy-badge';
-  Object.assign(badge.style, {
-    position: 'fixed',
-    top: `${pos.top}px`,
-    left: `${pos.left}px`,
-    width: '22px',
-    height: '22px',
-    borderRadius: '7px',
-    background: '#052415',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    zIndex: '2147483645',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-    animation: 'canopy-pulse 2s infinite, canopy-fadein 0.25s ease-out',
-    boxShadow: '0 2px 8px rgba(5,36,21,0.2)',
-    pointerEvents: 'auto',
-    fontSize: '10px',
-    fontWeight: '700',
-    color: '#ABFFC0',
-    fontFamily: 'system-ui, sans-serif',
-  });
-  badge.textContent = '1';
-  badge.title = 'Canopy';
+  const badge = createPlacedNoteBadge(document);
+  badge.style.top = `${pos.top}px`;
+  badge.style.left = `${pos.left}px`;
+  note.element.classList.add('canopy-has-note');
 
   let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -350,78 +422,49 @@ function showNoteCard(note: SavedNote) {
   if (left + cardWidth > window.innerWidth) left = window.innerWidth - cardWidth - 8;
   if (top < 8) top = 8;
 
-  const card = document.createElement('div');
-  card.className = 'canopy-note-card';
-  Object.assign(card.style, {
-    position: 'fixed',
-    top: `${top}px`,
-    left: `${left}px`,
-    width: `${cardWidth}px`,
-    zIndex: '2147483646',
-    fontFamily: 'system-ui, sans-serif',
-    animation: 'canopy-fadein 0.15s ease-out',
-    pointerEvents: 'auto',
-  });
-
   const displayDate = note.createdAt.includes('T')
     ? new Date(note.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : note.createdAt;
+  const card = createNotePreviewCardShell(document, {
+    elementInfo: note.elementInfo,
+    displayDate,
+    title: getNotePreviewTitle(note),
+    previewText: note.content,
+    tags: note.tags.length > 0 ? note.tags : extractHashtagsFromContent(note.content),
+  });
+  card.style.top = `${top}px`;
+  card.style.left = `${left}px`;
 
-  card.innerHTML = `
-    <div style="
-      background: #FAFAF7; border: 1px solid rgba(5,36,21,0.06);
-      border-radius: 14px; box-shadow: 0 8px 32px rgba(5,36,21,0.12);
-      overflow: hidden; width: 340px;
-    ">
-      <div style="padding: 10px 14px; border-bottom: 1px solid rgba(5,36,21,0.06); display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-size:10px;font-family:'SF Mono',monospace;color:#7a8a7d;background:rgba(5,36,21,0.04);padding:2px 6px;border-radius:3px;">
-          ${DOMPurify.sanitize(note.elementInfo)}
-        </span>
-        <span style="font-size:10px;color:#7a8a7d;">${displayDate}</span>
-      </div>
+  const previewBody = card.querySelector('[data-canopy-preview-body]') as HTMLElement | null;
+  if (previewBody) {
+    previewBody.innerHTML = simpleMarkdown(note.content);
+  }
 
-      <div style="padding: 14px; font-size: 13px; line-height: 1.7; color: #052415; max-height: 200px; overflow-y: auto;">
-        ${simpleMarkdown(note.content)}
-      </div>
+  const moveButton = card.querySelector('[data-canopy-move]') as HTMLButtonElement | null;
+  const editButton = card.querySelector('[data-canopy-edit]') as HTMLButtonElement | null;
+  const deleteButton = card.querySelector('[data-canopy-delete]') as HTMLButtonElement | null;
 
-      <div style="padding: 8px 14px; border-top: 1px solid rgba(5,36,21,0.06); display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="canopy-move-btn" style="
-          font-size:11px; color:#7a8a7d; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif;
-        ">Move</button>
-        <button class="canopy-edit-btn" style="
-          font-size:11px; color:#7a8a7d; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif;
-        ">Edit</button>
-        <button class="canopy-delete-btn" style="
-          font-size:11px; color:#dc2626; background:transparent; border:none;
-          cursor:pointer; padding:4px 10px; border-radius:4px; font-family:system-ui,sans-serif; opacity:0.7;
-        ">Delete</button>
-      </div>
-    </div>
-  `;
-
-  card.querySelector('.canopy-move-btn')!.addEventListener('click', (e) => {
+  moveButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     card.remove();
     note.expandedEl = null;
     moveNote(note);
   });
 
-  card.querySelector('.canopy-edit-btn')!.addEventListener('click', (e) => {
+  editButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     card.remove();
     note.expandedEl = null;
     showNoteEditor(note.element, note);
   });
 
-  card.querySelector('.canopy-delete-btn')!.addEventListener('click', (e) => {
+  deleteButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     deleteNote(note.id);
   });
 
   // Hover effects on buttons
-  card.querySelectorAll('.canopy-move-btn, .canopy-edit-btn').forEach(btn => {
+  [moveButton, editButton].filter(Boolean).forEach(btn => {
     btn.addEventListener('mouseenter', (e) => {
       (e.target as HTMLElement).style.color = '#052415';
       (e.target as HTMLElement).style.background = 'rgba(5,36,21,0.04)';
@@ -431,11 +474,11 @@ function showNoteCard(note: SavedNote) {
       (e.target as HTMLElement).style.background = 'transparent';
     });
   });
-  card.querySelector('.canopy-delete-btn')!.addEventListener('mouseenter', (e) => {
+  deleteButton?.addEventListener('mouseenter', (e) => {
     (e.target as HTMLElement).style.opacity = '1';
     (e.target as HTMLElement).style.background = 'rgba(220,38,38,0.08)';
   });
-  card.querySelector('.canopy-delete-btn')!.addEventListener('mouseleave', (e) => {
+  deleteButton?.addEventListener('mouseleave', (e) => {
     (e.target as HTMLElement).style.opacity = '0.7';
     (e.target as HTMLElement).style.background = 'transparent';
   });
@@ -467,6 +510,7 @@ function deleteNote(id: string, skipStorage = false) {
     clearTextHighlight(note);
     savedNotes.splice(idx, 1);
     if (!skipStorage) saveNotesToStorage();
+    updateNoteBadgeCount();
     console.log('[Canopy] Note deleted');
   }
 }
@@ -474,32 +518,33 @@ function deleteNote(id: string, skipStorage = false) {
 function moveNote(note: SavedNote) {
   console.log('[Canopy] Move mode activated');
 
-  // Show a move-specific banner
-  const banner = document.createElement('div');
-  Object.assign(banner.style, {
-    position: 'fixed', top: '0', left: '0', right: '0',
-    zIndex: '2147483647', padding: '10px 16px',
-    background: '#052415',
-    color: '#F5EFE9', fontFamily: 'system-ui, sans-serif',
-    fontSize: '13px', fontWeight: '500', textAlign: 'center',
-    boxShadow: '0 4px 20px rgba(5,36,21,0.3)',
-  });
-  banner.textContent = '🔀 Move note — click a new element (ESC to cancel)';
+  const banner = createSelectorGuide(document, 'Move note · Click a new element · ESC to cancel');
   document.body.appendChild(banner);
 
   const onHover = (e: Event) => {
     const t = e.target as HTMLElement;
-    if (t === banner || t.classList.contains('canopy-badge')) return;
+    if (isCanopyUiTarget(t)) return;
     t.classList.add('canopy-highlight');
+    removeSelectorPill();
+    const movePill = createHoverSelectorPill(document, {
+      tagLabel: t.tagName.toLowerCase(),
+      selectorLabel: getCssSelector(t),
+    });
+    document.body.appendChild(movePill);
+    const pos = getSelectorOverlayPosition(t, movePill);
+    movePill.style.top = `${pos.top}px`;
+    movePill.style.left = `${pos.left}px`;
+    selectorPill = movePill;
   };
   const onOut = (e: Event) => {
     (e.target as HTMLElement).classList.remove('canopy-highlight');
+    removeSelectorPill();
   };
   const onPick = (e: Event) => {
     e.preventDefault();
     e.stopPropagation();
     const newEl = e.target as HTMLElement;
-    if (newEl === banner || newEl.classList.contains('canopy-badge')) return;
+    if (isCanopyUiTarget(newEl)) return;
     newEl.classList.remove('canopy-highlight');
     cleanup();
 
@@ -525,6 +570,7 @@ function moveNote(note: SavedNote) {
   };
   const cleanup = () => {
     banner.remove();
+    removeSelectorPill();
     document.body.style.cursor = '';
     document.removeEventListener('mouseover', onHover, true);
     document.removeEventListener('mouseout', onOut, true);
@@ -550,6 +596,7 @@ function toggleAllNotes() {
       note.expandedEl = null;
     }
   });
+  syncPageNoteCountPill();
   console.log('[Canopy] Notes visibility:', notesVisible);
 }
 
@@ -574,6 +621,7 @@ function toggleScreenShareMode() {
   }
 
   // Persist state for side panel to read
+  syncPageNoteCountPill();
   chrome.storage.local.set({ divnotes_screen_share: screenShareMode });
 }
 
@@ -585,6 +633,7 @@ function clearAllBadges() {
     note.element.classList.remove('canopy-has-note');
   });
   savedNotes.length = 0;
+  updateNoteBadgeCount();
 }
 
 // ==================== SPA ROUTE DETECTION ====================
@@ -902,6 +951,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     }
 
     const isNew = !existingNote;
+    const hashtags = extractHashtagsFromContent(val);
     const note: SavedNote = existingNote || {
       id: crypto.randomUUID(),
       element,
@@ -921,16 +971,17 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     };
     note.content = val;
     note.folderId = selectedFolderId;
+    note.tags = hashtags;
 
     if (isNew) {
       savedNotes.push(note);
       createNoteBadge(note);
       if (note.selectedText) applyTextHighlight(note);
+      updateNoteBadgeCount();
       saveNotesToStorage();
       console.log('[Canopy] Note saved! Total:', savedNotes.length);
 
       // Extract and sync hashtags
-      const hashtags = extractHashtagsFromContent(val);
       if (hashtags.length > 0) {
         chrome.runtime.sendMessage({
           type: 'SYNC_NOTE_TAGS',
@@ -948,7 +999,6 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       console.log('[Canopy] Note updated');
 
       // Extract and sync hashtags
-      const hashtags = extractHashtagsFromContent(val);
       if (hashtags.length > 0) {
         chrome.runtime.sendMessage({
           type: 'SYNC_NOTE_TAGS',
