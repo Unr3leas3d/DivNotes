@@ -43,3 +43,61 @@ test('mergeImportedWorkspaceData canonicalizes imported note tags to tag ids', (
 
   assert.deepEqual(merged.notes[0]?.tags, ['tag-1']);
 });
+
+test('mergeImportedWorkspaceData does not rewrite unrelated existing note tags', () => {
+  const existingNote: StoredNote = {
+    id: 'note-existing',
+    url: 'https://example.com',
+    hostname: 'example.com',
+    pageTitle: 'Existing',
+    elementSelector: '#existing',
+    elementTag: 'div',
+    elementInfo: 'Existing note',
+    content: 'Existing content',
+    createdAt: '2026-03-29T00:00:00.000Z',
+    folderId: null,
+    tags: ['research'],
+    pinned: false,
+  };
+
+  const importedNote: StoredNote = {
+    id: 'note-imported',
+    url: 'https://example.com/imported',
+    hostname: 'example.com',
+    pageTitle: 'Imported',
+    elementSelector: '#imported',
+    elementTag: 'div',
+    elementInfo: 'Imported note',
+    content: 'Imported content',
+    createdAt: '2026-03-29T00:00:00.000Z',
+    folderId: null,
+    tags: [],
+    pinned: false,
+  };
+
+  const catalogTag: StoredTag = {
+    id: 'tag-1',
+    name: 'research',
+    color: '#052415',
+    createdAt: '2026-03-29T00:00:00.000Z',
+    updatedAt: '2026-03-29T00:00:00.000Z',
+  };
+
+  const merged = mergeImportedWorkspaceData(
+    {
+      notes: [existingNote],
+      folders: [],
+      tags: [catalogTag],
+    },
+    {
+      notes: [importedNote],
+      folders: [],
+      tags: [],
+    }
+  );
+
+  assert.deepEqual(
+    merged.notes.find((note) => note.id === 'note-existing')?.tags,
+    ['research']
+  );
+});

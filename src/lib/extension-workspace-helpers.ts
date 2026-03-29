@@ -99,10 +99,6 @@ export function mergeImportedWorkspaceData(
   existing: WorkspaceData,
   parsed: { notes?: unknown; folders?: unknown; tags?: unknown }
 ): WorkspaceData {
-  const notes = dedupeById([
-    ...existing.notes,
-    ...normalizeImportArray<StoredNote>(parsed.notes),
-  ]);
   const folders = dedupeById([
     ...existing.folders,
     ...normalizeImportArray<StoredFolder>(parsed.folders),
@@ -112,9 +108,15 @@ export function mergeImportedWorkspaceData(
     ...normalizeImportArray<StoredTag>(parsed.tags),
   ]);
   const canonicalTagLookup = buildCanonicalTagLookup(tags);
+  const notes = dedupeById([
+    ...existing.notes,
+    ...normalizeImportArray<StoredNote>(parsed.notes).map((note) =>
+      canonicalizeNoteTags(note, canonicalTagLookup)
+    ),
+  ]);
 
   return {
-    notes: notes.map((note) => canonicalizeNoteTags(note, canonicalTagLookup)),
+    notes,
     folders,
     tags,
   };
