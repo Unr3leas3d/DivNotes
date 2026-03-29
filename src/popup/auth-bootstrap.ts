@@ -25,6 +25,17 @@ export interface PopupBootstrapState {
   error: string | null;
 }
 
+interface PopupAuthStateChangeParams {
+  currentMode: PopupAuthMode;
+  sessionUser: SessionUser | null;
+}
+
+interface PopupAuthStateChangeResult {
+  mode: PopupAuthMode;
+  email: string;
+  clearAuthError: boolean;
+}
+
 export async function resolvePopupBootstrapState(
   deps: PopupBootstrapDependencies
 ): Promise<PopupBootstrapState> {
@@ -54,4 +65,27 @@ export async function resolvePopupBootstrapState(
         caughtError instanceof Error ? caughtError.message : 'Failed to determine auth state',
     };
   }
+}
+
+export function resolvePopupAuthStateChange({
+  currentMode,
+  sessionUser,
+}: PopupAuthStateChangeParams): PopupAuthStateChangeResult | null {
+  if (sessionUser) {
+    if (currentMode === 'local') {
+      return null;
+    }
+
+    return {
+      mode: 'authenticated',
+      email: sessionUser.email?.trim() ?? '',
+      clearAuthError: true,
+    };
+  }
+
+  if (currentMode === 'authenticated') {
+    return { mode: 'login', email: '', clearAuthError: false };
+  }
+
+  return null;
 }

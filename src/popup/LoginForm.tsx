@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { signInWithGoogleInExtension } from '@/lib/google-auth';
 import { supabase } from '@/lib/supabase';
+import { createAuthIntentGuard } from './auth-intent';
 
 interface LoginFormProps {
     onLogin: (email: string) => void;
@@ -19,6 +20,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('login');
     const [showEmailForm, setShowEmailForm] = useState(false);
+    const authIntentGuardRef = useRef(createAuthIntentGuard());
     const authOptionBaseClass = 'h-[50px] w-full rounded-[12px] border border-[#e7e2d8] bg-white px-4 text-[15px] font-medium text-[#314339] shadow-[0_1px_2px_rgba(5,36,21,0.03)] transition-colors hover:bg-[#f8f6f1] disabled:cursor-wait disabled:opacity-70';
     const authOptionContentClass = 'flex items-center gap-3';
 
@@ -54,6 +56,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
     };
 
     const handleGoogleSignIn = async () => {
+        const currentIntent = authIntentGuardRef.current.beginIntent();
         setIsLoading(true);
         setError('');
 
@@ -65,12 +68,32 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
                 exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
             });
 
-            onLogin(result.email);
+            if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
+                onLogin(result.email);
+            }
         } catch (caughtError) {
-            setError(caughtError instanceof Error ? caughtError.message : 'Google sign-in failed');
+            if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
+                setError(caughtError instanceof Error ? caughtError.message : 'Google sign-in failed');
+            }
         } finally {
-            setIsLoading(false);
+            if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
+                setIsLoading(false);
+            }
         }
+    };
+
+    const handleShowEmailForm = () => {
+        authIntentGuardRef.current.invalidateCurrentIntent();
+        setIsLoading(false);
+        setError('');
+        setShowEmailForm(true);
+    };
+
+    const handleUseLocalOnly = () => {
+        authIntentGuardRef.current.invalidateCurrentIntent();
+        setIsLoading(false);
+        setError('');
+        onUseLocally();
     };
 
     if (showEmailForm) {
@@ -173,7 +196,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
 
                     <button
                         type="button"
-                        onClick={() => setShowEmailForm(true)}
+                        onClick={handleShowEmailForm}
                         className={authOptionBaseClass}
                     >
                         <span className={authOptionContentClass}>
@@ -193,7 +216,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
 
                     <button
                         type="button"
-                        onClick={onUseLocally}
+                        onClick={handleUseLocalOnly}
                         className="h-[50px] w-full rounded-[12px] bg-[#f3f1eb] text-[15px] font-semibold text-[#314339] transition-colors hover:bg-[#ece8df]"
                     >
                         Use Local Only

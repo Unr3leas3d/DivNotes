@@ -5,7 +5,7 @@ import { resetFoldersService } from '@/lib/folders-service';
 import { resetNotesService } from '@/lib/notes-service';
 import { supabase } from '@/lib/supabase';
 import { resetTagsService } from '@/lib/tags-service';
-import { resolvePopupBootstrapState } from './auth-bootstrap';
+import { resolvePopupAuthStateChange, resolvePopupBootstrapState } from './auth-bootstrap';
 
 type AuthMode = 'loading' | 'login' | 'local' | 'authenticated';
 
@@ -54,14 +54,18 @@ export default function App() {
         // Listen for auth state changes (token refresh, etc.)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, session) => {
-                if (session?.user) {
-                    setUserEmail(session.user.email || '');
+                const nextState = resolvePopupAuthStateChange({
+                    currentMode: authModeRef.current,
+                    sessionUser: session?.user ?? null,
+                });
+                if (!nextState) {
+                    return;
+                }
+
+                setAuthMode(nextState.mode);
+                setUserEmail(nextState.email);
+                if (nextState.clearAuthError) {
                     setAuthError(null);
-                    setAuthMode('authenticated');
-                } else if (authModeRef.current === 'authenticated') {
-                    // Only drop to login if we were previously authenticated and lost the session
-                    setAuthMode('login');
-                    setUserEmail('');
                 }
             }
         );

@@ -20,6 +20,8 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(loginForm.includes('Continue with Google'));
   assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
+  assert.ok(loginForm.includes('createAuthIntentGuard'));
+  assert.ok(loginForm.includes('isCurrentIntent(currentIntent)'));
   assert.ok(popupShell.includes('sticky top-0'));
   assert.ok(popupShell.includes('overflow-hidden'));
   assert.ok(popupShell.includes('text-center'));
@@ -29,7 +31,9 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(popupDashboard.includes('WorkspaceActionDialog'));
   assert.ok(popupDashboard.includes('handleOpenSidePanel'));
   assert.ok(popupDashboard.includes('PanelsTopLeft'));
+  assert.ok(popupDashboard.includes('This removes every saved note in this profile.'));
   assert.ok(manifest.permissions.includes('identity'));
   assert.ok(popupApp.includes('h-[500px]'));
   assert.ok(popupApp.includes('authError'));
+  assert.ok(popupApp.includes('resolvePopupAuthStateChange'));
 });

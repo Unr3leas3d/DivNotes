@@ -14,7 +14,12 @@ import { AllNotesView } from './components/AllNotesView';
 import { FoldersView } from './components/FoldersView';
 import { TagsView } from './components/TagsView';
 import { SettingsView } from './components/SettingsView';
-import { validateNewFolderName } from './dialog-state';
+import {
+    getInitialClearAllDialogState,
+    prepareClearAllDialogForSubmit,
+    resolveClearAllDialogError,
+    validateNewFolderName,
+} from './dialog-state';
 
 interface DashboardProps {
     email: string;
@@ -61,7 +66,6 @@ type PopupDialogState =
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const workspace = useExtensionWorkspace({ shell: 'popup' });
     const previousViewRef = useRef<MainPopupView>('this-page');
-    const [localActionError, setLocalActionError] = useState<string | null>(null);
     const [dialogState, setDialogState] = useState<PopupDialogState>(null);
     const [dialogSubmitting, setDialogSubmitting] = useState(false);
     const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
@@ -77,20 +81,17 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         : (workspace.view.active as MainPopupView);
 
     const handleMainViewChange = (nextView: string) => {
-        setLocalActionError(null);
         previousViewRef.current = nextView as MainPopupView;
         workspace.actions.clearFilters();
         workspace.setView(nextView as MainPopupView);
     };
 
     const handleOpenSettings = () => {
-        setLocalActionError(null);
         previousViewRef.current = activeMainView;
         workspace.setView('settings');
     };
 
     const handleBack = () => {
-        setLocalActionError(null);
         if (workspace.view.active === 'settings') {
             workspace.setView(previousViewRef.current);
             return;
@@ -102,13 +103,11 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     };
 
     const handleAddNote = async () => {
-        setLocalActionError(null);
         await workspace.actions.activateInspector();
         window.close();
     };
 
     const handleOpenSidePanel = async () => {
-        setLocalActionError(null);
         try {
             await workspace.actions.openSidePanel();
             window.close();
@@ -133,7 +132,6 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     };
 
     const handleCreateFolder = () => {
-        setLocalActionError(null);
         setDialogState({ type: 'new-folder', value: '', error: null });
     };
 
@@ -186,17 +184,16 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         setDialogSubmitting(true);
         setDialogState((current) => (
             current?.type === 'clear-all'
-                ? { ...current, error: null }
+                ? prepareClearAllDialogForSubmit(current)
                 : current
         ));
         try {
             await workspace.actions.clearAllNotes();
             setDialogState(null);
         } catch (caughtError) {
-            const message = caughtError instanceof Error ? caughtError.message : 'Failed to clear all notes';
             setDialogState((current) => (
                 current?.type === 'clear-all'
-                    ? { ...current, error: message }
+                    ? { ...current, error: resolveClearAllDialogError(caughtError) }
                     : current
             ));
         } finally {
@@ -323,7 +320,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onExport={workspace.actions.exportNotes}
                         onImport={workspace.actions.importNotes}
                         onOpenSidePanel={() => void handleOpenSidePanel()}
-                        onClearAll={() => setDialogState({ type: 'clear-all', error: null })}
+                        onClearAll={() => setDialogState(getInitialClearAllDialogState())}
                     />
                 );
             default:
@@ -337,11 +334,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             utilityAction={utilityAction}
             backLabel={backLabel}
             onBack={backLabel ? handleBack : undefined}
-            errorMessage={
-                dialogState?.type === 'clear-all'
-                    ? localActionError
-                    : localActionError || workspace.error.actions
-            }
+            errorMessage={dialogState?.type === 'clear-all' ? null : workspace.error.actions}
         >
             {content}
             <WorkspaceActionDialog
@@ -376,7 +369,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                     }
                 }}
                 title="Clear All Notes?"
-                description="This removes every saved note, folder, and tag in this profile. This cannot be undone."
+                description="This removes every saved note in this profile. This cannot be undone."
                 confirmLabel="Clear All"
                 destructive
                 inlineError={dialogState?.type === 'clear-all' ? dialogState.error : null}

@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { resolvePopupBootstrapState } from './auth-bootstrap.ts';
+import {
+  resolvePopupBootstrapState,
+  resolvePopupAuthStateChange,
+} from './auth-bootstrap.ts';
 
 test('resolvePopupBootstrapState falls back to login with error when storage lookup fails', async () => {
   const state = await resolvePopupBootstrapState({
@@ -39,5 +42,27 @@ test('resolvePopupBootstrapState falls back to login with error when session loo
     mode: 'login',
     email: '',
     error: 'Session fetch failed',
+  });
+});
+
+test('resolvePopupAuthStateChange ignores session promotion while current mode is local', () => {
+  const nextState = resolvePopupAuthStateChange({
+    currentMode: 'local',
+    sessionUser: { email: 'user@example.com' },
+  });
+
+  assert.equal(nextState, null);
+});
+
+test('resolvePopupAuthStateChange promotes authenticated mode when current mode is not local', () => {
+  const nextState = resolvePopupAuthStateChange({
+    currentMode: 'login',
+    sessionUser: { email: 'user@example.com' },
+  });
+
+  assert.deepEqual(nextState, {
+    mode: 'authenticated',
+    email: 'user@example.com',
+    clearAuthError: true,
   });
 });
