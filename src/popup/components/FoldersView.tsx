@@ -3,7 +3,7 @@ import { Folder, FolderOpen } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
-import type { FolderSummary } from '@/lib/extension-selectors';
+import { createTagResolver, type FolderSummary } from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
 
 interface FoldersViewProps {
@@ -35,6 +35,8 @@ export function FoldersView({
     () => folderSummaries.find((summary) => summary.folder.id === selectedFolderId) || null,
     [folderSummaries, selectedFolderId]
   );
+  const tags = useMemo(() => [...tagsById.values()], [tagsById]);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
 
   if (loading) {
     return (
@@ -91,9 +93,7 @@ export function FoldersView({
                   density="compact"
                   onOpen={onOpenNote}
                   folderName={selectedSummary.folder.name}
-                  tagNames={note.tags
-                    .map((tagId) => tagsById.get(tagId)?.name)
-                    .filter(Boolean) as string[]}
+                  tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
                 />
               );
             })}

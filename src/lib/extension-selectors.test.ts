@@ -7,6 +7,8 @@ import {
   buildViewCounts,
   filterNotesBySearch,
   groupNotesByHostname,
+  noteHasTagValue,
+  resolveStoredTagLabels,
   selectThisPageNotes,
 } from './extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from './types';
@@ -191,6 +193,27 @@ test('buildTagSummaries and filterNotesBySearch resolve tag names stored on note
 
   const matches = filterNotesBySearch([noteWithTagNames], 'research', catalog);
   assert.deepEqual(matches.map((note) => note.id), ['note-name-tags']);
+});
+
+test('noteHasTagValue matches canonical tag ids against tag names stored on notes', () => {
+  const noteWithTagNames: StoredNote = {
+    ...sampleNotes[0],
+    id: 'note-name-tags',
+    tags: ['research'],
+  };
+
+  assert.equal(noteHasTagValue(noteWithTagNames, 'tag-2', sampleTags), true);
+  assert.equal(noteHasTagValue(noteWithTagNames, 'tag-1', sampleTags), false);
+});
+
+test('resolveStoredTagLabels resolves note tags stored as names for workspace rendering', () => {
+  const noteWithTagNames: StoredNote = {
+    ...sampleNotes[0],
+    id: 'note-name-tags',
+    tags: ['research', 'orphan-tag'],
+  };
+
+  assert.deepEqual(resolveStoredTagLabels(noteWithTagNames.tags, sampleTags), ['research', 'orphan-tag']);
 });
 
 test('buildViewCounts returns shared pill counts for popup and side panel', () => {

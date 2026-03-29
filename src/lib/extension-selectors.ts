@@ -20,6 +20,14 @@ export interface TagSummary {
   noteIds: string[];
 }
 
+type TagCatalogEntry = Pick<StoredTag, 'id' | 'name'>;
+
+export interface TagResolver {
+  resolveStoredTagLabels: (tags: readonly string[]) => string[];
+  noteHasTagValue: (note: Pick<StoredNote, 'tags'>, tagValue: string) => boolean;
+  noteHasAllTagValues: (note: Pick<StoredNote, 'tags'>, tagValues: Iterable<string>) => boolean;
+}
+
 export interface ViewCountInput {
   notes: StoredNote[];
   folders: StoredFolder[];
@@ -42,14 +50,127 @@ function normalizeTagValue(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function noteHasTag(note: StoredNote, tag: StoredTag): boolean {
-  const normalizedTagId = normalizeTagValue(tag.id);
-  const normalizedTagName = normalizeTagValue(tag.name);
+function createTagLookup(tagCatalog: readonly TagCatalogEntry[]): Map<string, TagCatalogEntry> {
+  const lookup = new Map<string, TagCatalogEntry>();
+
+  for (const tag of tagCatalog) {
+    lookup.set(normalizeTagValue(tag.id), tag);
+    lookup.set(normalizeTagValue(tag.name), tag);
+  }
+
+  return lookup;
+}
+
+function resolveTagValue(
+  value: string,
+  tagLookup: Map<string, TagCatalogEntry>
+): string | null {
+  const normalizedValue = normalizeTagValue(value);
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const matchedTag = tagLookup.get(normalizedValue);
+  return matchedTag ? matchedTag.name : value.trim();
+}
+
+function noteMatchesTagValue(
+  note: Pick<StoredNote, 'tags'>,
+  tagValue: string,
+  tagLookup: Map<string, TagCatalogEntry>
+): boolean {
+  const normalizedTargetValue = normalizeTagValue(tagValue);
+  if (!normalizedTargetValue) {
+    return false;
+  }
 
   return note.tags.some((value) => {
     const normalizedValue = normalizeTagValue(value);
-    return normalizedValue === normalizedTagId || normalizedValue === normalizedTagName;
+    if (!normalizedValue) {
+      return false;
+    }
+
+    if (normalizedValue === normalizedTargetValue) {
+      return true;
+    }
+
+    const matchedTag = tagLookup.get(normalizedValue);
+    if (!matchedTag) {
+      return false;
+    }
+
+    return (
+      normalizeTagValue(matchedTag.id) === normalizedTargetValue ||
+      normalizeTagValue(matchedTag.name) === normalizedTargetValue
+    );
   });
+}
+
+export function createTagResolver(tagCatalog: readonly TagCatalogEntry[] = []): TagResolver {
+  const tagLookup = createTagLookup(tagCatalog);
+
+  return {
+    resolveStoredTagLabels(tags: readonly string[]) {
+      const seen = new Set<string>();
+      const labels: string[] = [];
+
+      for (const value of tags) {
+        const resolvedLabel = resolveTagValue(value, tagLookup);
+        if (!resolvedLabel) {
+          continue;
+        }
+
+        const normalizedLabel = normalizeTagValue(resolvedLabel);
+        if (seen.has(normalizedLabel)) {
+          continue;
+        }
+
+        seen.add(normalizedLabel);
+        labels.push(resolvedLabel);
+      }
+
+      return labels;
+    },
+    noteHasTagValue(note: Pick<StoredNote, 'tags'>, tagValue: string) {
+      return noteMatchesTagValue(note, tagValue, tagLookup);
+    },
+    noteHasAllTagValues(note: Pick<StoredNote, 'tags'>, tagValues: Iterable<string>) {
+      for (const tagValue of tagValues) {
+        if (!noteMatchesTagValue(note, tagValue, tagLookup)) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+  };
+}
+
+export function resolveStoredTagLabels(
+  tags: readonly string[],
+  tagCatalog: readonly TagCatalogEntry[] = []
+): string[] {
+  return createTagResolver(tagCatalog).resolveStoredTagLabels(tags);
+}
+
+export function noteHasTagValue(
+  note: Pick<StoredNote, 'tags'>,
+  tagValue: string,
+  tagCatalog: readonly TagCatalogEntry[] = []
+): boolean {
+  return createTagResolver(tagCatalog).noteHasTagValue(note, tagValue);
+}
+
+export function noteHasAllTagValues(
+  note: Pick<StoredNote, 'tags'>,
+  tagValues: Iterable<string>,
+  tagCatalog: readonly TagCatalogEntry[] = []
+): boolean {
+  return createTagResolver(tagCatalog).noteHasAllTagValues(note, tagValues);
+}
+
+function noteHasTag(note: StoredNote, tag: StoredTag): boolean {
+  return noteHasTagValue(note, tag.id, [tag]);
 }
 
 function collectSearchableTagValues(note: StoredNote, tags: StoredTag[]): string[] {
@@ -170,9 +291,13 @@ export function buildFolderSummaries(
 }
 
 export function buildTagSummaries(tags: StoredTag[], notes: StoredNote[]): TagSummary[] {
+  const tagResolver = createTagResolver(tags);
+
   return [...tags]
     .map((tag) => {
-      const taggedNotes = sortNotesNewestFirst(notes.filter((note) => noteHasTag(note, tag)));
+      const taggedNotes = sortNotesNewestFirst(
+        notes.filter((note) => tagResolver.noteHasTagValue(note, tag.id))
+      );
       return {
         tag,
         count: taggedNotes.length,

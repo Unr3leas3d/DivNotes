@@ -3,7 +3,12 @@ import { Globe, Search, StickyNote } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
-import { filterNotesBySearch, groupNotesByHostname, type DomainGroup } from '@/lib/extension-selectors';
+import {
+  createTagResolver,
+  filterNotesBySearch,
+  groupNotesByHostname,
+  type DomainGroup,
+} from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
 
 interface AllNotesViewProps {
@@ -27,6 +32,7 @@ export function AllNotesView({
 }: AllNotesViewProps) {
   const [query, setQuery] = useState('');
   const tags = useMemo(() => [...tagsById.values()], [tagsById]);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
 
   const filteredNotes = useMemo(() => filterNotesBySearch(notes, query, tags), [notes, query, tags]);
   const visibleGroups = useMemo(
@@ -111,9 +117,7 @@ export function AllNotesView({
                       density="compact"
                       note={note}
                       folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
-                      tagNames={note.tags
-                        .map((tagId) => tagsById.get(tagId)?.name)
-                        .filter(Boolean) as string[]}
+                      tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
                       onOpen={onOpenNote}
                     />
                   );

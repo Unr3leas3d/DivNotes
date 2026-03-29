@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Hash, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
+import { buildTagSummaries, createTagResolver } from '@/lib/extension-selectors';
 import { NoteCard } from './NoteCard';
 import { TagPill } from './TagPill';
 import { TagManager } from './TagManager';
@@ -27,23 +28,10 @@ export function TagsView({
 }: TagsViewProps) {
   const [activeTagIds, setActiveTagIds] = useState<Set<string>>(new Set());
   const [showManager, setShowManager] = useState(false);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
 
-  // Count notes per tag
   const tagNoteCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const tag of tags) {
-      counts.set(tag.id, 0);
-    }
-    for (const note of notes) {
-      if (note.tags) {
-        for (const tagId of note.tags) {
-          if (counts.has(tagId)) {
-            counts.set(tagId, counts.get(tagId)! + 1);
-          }
-        }
-      }
-    }
-    return counts;
+    return new Map(buildTagSummaries(tags, notes).map((summary) => [summary.tag.id, summary.count]));
   }, [notes, tags]);
 
   // Toggle a tag in the active filter
@@ -59,7 +47,6 @@ export function TagsView({
     });
   };
 
-  // Remove a tag from the active filter
   const removeTag = (tagId: string) => {
     setActiveTagIds((prev) => {
       const next = new Set(prev);
@@ -68,22 +55,13 @@ export function TagsView({
     });
   };
 
-  // Filter notes: must have ALL active tags (AND filter) + search query
   const filteredNotes = useMemo(() => {
     let result = notes;
 
-    // AND filter: note must contain every active tag
     if (activeTagIds.size > 0) {
-      result = result.filter((note) => {
-        if (!note.tags) return false;
-        for (const tagId of activeTagIds) {
-          if (!note.tags.includes(tagId)) return false;
-        }
-        return true;
-      });
+      result = result.filter((note) => tagResolver.noteHasAllTagValues(note, activeTagIds));
     }
 
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -94,9 +72,8 @@ export function TagsView({
     }
 
     return result;
-  }, [notes, activeTagIds, searchQuery]);
+  }, [notes, activeTagIds, searchQuery, tagResolver]);
 
-  // Build folder path for a note
   const getFolderPath = (note: StoredNote): string | undefined => {
     if (!note.folderId) return undefined;
     const ancestors = getAncestorPath(note.folderId, folders);
@@ -104,7 +81,6 @@ export function TagsView({
     return ancestors.map((f) => f.name).join(' / ');
   };
 
-  // Active tags resolved
   const activeTags = useMemo(
     () => tags.filter((t) => activeTagIds.has(t.id)),
     [tags, activeTagIds]

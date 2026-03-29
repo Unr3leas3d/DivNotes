@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import { Pin, Trash2 } from 'lucide-react';
 
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
+import { createTagResolver } from '@/lib/extension-selectors';
 import { cn } from '@/lib/utils';
 import type { StoredNote, StoredTag } from '@/lib/types';
 
@@ -107,21 +108,15 @@ export function NoteCard({
   onDragEnd,
 }: NoteCardProps) {
   const [expanded, setExpanded] = useState(false);
-
-  const resolvedTags = useMemo(() => {
-    if (note.tags.length === 0) {
-      return [];
-    }
-
-    return note.tags
-      .map((tagId) => tags.find((tag) => tag.id === tagId))
-      .filter((tag): tag is StoredTag => Boolean(tag));
-  }, [note.tags, tags]);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
 
   const title = useMemo(() => deriveTitle(note.content), [note.content]);
   const preview = useMemo(() => derivePreview(note.content, title), [note.content, title]);
   const renderedContent = useMemo(() => (expanded ? renderMarkdown(note.content) : ''), [expanded, note.content]);
-  const tagNames = useMemo(() => resolvedTags.map((tag) => tag.name), [resolvedTags]);
+  const tagNames = useMemo(
+    () => tagResolver.resolveStoredTagLabels(note.tags),
+    [note.tags, tagResolver]
+  );
 
   return (
     <div

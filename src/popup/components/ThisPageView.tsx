@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FilePlus2, FileText } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
+import { createTagResolver } from '@/lib/extension-selectors';
 import type { CurrentPageState } from '@/lib/extension-workspace-types';
 import type { StoredNote, StoredTag } from '@/lib/types';
 
@@ -25,6 +26,9 @@ export function ThisPageView({
   onAddNote,
   onOpenNote,
 }: ThisPageViewProps) {
+  const tags = useMemo(() => [...tagsById.values()], [tagsById]);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
+
   if (loading) {
     return (
       <WorkspaceEmptyState
@@ -81,7 +85,7 @@ export function ThisPageView({
               key={note.id}
               note={note}
               onOpen={onOpenNote}
-              tagNames={note.tags.map((tagId) => tagsById.get(tagId)?.name).filter(Boolean) as string[]}
+              tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
             />
           ))}
         </div>

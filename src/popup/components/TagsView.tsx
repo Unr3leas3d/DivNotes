@@ -3,7 +3,7 @@ import { Hash, Tags } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
-import type { TagSummary } from '@/lib/extension-selectors';
+import { createTagResolver, type TagSummary } from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -30,13 +30,15 @@ export function TagsView({
   onSelectTag,
   onOpenNote,
 }: TagsViewProps) {
+  const tags = useMemo(() => [...tagsById.values()], [tagsById]);
+  const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
   const filteredNotes = useMemo(() => {
     if (!selectedTagId) {
       return notes.filter((note) => note.tags.length > 0);
     }
 
-    return notes.filter((note) => note.tags.includes(selectedTagId));
-  }, [notes, selectedTagId]);
+    return notes.filter((note) => tagResolver.noteHasTagValue(note, selectedTagId));
+  }, [notes, selectedTagId, tagResolver]);
 
   if (loading) {
     return (
@@ -120,9 +122,7 @@ export function TagsView({
               note={note}
               onOpen={onOpenNote}
               folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
-              tagNames={note.tags
-                .map((tagId) => tagsById.get(tagId)?.name)
-                .filter(Boolean) as string[]}
+              tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
             />
           ))}
         </div>
