@@ -120,6 +120,8 @@ Use Chrome extension auth primitives for the handoff and treat Supabase as the s
 
 If Chrome identity permissions are required in the manifest, they are in scope for this batch.
 
+If the extension redirect URL or Google provider setup requires corresponding Supabase auth configuration changes, those configuration updates are also in scope for this batch and should be called out explicitly in the implementation plan.
+
 ## Popup Login Screen
 
 The logged-out popup remains a single-screen auth choice surface.
@@ -197,6 +199,8 @@ The sidepanel header remains sticky and management-oriented:
 ### Layout Constraint
 
 When the sidepanel is widened, the content should sit inside a centered fixed-width column. The goal is to prevent note cards, trees, filters, and forms from stretching across the full panel width.
+
+Target the main sidepanel working surface at a maximum content width of `720px` unless an existing shared width token already provides the same effect.
 
 The header can span the panel, but the main working surface should feel anchored and readable.
 
