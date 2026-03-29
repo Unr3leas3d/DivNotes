@@ -122,15 +122,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === 'SYNC_NOTE_TAGS') {
-        const { noteId, tagNames } = message;
+        const { noteId, tagNames, previousTagNames } = message;
         chrome.storage.local.get(['divnotes_tags', 'divnotes_notes'], (result) => {
             const tags = result.divnotes_tags || [];
             const notes = result.divnotes_notes || [];
             const resolvedTagIds = [];
             const newlyCreatedTagIds = new Set();
+            const normalizedTagNames = [...new Set(
+                (Array.isArray(tagNames) ? tagNames : [])
+                    .map((name) => typeof name === 'string' ? name.trim().toLowerCase() : '')
+                    .filter(Boolean)
+            )];
 
-            for (const name of tagNames) {
-                const normalized = name.toLowerCase();
+            const resolveExistingTagIds = (values) => {
+                const resolved = [];
+                const seen = new Set();
+
+                for (const value of Array.isArray(values) ? values : []) {
+                    if (typeof value !== 'string') {
+                        continue;
+                    }
+
+                    const normalized = value.trim().toLowerCase();
+                    if (!normalized) {
+                        continue;
+                    }
+
+                    const tag = tags.find((candidate) =>
+                        candidate.id === value || candidate.name.toLowerCase() === normalized
+                    );
+                    if (!tag || seen.has(tag.id)) {
+                        continue;
+                    }
+
+                    seen.add(tag.id);
+                    resolved.push(tag.id);
+                }
+
+                return resolved;
+            };
+
+            for (const normalized of normalizedTagNames) {
                 let tag = tags.find(t => t.name.toLowerCase() === normalized);
                 if (!tag) {
                     // Duplicated from src/lib/types.ts TAG_COLORS — keep in sync
@@ -149,15 +181,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             const noteIdx = notes.findIndex(n => n.id === noteId);
-            const existingTags = noteIdx > -1 ? (notes[noteIdx].tags || []) : [];
+            const existingTags = resolveExistingTagIds(
+                Array.isArray(previousTagNames)
+                    ? previousTagNames
+                    : (noteIdx > -1 ? (notes[noteIdx].tags || []) : [])
+            );
             if (noteIdx > -1) {
-                // Merge with existing tags (don't overwrite manually-added tags)
-                const merged = [...new Set([...existingTags, ...resolvedTagIds])];
-                notes[noteIdx].tags = merged;
+                notes[noteIdx].tags = normalizedTagNames;
             }
 
             // Compute which note_tag associations are actually new
             const newAssociations = resolvedTagIds.filter(id => !existingTags.includes(id));
+            const removedAssociations = existingTags.filter(id => !resolvedTagIds.includes(id));
 
             chrome.storage.local.set({
                 divnotes_tags: tags,
@@ -193,6 +228,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 id: crypto.randomUUID(),
                                 entityType: 'note_tag',
                                 action: 'save',
+                                entityId,
+                                payload: { note_id: noteId, tag_id: tagId },
+                                timestamp: Date.now(),
+                            });
+                        }
+                    }
+                    for (const tagId of removedAssociations) {
+                        const entityId = `${noteId}:${tagId}`;
+                        if (!hasEntry('note_tag', 'delete', entityId)) {
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'note_tag',
+                                action: 'delete',
                                 entityId,
                                 payload: { note_id: noteId, tag_id: tagId },
                                 timestamp: Date.now(),

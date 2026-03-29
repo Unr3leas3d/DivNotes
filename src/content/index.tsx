@@ -1039,6 +1039,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     const formattedContent = formatEditorContent(nextDraft);
     const nextTags = buildEditorTagNames(manualTags, nextDraft);
     const nextPinned = pinnedInput.checked;
+    const previousTags = existingNote ? [...existingNote.tags] : [];
 
     errorEl.textContent = '';
     saveBtn.disabled = true;
@@ -1073,13 +1074,12 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         updateNoteBadgeCount();
         console.log('[Canopy] Note saved! Total:', savedNotes.length);
 
-        if (nextTags.length > 0) {
-          chrome.runtime.sendMessage({
-            type: 'SYNC_NOTE_TAGS',
-            noteId: note.id,
-            tagNames: nextTags,
-          });
-        }
+        chrome.runtime.sendMessage({
+          type: 'SYNC_NOTE_TAGS',
+          noteId: note.id,
+          tagNames: nextTags,
+          previousTagNames: [],
+        });
       } else {
         const nextSavedNotes = savedNotes.map((note) =>
           note.id === existingNote.id
@@ -1105,13 +1105,12 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         updateNoteBadgeCount();
         console.log('[Canopy] Note updated');
 
-        if (nextTags.length > 0) {
-          chrome.runtime.sendMessage({
-            type: 'SYNC_NOTE_TAGS',
-            noteId: existingNote.id,
-            tagNames: nextTags,
-          });
-        }
+        chrome.runtime.sendMessage({
+          type: 'SYNC_NOTE_TAGS',
+          noteId: existingNote.id,
+          tagNames: nextTags,
+          previousTagNames: previousTags,
+        });
       }
 
       closeNoteEditor();
