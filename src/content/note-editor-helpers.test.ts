@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildEditorTagNames,
   createFolderPickerHeader,
   formatEditorContent,
   getFolderChipLabel,
+  getInitialManualTags,
   getInitialSelectedFolderId,
   getTagChipLabels,
   hasMeaningfulEditorContent,
@@ -99,6 +101,19 @@ test('formatEditorContent and parseEditorDraft round-trip title and body', () =>
   });
 });
 
+test('formatEditorContent and parseEditorDraft preserve titled body indentation and trailing whitespace', () => {
+  const original = {
+    title: 'Code sample',
+    body: '    const answer = 42;\n    return answer;  \n',
+  };
+
+  const content = formatEditorContent(original);
+
+  assert.equal(content, '# Code sample\n\n    const answer = 42;\n    return answer;  \n');
+  assert.deepEqual(parseEditorDraft(content), original);
+  assert.equal(formatEditorContent(parseEditorDraft(content)), content);
+});
+
 test('getInitialSelectedFolderId allows auto-suggest for an unfiled existing note', () => {
   assert.equal(
     getInitialSelectedFolderId({
@@ -149,6 +164,25 @@ test('getFolderChipLabel returns the selected folder name and falls back to Inbo
 
 test('getTagChipLabels normalizes chip labels for display', () => {
   assert.deepEqual(getTagChipLabels(['launch', '#copy', 'launch', '']), ['#launch', '#copy']);
+});
+
+test('getInitialManualTags excludes hashtags already present in the saved note body', () => {
+  assert.deepEqual(
+    getInitialManualTags(['manual-tag', 'body-tag'], '# Title\n\nBody with #body-tag'),
+    ['manual-tag']
+  );
+});
+
+test('buildEditorTagNames reflects the current body hashtags without permanently accumulating prior body tags', () => {
+  const manualTags = getInitialManualTags(['manual-tag', 'old-body-tag'], '# Title\n\nBody with #old-body-tag');
+
+  assert.deepEqual(
+    buildEditorTagNames(manualTags, {
+      title: 'Title',
+      body: 'Body after editing without the removed hashtag',
+    }),
+    ['manual-tag']
+  );
 });
 
 test('createFolderPickerHeader uses textContent for the folder name', () => {

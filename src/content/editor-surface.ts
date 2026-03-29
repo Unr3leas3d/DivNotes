@@ -65,25 +65,55 @@ export function createEditorShell(doc: EditorSurfaceDocument) {
 export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurfaceState) {
   const header = applyDataAttr(doc.createElement('div'), 'canopy-editor-header');
   header.style.cssText =
-    'padding:12px 16px;border-bottom:1px solid rgba(5,36,21,0.06);display:flex;align-items:center;gap:8px;';
+    'padding:12px 16px;border-bottom:1px solid rgba(5,36,21,0.06);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;';
+
+  const infoBlock = doc.createElement('div');
+  infoBlock.style.cssText = 'display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1;';
 
   const accent = doc.createElement('div');
   accent.style.cssText =
-    'width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#052415,#1a5c2e);flex-shrink:0;';
+    'width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#052415,#1a5c2e);flex-shrink:0;margin-top:1px;';
+
+  const textBlock = doc.createElement('div');
+  textBlock.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;';
 
   const heading = applyDataAttr(doc.createElement('span'), 'canopy-editor-heading');
   heading.textContent = state.isNew ? 'New Note' : 'Edit Note';
   heading.style.cssText = 'font-size:12px;font-weight:600;color:#052415;';
-
-  const spacer = doc.createElement('div');
-  spacer.style.cssText = 'flex:1;';
 
   const info = applyDataAttr(doc.createElement('span'), 'canopy-editor-element-info');
   info.textContent = state.elementInfo;
   info.style.cssText =
     "font-size:10px;font-family:'SF Mono',monospace;color:#7a8a7d;background:rgba(5,36,21,0.04);padding:2px 8px;border-radius:4px;";
 
-  appendChildren(header, [accent, heading, spacer, info]);
+  textBlock.appendChild(heading);
+  textBlock.appendChild(info);
+  appendChildren(infoBlock, [accent, textBlock]);
+
+  const actions = doc.createElement('div');
+  actions.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+
+  if (!state.isNew) {
+    actions.appendChild(
+      createButton(
+        doc,
+        'Delete',
+        'canopy-delete',
+        'padding:7px 12px;border:none;border-radius:10px;background:rgba(220,38,38,0.08);color:#b91c1c;font-size:12px;cursor:pointer;'
+      )
+    );
+  }
+
+  actions.appendChild(
+    createButton(
+      doc,
+      'Close',
+      'canopy-close',
+      'padding:7px 12px;border:1px solid rgba(5,36,21,0.06);border-radius:10px;background:rgba(5,36,21,0.04);color:#7a8a7d;font-size:12px;cursor:pointer;'
+    )
+  );
+
+  appendChildren(header, [infoBlock, actions]);
   return header;
 }
 
@@ -225,37 +255,12 @@ export function createPrimarySaveButton(doc: EditorSurfaceDocument, state: Edito
 }
 
 function createFooter(doc: EditorSurfaceDocument, state: EditorSurfaceState) {
-  const footer = doc.createElement('div');
+  const footer = applyDataAttr(doc.createElement('div'), 'canopy-footer');
   footer.style.cssText =
-    'padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
-
-  const leftActions = doc.createElement('div');
-  leftActions.style.cssText = 'display:flex;align-items:center;gap:8px;';
-
-  if (!state.isNew) {
-    const deleteButton = createButton(
-      doc,
-      'Delete',
-      'canopy-delete',
-      'padding:7px 12px;border:none;border-radius:10px;background:rgba(220,38,38,0.08);color:#b91c1c;font-size:12px;cursor:pointer;'
-    );
-    leftActions.appendChild(deleteButton);
-  }
-
-  const rightActions = doc.createElement('div');
-  rightActions.style.cssText = 'display:flex;align-items:center;gap:8px;';
-
-  const cancelButton = createButton(
-    doc,
-    'Cancel',
-    'canopy-cancel',
-    'padding:7px 16px;border:1px solid rgba(5,36,21,0.06);border-radius:10px;background:rgba(5,36,21,0.04);color:#7a8a7d;font-size:12px;cursor:pointer;'
-  );
+    'padding:12px;display:flex;align-items:center;justify-content:flex-end;gap:8px;';
 
   const saveButton = createPrimarySaveButton(doc, state);
-
-  appendChildren(rightActions, [cancelButton, saveButton]);
-  appendChildren(footer, [leftActions, rightActions]);
+  footer.appendChild(saveButton);
   return footer;
 }
 

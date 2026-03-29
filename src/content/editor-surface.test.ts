@@ -113,7 +113,7 @@ const sampleState = {
   saveDisabled: false,
 };
 
-test('createEditorSurface renders the shell, editor fields, controls, and inline status for an existing note', () => {
+test('createEditorSurface renders header actions for an existing note and keeps the footer focused on save', () => {
   const fakeDocument = createFakeDocument();
 
   const surface = createEditorSurface(fakeDocument, sampleState);
@@ -126,6 +126,16 @@ test('createEditorSurface renders the shell, editor fields, controls, and inline
   assert.equal(
     surface.querySelector?.('[data-canopy-editor-element-info]')?.textContent,
     sampleState.elementInfo
+  );
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-delete]')
+      ?.textContent,
+    'Delete'
+  );
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-close]')
+      ?.textContent,
+    'Close'
   );
   assert.equal(surface.querySelector?.('[data-canopy-editor-title]')?.value, sampleState.title);
   assert.equal(
@@ -166,10 +176,13 @@ test('createEditorSurface renders the shell, editor fields, controls, and inline
     sampleState.errorMessage
   );
   assert.equal(surface.querySelector?.('[data-canopy-save]')?.textContent, 'Update Note');
-  assert.equal(surface.querySelector?.('[data-canopy-delete]')?.textContent, 'Delete');
+  assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-save]')
+    ?.textContent, 'Update Note');
+  assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-delete]'), null);
+  assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-cancel]'), null);
 });
 
-test('createEditorSurface disables save and omits delete for new notes', () => {
+test('createEditorSurface disables save, omits delete for new notes, and still provides header close', () => {
   const fakeDocument = createFakeDocument();
 
   const surface = createEditorSurface(fakeDocument, {
@@ -185,6 +198,8 @@ test('createEditorSurface disables save and omits delete for new notes', () => {
   );
   assert.equal(surface.querySelector?.('[data-canopy-save]')?.textContent, 'Save Note');
   assert.equal(surface.querySelector?.('[data-canopy-save]')?.disabled, true);
-  assert.equal(surface.querySelector?.('[data-canopy-delete]'), null);
+  assert.equal(surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-delete]'), null);
+  assert.equal(surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-close]')
+    ?.textContent, 'Close');
   assert.equal(surface.querySelector?.('[data-canopy-error]')?.textContent, '');
 });

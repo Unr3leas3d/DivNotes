@@ -98,41 +98,89 @@ export function hasMeaningfulEditorContent({ title, body }: EditorDraft): boolea
   return title.trim().length > 0 || body.trim().length > 0;
 }
 
+function normalizeTagName(tag: string): string {
+  return tag.trim().replace(/^#+/, '').toLowerCase();
+}
+
 export function formatEditorContent({ title, body }: EditorDraft): string {
   const trimmedTitle = title.trim();
-  const trimmedBody = body.trim();
 
   if (!trimmedTitle) {
-    return trimmedBody;
+    return body;
   }
 
-  if (!trimmedBody) {
+  if (body.length === 0) {
     return `# ${trimmedTitle}`;
   }
 
-  return `# ${trimmedTitle}\n\n${trimmedBody}`;
+  return `# ${trimmedTitle}\n\n${body}`;
 }
 
 export function parseEditorDraft(content: string): EditorDraft {
-  const normalized = content.replace(/\r\n/g, '\n').trim();
-  if (!normalized) {
+  const normalized = content.replace(/\r\n/g, '\n');
+  if (!normalized.trim()) {
     return { title: '', body: '' };
   }
 
-  const [firstLine, ...remainingLines] = normalized.split('\n');
-  if (!firstLine) {
-    return { title: '', body: normalized };
-  }
-
-  const titleMatch = firstLine.match(/^#\s+(.+)$/);
+  const firstLineBreak = normalized.indexOf('\n');
+  const firstLine = firstLineBreak === -1 ? normalized : normalized.slice(0, firstLineBreak);
+  const titleMatch = firstLine.match(/^#\s+(.+?)\s*$/);
   if (!titleMatch) {
     return { title: '', body: normalized };
   }
 
+  let body = firstLineBreak === -1 ? '' : normalized.slice(firstLineBreak + 1);
+  if (body.startsWith('\n')) {
+    body = body.slice(1);
+  }
+
   return {
     title: titleMatch[1]?.trim() ?? '',
-    body: remainingLines.join('\n').replace(/^\n+/, '').trim(),
+    body,
   };
+}
+
+export function getInitialManualTags(
+  savedTags: readonly string[],
+  content: string
+): string[] {
+  const contentTags = new Set(extractHashtagsFromEditorContent(content));
+  const manualTags: string[] = [];
+
+  for (const tag of savedTags) {
+    const normalized = normalizeTagName(tag);
+    if (!normalized || contentTags.has(normalized) || manualTags.includes(normalized)) {
+      continue;
+    }
+
+    manualTags.push(normalized);
+  }
+
+  return manualTags;
+}
+
+function extractHashtagsFromEditorContent(content: string): string[] {
+  const regex = /(?:^|(?<=\s))#([a-zA-Z0-9_-]{1,50})(?=\s|$)/g;
+  const tags = new Set<string>();
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    tags.add(match[1].toLowerCase());
+  }
+
+  return Array.from(tags);
+}
+
+export function buildEditorTagNames(
+  manualTags: readonly string[],
+  draft: EditorDraft
+): string[] {
+  return Array.from(
+    new Set([
+      ...manualTags.map(normalizeTagName).filter(Boolean),
+      ...extractHashtagsFromEditorContent(formatEditorContent(draft)),
+    ])
+  );
 }
 
 export function getFolderChipLabel(
@@ -151,7 +199,7 @@ export function getTagChipLabels(tags: readonly string[]): string[] {
   const labels: string[] = [];
 
   for (const tag of tags) {
-    const normalized = tag.trim().replace(/^#+/, '').toLowerCase();
+    const normalized = normalizeTagName(tag);
     if (!normalized || seen.has(normalized)) {
       continue;
     }

@@ -5,8 +5,10 @@ import { marked } from 'marked';
 import type { StoredFolder } from '../lib/types.ts';
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
+  buildEditorTagNames,
   formatEditorContent,
   getFolderChipLabel,
+  getInitialManualTags,
   getInitialSelectedFolderId,
   getSuggestedFolderIdForDomain,
   getTagChipLabels,
@@ -645,11 +647,7 @@ function toggleScreenShareMode() {
     }
   });
 
-  // Hide any open editor
-  if (noteEditorContainer) {
-    noteEditorContainer.remove();
-    noteEditorContainer = null;
-  }
+  closeNoteEditor();
 
   // Persist state for side panel to read
   syncPageNoteCountPill();
@@ -693,22 +691,6 @@ history.replaceState = function (...args: Parameters<typeof history.replaceState
 window.addEventListener('popstate', () => setTimeout(checkUrlChange, 0));
 
 // ==================== NOTE EDITOR (Pure DOM) ====================
-function normalizeTagName(tag: string): string {
-  return tag.trim().replace(/^#+/, '').toLowerCase();
-}
-
-function buildEditorTagNames(
-  manualTags: readonly string[],
-  draft: { title: string; body: string }
-): string[] {
-  return Array.from(
-    new Set([
-      ...manualTags.map(normalizeTagName).filter(Boolean),
-      ...extractHashtagsFromContent(formatEditorContent(draft)),
-    ])
-  );
-}
-
 function applySaveButtonState(button: HTMLButtonElement, enabled: boolean) {
   button.disabled = !enabled;
   button.style.background = enabled ? '#052415' : 'rgba(5,36,21,0.1)';
@@ -759,13 +741,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   let selectedFolderId: string | null = existingNote?.folderId ?? null;
   let availableFolders: StoredFolder[] = [];
   let folderSelectionTouched = false;
-  let manualTags = Array.from(
-    new Set(
-      (existingNote?.tags ?? [])
-        .map(normalizeTagName)
-        .filter(Boolean)
-    )
-  );
+  let manualTags = getInitialManualTags(existingNote?.tags ?? [], existingNote?.content ?? '');
 
   const elInfo = `${getElementInfo(element)}${
     selectedText
@@ -817,10 +793,10 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   ) as HTMLInputElement | null;
   const errorEl = currentEditor.querySelector('[data-canopy-error]') as HTMLElement | null;
   const saveBtn = currentEditor.querySelector('[data-canopy-save]') as HTMLButtonElement | null;
-  const cancelBtn = currentEditor.querySelector('[data-canopy-cancel]') as HTMLButtonElement | null;
+  const closeBtn = currentEditor.querySelector('[data-canopy-close]') as HTMLButtonElement | null;
   const deleteBtn = currentEditor.querySelector('[data-canopy-delete]') as HTMLButtonElement | null;
 
-  if (!titleInput || !bodyTextarea || !folderControl || !folderLabel || !folderChangeButton || !pinnedInput || !errorEl || !saveBtn || !cancelBtn) {
+  if (!titleInput || !bodyTextarea || !folderControl || !folderLabel || !folderChangeButton || !pinnedInput || !errorEl || !saveBtn || !closeBtn) {
     closeNoteEditor();
     return;
   }
@@ -925,7 +901,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         return;
       }
 
-      const normalized = normalizeTagName(nextTag);
+      const normalized = nextTag.trim().replace(/^#+/, '').toLowerCase();
       if (!normalized) {
         return;
       }
@@ -1002,7 +978,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     openFolderDropdown();
   });
 
-  cancelBtn.addEventListener('click', (event) => {
+  closeBtn.addEventListener('click', (event) => {
     event.stopPropagation();
     closeNoteEditor();
   });
