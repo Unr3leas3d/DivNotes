@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Settings2 } from 'lucide-react';
+import { PanelsTopLeft, Settings2 } from 'lucide-react';
 
+import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
 import { getFoldersService } from '@/lib/folders-service';
@@ -51,10 +52,17 @@ const chromeWebStoreUrl = 'https://divnotes.com';
 const privacyPolicyUrl = 'https://divnotes.com/privacy';
 const newFolderLabel = 'New Folder';
 
+type PopupDialogState =
+    | { type: 'new-folder'; value: string; error: string | null }
+    | { type: 'clear-all' }
+    | null;
+
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const workspace = useExtensionWorkspace({ shell: 'popup' });
     const previousViewRef = useRef<MainPopupView>('this-page');
     const [localActionError, setLocalActionError] = useState<string | null>(null);
+    const [dialogState, setDialogState] = useState<PopupDialogState>(null);
+    const [dialogSubmitting, setDialogSubmitting] = useState(false);
     const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
     const foldersById = useMemo(
         () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
@@ -123,18 +131,33 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         });
     };
 
-    const handleCreateFolder = async () => {
+    const handleCreateFolder = () => {
         setLocalActionError(null);
-        const name = window.prompt(`${newFolderLabel} name:`);
-        if (!name || !name.trim()) {
+        setDialogState({ type: 'new-folder', value: '', error: null });
+    };
+
+    const handleSubmitCreateFolder = async () => {
+        if (!dialogState || dialogState.type !== 'new-folder') {
             return;
         }
+
+        const trimmedName = dialogState.value.trim();
+        if (!trimmedName) {
+            setDialogState((current) => (
+                current?.type === 'new-folder'
+                    ? { ...current, error: 'Please enter a folder name.' }
+                    : current
+            ));
+            return;
+        }
+
+        setDialogSubmitting(true);
         try {
             const service = await getFoldersService();
             const siblings = workspace.data.folders.filter((folder) => folder.parentId === null);
             const folder: StoredFolder = {
                 id: crypto.randomUUID(),
-                name: name.trim(),
+                name: trimmedName,
                 parentId: null,
                 order: getNextOrder(siblings),
                 color: null,
@@ -145,10 +168,31 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
 
             await service.create(folder);
             workspace.setView('folders');
+            setDialogState(null);
+        } catch (caughtError) {
+            const message = caughtError instanceof Error ? caughtError.message : 'Failed to create folder';
+            setDialogState((current) => (
+                current?.type === 'new-folder'
+                    ? { ...current, error: message }
+                    : current
+            ));
+        } finally {
+            setDialogSubmitting(false);
+        }
+    };
+
+    const handleClearAllNotes = async () => {
+        setDialogSubmitting(true);
+        setLocalActionError(null);
+        try {
+            await workspace.actions.clearAllNotes();
+            setDialogState(null);
         } catch (caughtError) {
             setLocalActionError(
-                caughtError instanceof Error ? caughtError.message : 'Failed to create folder'
+                caughtError instanceof Error ? caughtError.message : 'Failed to clear all notes'
             );
+        } finally {
+            setDialogSubmitting(false);
         }
     };
 
@@ -158,16 +202,28 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         }
 
         return (
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleOpenSettings}
-                className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
-                aria-label="Open settings"
-            >
-                <Settings2 className="h-4 w-4" />
-            </Button>
+            <>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void handleOpenSidePanel()}
+                    className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+                    aria-label="Open side panel"
+                >
+                    <PanelsTopLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleOpenSettings}
+                    className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+                    aria-label="Open settings"
+                >
+                    <Settings2 className="h-4 w-4" />
+                </Button>
+            </>
         );
     })();
 
@@ -259,12 +315,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onExport={workspace.actions.exportNotes}
                         onImport={workspace.actions.importNotes}
                         onOpenSidePanel={() => void handleOpenSidePanel()}
-                        onClearAll={async () => {
-                            const confirmed = window.confirm('Delete ALL notes? This cannot be undone.');
-                            if (confirmed) {
-                                await workspace.actions.clearAllNotes();
-                            }
-                        }}
+                        onClearAll={() => setDialogState({ type: 'clear-all' })}
                     />
                 );
             default:
@@ -281,6 +332,44 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             errorMessage={localActionError || workspace.error.actions}
         >
             {content}
+            <WorkspaceActionDialog
+                open={dialogState?.type === 'new-folder'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDialogState(null);
+                    }
+                }}
+                title="Create Folder"
+                description="Give this folder a clear name so notes stay easy to find."
+                promptLabel={newFolderLabel}
+                promptPlaceholder="Folder name"
+                promptValue={dialogState?.type === 'new-folder' ? dialogState.value : ''}
+                onPromptChange={(value) => {
+                    setDialogState((current) => (
+                        current?.type === 'new-folder'
+                            ? { ...current, value, error: null }
+                            : current
+                    ));
+                }}
+                validationError={dialogState?.type === 'new-folder' ? dialogState.error : null}
+                confirmLabel="Create Folder"
+                onConfirm={() => void handleSubmitCreateFolder()}
+                isSubmitting={dialogSubmitting}
+            />
+            <WorkspaceActionDialog
+                open={dialogState?.type === 'clear-all'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDialogState(null);
+                    }
+                }}
+                title="Clear All Notes?"
+                description="This removes every saved note, folder, and tag in this profile. This cannot be undone."
+                confirmLabel="Clear All"
+                destructive
+                onConfirm={() => void handleClearAllNotes()}
+                isSubmitting={dialogSubmitting}
+            />
         </PopupShell>
     );
 }

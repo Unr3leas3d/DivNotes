@@ -49,26 +49,26 @@ test('tag colors switch to the green palette from the approved redesign', () => 
 
 test('popup auth flow matches the Paper-driven redesign shell', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
+  const popupShell = read('src/popup/components/PopupShell.tsx');
   const popupDashboard = read('src/popup/Dashboard.tsx');
+  const popupApp = read('src/popup/App.tsx');
   const workspaceHook = read('src/lib/use-extension-workspace.ts');
 
-  assert.ok(loginForm.includes('const [showEmailForm, setShowEmailForm] = useState(false);'));
-  assert.ok(
-    loginForm.includes("const authOptionBaseClass = 'h-[50px] w-full rounded-[12px] border border-[#e7e2d8] bg-white px-4 text-[15px] font-medium text-[#314339] shadow-[0_1px_2px_rgba(5,36,21,0.03)] transition-colors hover:bg-[#f8f6f1] disabled:cursor-wait disabled:opacity-70';")
-  );
-  assert.ok(
-    loginForm.includes('className="mx-auto flex w-full max-w-[316px] flex-1 flex-col justify-center px-7 pb-6 pt-11"')
-  );
-  assert.ok(
-    loginForm.includes('max-w-[260px] text-center text-[14px] leading-[1.45] text-[#9aa294]')
-  );
-  assert.ok(
-    loginForm.includes('h-[50px] w-full rounded-[12px] bg-[#f3f1eb] text-[15px] font-semibold text-[#314339] transition-colors hover:bg-[#ece8df]')
-  );
+  assert.ok(loginForm.includes('signInWithGoogleInExtension'));
+  assert.ok(loginForm.includes('getRedirectURL: () => chrome.identity.getRedirectURL()'));
+  assert.ok(loginForm.includes('launchWebAuthFlow: (details) => chrome.identity.launchWebAuthFlow(details)'));
+  assert.ok(loginForm.includes('exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code)'));
+  assert.ok(!loginForm.includes('Sign in to sync across devices'));
   assert.ok(loginForm.includes('Continue with Google'));
   assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
   assert.ok(loginForm.includes('Think on top of the web.'));
+  assert.ok(popupShell.includes('sticky top-0'));
+  assert.ok(popupShell.includes('overflow-hidden'));
+  assert.ok(popupShell.includes('text-center'));
+  assert.ok(popupApp.includes('h-[500px]'));
+  assert.ok(popupApp.includes('overflow-hidden'));
+  assert.ok(popupApp.includes('authError'));
   assert.ok(
     workspaceHook.includes(
       "export type WorkspaceView = 'this-page' | 'all-notes' | 'folders' | 'tags' | 'settings';"

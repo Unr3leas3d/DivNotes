@@ -35,8 +35,8 @@ export function PopupShell({
   children,
 }: PopupShellProps) {
   return (
-    <div className="flex min-h-[500px] flex-col bg-[#fcfbf7] text-[#173628]">
-      <div className="border-b border-[#ece7de] px-5 pb-4 pt-5">
+    <div className="flex h-full min-h-[500px] flex-col overflow-hidden bg-[#fcfbf7] text-[#173628]">
+      <div className="sticky top-0 z-20 border-b border-[#ece7de] bg-[#fcfbf7]/95 px-5 pb-4 pt-5 backdrop-blur">
         <div className="flex items-center gap-3">
           {onBack ? (
             <button
@@ -49,13 +49,13 @@ export function PopupShell({
             </button>
           ) : null}
           <CanopyMark />
-          <div className="min-w-0 flex-1">
-            <p className="font-serif text-[18px] tracking-[-0.35px] text-[#173628]">Canopy</p>
-            <p className="text-[11px] text-[#8f998f]">
+          <div className="min-w-0 flex-1 text-center">
+            <p className="font-serif text-[19px] font-semibold tracking-[-0.35px] text-[#173628]">Canopy</p>
+            <p className="text-[11px] font-semibold text-[#8f998f]">
               {backLabel ? backLabel : 'Think on top of the web.'}
             </p>
           </div>
-          {utilityAction ? <div className="shrink-0">{utilityAction}</div> : null}
+          {utilityAction ? <div className="shrink-0 flex items-center gap-2">{utilityAction}</div> : null}
         </div>
         {navigation ? <div className="mt-4">{navigation}</div> : null}
       </div>

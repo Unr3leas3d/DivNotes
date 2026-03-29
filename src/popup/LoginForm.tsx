@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { signInWithGoogleInExtension } from '@/lib/google-auth';
 import { supabase } from '@/lib/supabase';
 
 interface LoginFormProps {
@@ -55,12 +56,21 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
         setError('');
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: chrome.identity?.getRedirectURL?.() },
-        });
-        setIsLoading(false);
-        if (error) setError(error.message);
+
+        try {
+            const result = await signInWithGoogleInExtension({
+                getRedirectURL: () => chrome.identity.getRedirectURL(),
+                signInWithOAuth: (credentials) => supabase.auth.signInWithOAuth(credentials),
+                launchWebAuthFlow: (details) => chrome.identity.launchWebAuthFlow(details),
+                exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+            });
+
+            onLogin(result.email);
+        } catch (caughtError) {
+            setError(caughtError instanceof Error ? caughtError.message : 'Google sign-in failed');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (showEmailForm) {
@@ -135,11 +145,11 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
                             <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
                         </svg>
                     </div>
-                    <h1 className="font-serif text-[29px] leading-[1.16] tracking-[-0.6px] text-[#173628]">
+                    <h1 className="text-center font-serif text-[32px] font-semibold leading-[1.12] tracking-[-0.7px] text-[#173628]">
                         Think on top of the web.
                     </h1>
                     <p className="mt-7 max-w-[260px] text-center text-[14px] leading-[1.45] text-[#9aa294]">
-                        Attach notes to any element on any page. Sign in to sync across devices.
+                        Attach notes to any element on any page.
                     </p>
                 </div>
 
