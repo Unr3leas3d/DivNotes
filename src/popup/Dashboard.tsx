@@ -14,6 +14,7 @@ import { AllNotesView } from './components/AllNotesView';
 import { FoldersView } from './components/FoldersView';
 import { TagsView } from './components/TagsView';
 import { SettingsView } from './components/SettingsView';
+import { validateNewFolderName } from './dialog-state';
 
 interface DashboardProps {
     email: string;
@@ -141,11 +142,11 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             return;
         }
 
-        const trimmedName = dialogState.value.trim();
-        if (!trimmedName) {
+        const validation = validateNewFolderName(dialogState.value);
+        if (!validation.valid) {
             setDialogState((current) => (
                 current?.type === 'new-folder'
-                    ? { ...current, error: 'Please enter a folder name.' }
+                    ? { ...current, error: validation.error }
                     : current
             ));
             return;
@@ -157,7 +158,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             const siblings = workspace.data.folders.filter((folder) => folder.parentId === null);
             const folder: StoredFolder = {
                 id: crypto.randomUUID(),
-                name: trimmedName,
+                name: validation.value,
                 parentId: null,
                 order: getNextOrder(siblings),
                 color: null,

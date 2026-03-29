@@ -5,6 +5,7 @@ import { resetFoldersService } from '@/lib/folders-service';
 import { resetNotesService } from '@/lib/notes-service';
 import { supabase } from '@/lib/supabase';
 import { resetTagsService } from '@/lib/tags-service';
+import { resolvePopupBootstrapState } from './auth-bootstrap';
 
 type AuthMode = 'loading' | 'login' | 'local' | 'authenticated';
 
@@ -22,48 +23,30 @@ export default function App() {
     useEffect(() => {
         async function bootstrapAuth() {
             setAuthMode('loading');
-            try {
-                setAuthError(null);
-                const result = await new Promise<{ divnotes_auth?: { mode?: string } }>((resolve, reject) => {
+            const nextState = await resolvePopupBootstrapState({
+                readStoredAuth: async () => new Promise<{ mode?: string } | undefined>((resolve, reject) => {
                     chrome.storage.local.get(['divnotes_auth'], (value) => {
                         if (chrome.runtime.lastError) {
                             reject(new Error(chrome.runtime.lastError.message));
                             return;
                         }
-                        resolve(value);
+                        resolve(value.divnotes_auth);
                     });
-                });
-
-                if (result.divnotes_auth?.mode === 'local') {
-                    setAuthMode('local');
-                    return;
-                }
-
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) {
-                    throw error;
-                }
-
-                if (session?.user) {
-                    const nextEmail = session.user.email || '';
-                    setUserEmail(nextEmail);
-                    setAuthMode('authenticated');
-                    chrome.storage.local.set({
-                        divnotes_auth: { mode: 'authenticated', email: nextEmail },
+                }),
+                readSupabaseSession: async () => {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    return { session, error };
+                },
+                persistAuthenticatedAuth: async (email) => {
+                    await chrome.storage.local.set({
+                        divnotes_auth: { mode: 'authenticated', email },
                     });
-                    return;
-                }
+                },
+            });
 
-                setAuthMode('login');
-            } catch (caughtError) {
-                setAuthError(
-                    caughtError instanceof Error ? caughtError.message : 'Failed to determine auth state'
-                );
-                setAuthMode('login');
-                setUserEmail('');
-            } finally {
-                setAuthMode((currentMode) => (currentMode === 'loading' ? 'login' : currentMode));
-            }
+            setAuthError(nextState.error);
+            setUserEmail(nextState.email);
+            setAuthMode(nextState.mode);
         }
 
         void bootstrapAuth();
