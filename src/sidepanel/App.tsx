@@ -1,199 +1,284 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getNotesService, type NotesService } from '@/lib/notes-service';
-import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';
+import React, { useMemo, useRef, useState } from 'react';
+import { FilePlus2, Search, Settings2, PanelsTopLeft, LogIn } from 'lucide-react';
+
+import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-    Search,
-    Download,
-} from 'lucide-react';
+import { getNotesService } from '@/lib/notes-service';
+import { useExtensionWorkspace } from '@/lib/use-extension-workspace';
+import type { StoredNote } from '@/lib/types';
 import { SegmentedControl, type ViewMode } from './components/SegmentedControl';
-import { SitesView } from './components/SitesView';
+import { SidePanelShell } from './components/SidePanelShell';
+import { ThisPageView } from './components/ThisPageView';
+import { AllNotesView } from './components/AllNotesView';
 import { FoldersView } from './components/FoldersView';
 import { TagsView } from './components/TagsView';
+import { SettingsView } from './components/SettingsView';
+
+type MainSidePanelView = 'this-page' | 'all-notes' | 'folders' | 'tags';
+
+const chromeWebStoreUrl = 'https://divnotes.com';
+const privacyPolicyUrl = 'https://divnotes.com/privacy';
+
+const searchPlaceholders: Record<MainSidePanelView, string> = {
+  'this-page': 'Search this page',
+  'all-notes': 'Search all notes',
+  folders: 'Search folders and notes',
+  tags: 'Search tagged notes',
+};
 
 export default function App() {
-    const [viewMode, setViewMode] = useState<ViewMode>('sites');
-    const [notes, setNotes] = useState<StoredNote[]>([]);
-    const [folders, setFolders] = useState<StoredFolder[]>([]);
-    const [tags, setTags] = useState<StoredTag[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [screenShareMode, setScreenShareMode] = useState(false);
-    const serviceRef = useRef<NotesService | null>(null);
+  const workspace = useExtensionWorkspace({ shell: 'sidepanel' });
+  const previousViewRef = useRef<MainSidePanelView>('all-notes');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [localActionError, setLocalActionError] = useState<string | null>(null);
 
-    // Init notes service
-    useEffect(() => {
-        getNotesService().then(s => { serviceRef.current = s; });
-    }, []);
+  const foldersById = useMemo(
+    () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
+    [workspace.data.folders]
+  );
 
-    // Load notes, folders, tags and screen share state from storage
-    useEffect(() => {
-        chrome.storage.local.get(['divnotes_notes', 'divnotes_folders', 'divnotes_tags', 'divnotes_screen_share'], (result) => {
-            const allNotes: StoredNote[] = result.divnotes_notes || [];
-            setNotes(allNotes);
-            setFolders(result.divnotes_folders || []);
-            setTags(result.divnotes_tags || []);
-            setScreenShareMode(!!result.divnotes_screen_share);
+  const activeMainView =
+    workspace.view.active === 'settings'
+      ? previousViewRef.current
+      : (workspace.view.active as MainSidePanelView);
+
+  const loadingContent = workspace.loading.currentPage || workspace.loading.data;
+
+  const handleOpenNote = (note: StoredNote) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0];
+      if (currentTab?.url === note.url && currentTab.id) {
+        chrome.tabs.sendMessage(currentTab.id, {
+          type: 'SCROLL_TO_NOTE',
+          selector: note.elementSelector,
         });
+        return;
+      }
 
-        const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
-            if (changes.divnotes_notes) {
-                const updated: StoredNote[] = changes.divnotes_notes.newValue || [];
-                setNotes(updated);
-            }
-            if (changes.divnotes_folders) {
-                setFolders(changes.divnotes_folders.newValue || []);
-            }
-            if (changes.divnotes_tags) {
-                setTags(changes.divnotes_tags.newValue || []);
-            }
-            if (changes.divnotes_screen_share) {
-                setScreenShareMode(!!changes.divnotes_screen_share.newValue);
-            }
-        };
-        chrome.storage.onChanged.addListener(listener);
-        return () => chrome.storage.onChanged.removeListener(listener);
-    }, []);
+      if (currentTab?.id) {
+        chrome.tabs.update(currentTab.id, { url: note.url });
+      }
+    });
+  };
 
-    const handleDelete = async (noteId: string) => {
-        // Delete via service (handles cloud sync if authenticated)
-        if (serviceRef.current) {
-            await serviceRef.current.delete(noteId);
-        } else {
-            // Fallback: direct chrome.storage
-            chrome.storage.local.get(['divnotes_notes'], (result) => {
-                const allNotes: StoredNote[] = result.divnotes_notes || [];
-                const updated = allNotes.filter(n => n.id !== noteId);
-                chrome.storage.local.set({ divnotes_notes: updated });
-            });
-        }
-    };
+  const handleDeleteNote = async (noteId: string) => {
+    const service = await getNotesService();
+    await service.delete(noteId);
+  };
 
-    const handleNavigate = (note: StoredNote) => {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const tab = tabs[0];
-            if (tab?.url === note.url && tab?.id) {
-                chrome.tabs.sendMessage(tab.id, {
-                    type: 'SCROLL_TO_NOTE',
-                    selector: note.elementSelector,
-                });
-            } else if (tab?.id) {
-                chrome.tabs.update(tab.id, { url: note.url });
-            }
-        });
-    };
+  const handleAddNote = async () => {
+    setLocalActionError(null);
+    try {
+      await workspace.actions.activateInspector();
+    } catch {
+      // Shared action state already surfaces the failure.
+    }
+  };
 
-    const handleExport = () => {
-        const data = {
-            version: 1,
-            exportedAt: new Date().toISOString(),
-            notes,
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `canopy-export-${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+  const handleOpenPopup = async () => {
+    setLocalActionError(null);
+    try {
+      await workspace.actions.openPopup();
+    } catch {
+      // Shared action state already surfaces the failure.
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-background text-foreground">
-            {/* Screen Share Mode Banner */}
-            {screenShareMode && (
-                <div className="bg-red-500/90 text-white px-4 py-2 text-xs font-medium flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                    Screen Share Mode — notes hidden on page
-                    <span className="text-[10px] opacity-70 ml-auto">⌘⇧P to exit</span>
-                </div>
-            )}
-            {/* Header */}
-            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border/50">
-                <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-                    <div className="w-7 h-7 rounded-lg bg-[#052415] flex items-center justify-center flex-shrink-0">
-                        <svg width="18" height="18" viewBox="0 0 68 68" fill="none">
-                            <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
-                            <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
-                            <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
-                        </svg>
-                    </div>
-                    <div className="flex-1">
-                        <h1 className="font-serif text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
-                        <p className="text-[11px] text-muted-foreground">
-                            {notes.length} {notes.length === 1 ? 'note' : 'notes'} across{' '}
-                            {new Set(notes.map(n => n.hostname)).size} sites
-                        </p>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground"
-                        onClick={handleExport}
-                        disabled={notes.length === 0}
-                        title="Export all notes"
-                    >
-                        <Download className="w-4 h-4" />
-                    </Button>
-                </div>
+  const handleOpenSettings = () => {
+    setLocalActionError(null);
+    previousViewRef.current = activeMainView;
+    workspace.setView('settings');
+  };
 
-                {/* Segmented Control */}
-                <div className="px-5 pb-3">
-                    <SegmentedControl value={viewMode} onChange={setViewMode} />
-                </div>
+  const handleBack = () => {
+    setLocalActionError(null);
+    workspace.setView(previousViewRef.current);
+  };
 
-                {/* Search */}
-                <div className="px-5 pb-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search notes..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 h-9 bg-muted/50 border-border/30"
-                            data-search-input
-                        />
-                    </div>
-                </div>
-            </div>
+  const handleViewChange = (nextView: ViewMode) => {
+    setLocalActionError(null);
+    previousViewRef.current = nextView;
+    setSearchQuery('');
+    workspace.actions.clearFilters();
+    workspace.setView(nextView);
+  };
 
-            {/* View Content */}
-            {viewMode === 'sites' && (
-                <SitesView
-                    notes={notes}
-                    folders={folders}
-                    tags={tags}
-                    searchQuery={searchQuery}
-                    onDeleteNote={handleDelete}
-                    onNavigateNote={handleNavigate}
-                />
-            )}
+  const headerActions = (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => void handleAddNote()}
+        className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+        aria-label="Add note"
+        title="Add note"
+      >
+        <FilePlus2 className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => void handleOpenPopup()}
+        className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+        aria-label="Open popup"
+        title="Open popup"
+      >
+        <PanelsTopLeft className="h-4 w-4" />
+      </Button>
+      {workspace.view.active !== 'settings' ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleOpenSettings}
+          className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+          aria-label="Open settings"
+          title="Open settings"
+        >
+          <Settings2 className="h-4 w-4" />
+        </Button>
+      ) : null}
+    </>
+  );
 
-            {viewMode === 'folders' && (
-                <FoldersView
-                    notes={notes}
-                    folders={folders}
-                    tags={tags}
-                    searchQuery={searchQuery}
-                    onDeleteNote={handleDelete}
-                    onNavigateNote={handleNavigate}
-                />
-            )}
-
-            {viewMode === 'tags' && (
-                <TagsView
-                    notes={notes}
-                    folders={folders}
-                    tags={tags}
-                    searchQuery={searchQuery}
-                    onDeleteNote={handleDelete}
-                    onNavigateNote={handleNavigate}
-                />
-            )}
-        </div>
+  const toolbar =
+    workspace.view.active === 'settings' || activeMainView === 'this-page' ? undefined : (
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#95a097]" />
+        <Input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder={searchPlaceholders[activeMainView]}
+          className="h-[42px] rounded-[14px] border border-[#e7e2d8] bg-white pl-10 text-[13px] text-[#173628] placeholder:text-[#a0a89f] focus-visible:ring-0"
+        />
+      </label>
     );
+
+  const navigation =
+    workspace.view.active === 'settings' ? undefined : (
+      <SegmentedControl
+        value={activeMainView}
+        counts={workspace.counts}
+        onChange={handleViewChange}
+      />
+    );
+
+  if (workspace.loading.auth) {
+    return (
+      <SidePanelShell actions={headerActions}>
+        <WorkspaceEmptyState
+          loading
+          title="Checking your workspace"
+          description="Loading your account and saved note data."
+        />
+      </SidePanelShell>
+    );
+  }
+
+  if (!workspace.auth.isAuthenticated) {
+    return (
+      <SidePanelShell actions={headerActions} errorMessage={localActionError || workspace.error.actions}>
+        <WorkspaceEmptyState
+          icon={<LogIn className="h-5 w-5" />}
+          title="Sign in to use the side panel"
+          description="Open the popup to continue with Google, email, or local-only mode."
+          action={
+            <button
+              type="button"
+              onClick={() => void handleOpenPopup()}
+              className="rounded-[12px] bg-[#173628] px-4 py-2 text-[12px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+            >
+              Open Popup
+            </button>
+          }
+        />
+      </SidePanelShell>
+    );
+  }
+
+  return (
+    <SidePanelShell
+      actions={headerActions}
+      toolbar={toolbar}
+      navigation={navigation}
+      backLabel={workspace.view.active === 'settings' ? 'Settings' : undefined}
+      onBack={workspace.view.active === 'settings' ? handleBack : undefined}
+      errorMessage={localActionError || workspace.error.actions}
+    >
+      {workspace.view.active === 'this-page' ? (
+        <ThisPageView
+          currentPage={workspace.currentPage}
+          notes={workspace.derived.thisPageNotes}
+          tags={workspace.data.tags}
+          loading={loadingContent}
+          error={workspace.error.currentPage || workspace.error.data}
+          onAddNote={() => void handleAddNote()}
+          onOpenNote={handleOpenNote}
+          onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
+        />
+      ) : null}
+
+      {workspace.view.active === 'all-notes' ? (
+        <AllNotesView
+          groupedNotes={workspace.derived.groupedNotes}
+          notes={workspace.data.notes}
+          foldersById={foldersById}
+          tags={workspace.data.tags}
+          loading={loadingContent}
+          error={workspace.error.data}
+          query={searchQuery}
+          onOpenNote={handleOpenNote}
+          onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
+        />
+      ) : null}
+
+      {workspace.view.active === 'folders' ? (
+        <FoldersView
+          notes={workspace.data.notes}
+          folders={workspace.data.folders}
+          tags={workspace.data.tags}
+          searchQuery={searchQuery}
+          onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
+          onNavigateNote={handleOpenNote}
+        />
+      ) : null}
+
+      {workspace.view.active === 'tags' ? (
+        <TagsView
+          notes={workspace.data.notes}
+          folders={workspace.data.folders}
+          tags={workspace.data.tags}
+          searchQuery={searchQuery}
+          onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
+          onNavigateNote={handleOpenNote}
+        />
+      ) : null}
+
+      {workspace.view.active === 'settings' ? (
+        <SettingsView
+          email={workspace.auth.email}
+          isLocalMode={workspace.auth.isLocalMode}
+          version={chrome.runtime.getManifest().version}
+          noteCount={workspace.data.notes.length}
+          folderCount={workspace.data.folders.length}
+          tagCount={workspace.data.tags.length}
+          chromeWebStoreUrl={chromeWebStoreUrl}
+          privacyPolicyUrl={privacyPolicyUrl}
+          onLogout={workspace.actions.logout}
+          onExport={workspace.actions.exportNotes}
+          onImport={workspace.actions.importNotes}
+          onOpenPopup={() => void handleOpenPopup()}
+          onClearAll={async () => {
+            const confirmed = window.confirm('Delete ALL notes? This cannot be undone.');
+            if (confirmed) {
+              await workspace.actions.clearAllNotes();
+            }
+          }}
+        />
+      ) : null}
+    </SidePanelShell>
+  );
 }

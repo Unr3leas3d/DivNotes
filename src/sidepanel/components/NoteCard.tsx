@@ -1,12 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import DOMPurify from 'dompurify';
-import { marked } from 'marked';
-import { ExternalLink, Star, Trash2, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { TagPill } from './TagPill';
+import React, { useMemo } from 'react';
+import { Pin, Trash2 } from 'lucide-react';
+
+import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import type { StoredNote, StoredTag } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface NoteCardProps {
   note: StoredNote;
@@ -18,29 +15,9 @@ interface NoteCardProps {
   folderPath?: string;
   selected?: boolean;
   onSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
-  // Drag and drop
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
-}
-
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/[#*_~`>\-\[\]()!]/g, '')
-    .replace(/\n+/g, ' ')
-    .trim();
-}
-
-function renderMarkdown(text: string): string {
-  try {
-    const rawHtml = marked.parse(text, { async: false }) as string;
-    return DOMPurify.sanitize(rawHtml, {
-      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'code', 'pre', 'br', 'span', 'div', 'blockquote'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class'],
-    });
-  } catch {
-    return DOMPurify.sanitize(text);
-  }
 }
 
 export function NoteCard({
@@ -51,142 +28,87 @@ export function NoteCard({
   onTogglePin,
   showFolderPath,
   folderPath,
-  selected,
+  selected = false,
   onSelectClick,
-  draggable: isDraggable,
+  draggable = false,
   onDragStart,
   onDragEnd,
 }: NoteCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
-  const resolvedTags = useMemo(() => {
-    if (!note.tags || note.tags.length === 0) return [];
-    return note.tags
-      .map((tagId) => tags.find((t) => t.id === tagId))
-      .filter((t): t is StoredTag => t !== undefined);
-  }, [note.tags, tags]);
-
-  const visibleTags = resolvedTags.slice(0, 2);
-  const overflowCount = resolvedTags.length - 2;
-
-  const preview = useMemo(() => {
-    const stripped = stripMarkdown(note.content);
-    return stripped.length > 120 ? stripped.slice(0, 120) + '...' : stripped;
-  }, [note.content]);
-
-  const renderedContent = useMemo(() => {
-    if (!expanded) return '';
-    return renderMarkdown(note.content);
-  }, [expanded, note.content]);
-
-  const dateStr = useMemo(() => {
-    const d = new Date(note.createdAt);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }, [note.createdAt]);
+  const tagNames = useMemo(
+    () =>
+      note.tags
+        .map((tagId) => tags.find((tag) => tag.id === tagId)?.name)
+        .filter(Boolean) as string[],
+    [note.tags, tags]
+  );
 
   return (
-    <Card
+    <div
       className={cn(
-        'group cursor-pointer transition-all hover:shadow-md border-border/50',
-        expanded && 'ring-1 ring-primary/20',
-        selected && 'ring-2 ring-primary bg-primary/5',
+        'rounded-[16px] transition-shadow',
+        selected ? 'ring-2 ring-[#173628] ring-offset-2 ring-offset-[#fcfbf7]' : undefined
       )}
-      draggable={isDraggable}
+      draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={(e: React.MouseEvent) => {
-        if (onSelectClick && (e.metaKey || e.ctrlKey || e.shiftKey)) {
-          e.stopPropagation();
-          onSelectClick(note.id, { shift: e.shiftKey, cmd: e.metaKey || e.ctrlKey });
+      onClickCapture={(event) => {
+        if (!onSelectClick || (!event.metaKey && !event.ctrlKey && !event.shiftKey)) {
           return;
         }
-        setExpanded(!expanded);
+
+        event.preventDefault();
+        event.stopPropagation();
+        onSelectClick(note.id, {
+          shift: event.shiftKey,
+          cmd: event.metaKey || event.ctrlKey,
+        });
       }}
     >
-      <CardContent className="p-3">
-        {/* Header row: element tag + date + pin indicator */}
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-            {'<' + note.elementTag + '>'}
-          </span>
-          {note.pinned && (
-            <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          )}
-          <span className="ml-auto text-[9px] text-muted-foreground/60">
-            {dateStr}
-          </span>
-        </div>
-
-        {/* Folder path breadcrumb */}
-        {showFolderPath && folderPath && (
-          <div className="flex items-center gap-0.5 mb-1.5 text-[9px] text-muted-foreground/50">
-            <ChevronRight className="w-2.5 h-2.5" />
-            <span className="truncate">{folderPath}</span>
-          </div>
-        )}
-
-        {/* Content preview */}
-        <p className="text-[11px] text-foreground/80 line-clamp-2 leading-relaxed mb-2">
-          {preview}
-        </p>
-
-        {/* Tag pills */}
-        {resolvedTags.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
-            {visibleTags.map((tag) => (
-              <TagPill key={tag.id} tag={tag} size="sm" />
-            ))}
-            {overflowCount > 0 && (
-              <span className="text-[8px] text-muted-foreground/60 font-medium">
-                +{overflowCount}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Expanded content */}
-        {expanded && (
-          <>
-            <Separator className="my-2" />
-            <div
-              className="prose prose-sm prose-neutral dark:prose-invert max-w-none text-[11px] leading-relaxed [&_p]:mb-1.5 [&_ul]:mb-1.5 [&_ol]:mb-1.5 [&_pre]:text-[10px] [&_code]:text-[10px]"
-              dangerouslySetInnerHTML={{ __html: renderedContent }}
-            />
-            <Separator className="my-2" />
-            {/* Action buttons */}
-            <div className="flex items-center gap-1">
+      <WorkspaceNoteCard
+        note={note}
+        density="comfortable"
+        folderName={showFolderPath ? folderPath || null : null}
+        tagNames={tagNames}
+        onOpen={onNavigate}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onNavigate(note);
+              }}
+              className="inline-flex items-center justify-center rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+            >
+              Scroll to element
+            </button>
+            {onTogglePin ? (
               <button
-                onClick={(e) => { e.stopPropagation(); onNavigate(note); }}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTogglePin(note.id);
+                }}
+                className="inline-flex items-center gap-1 rounded-[10px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f1eee7]"
               >
-                <ExternalLink className="w-3 h-3" />
-                Go to note
+                <Pin className={cn('h-3.5 w-3.5', note.pinned ? 'fill-current' : undefined)} />
+                {note.pinned ? 'Unpin' : 'Pin'}
               </button>
-              {onTogglePin && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onTogglePin(note.id); }}
-                  className={cn(
-                    'flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors',
-                    note.pinned
-                      ? 'text-yellow-500 hover:bg-yellow-500/10'
-                      : 'text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10',
-                  )}
-                >
-                  <Star className={cn('w-3 h-3', note.pinned && 'fill-current')} />
-                  {note.pinned ? 'Unpin' : 'Pin'}
-                </button>
-              )}
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive px-2 py-1 rounded-md hover:bg-destructive/10 transition-colors ml-auto"
-              >
-                <Trash2 className="w-3 h-3" />
-                Delete
-              </button>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+            ) : null}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete(note.id);
+              }}
+              className="ml-auto inline-flex items-center gap-1 rounded-[10px] border border-[rgba(220,38,38,0.14)] bg-[rgba(254,242,242,0.7)] px-3 py-1.5 text-[11px] font-medium text-[#b91c1c] transition-colors hover:bg-[rgba(254,226,226,0.92)]"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
+        }
+      />
+    </div>
   );
 }

@@ -102,10 +102,18 @@ test('content script styles switch from purple to Eden Bright green and cream tr
 });
 
 test('side panel segmented control uses themed active and inactive states', () => {
+  const sidepanelApp = read('src/sidepanel/App.tsx');
   const segmentedControl = read('src/sidepanel/components/SegmentedControl.tsx');
+  const noteCard = read('src/sidepanel/components/NoteCard.tsx');
 
+  assert.ok(sidepanelApp.includes("'this-page' | 'all-notes' | 'folders' | 'tags'"));
+  assert.ok(sidepanelApp.includes('openPopup'));
+  assert.ok(sidepanelApp.includes('settings'));
   assert.ok(segmentedControl.includes("bg-primary text-primary-foreground font-semibold shadow-card"));
   assert.ok(segmentedControl.includes("bg-muted text-foreground hover:bg-secondary"));
+  assert.ok(segmentedControl.includes('This Page'));
+  assert.ok(segmentedControl.includes('All Notes'));
+  assert.ok(noteCard.includes('Scroll to element'));
 });
 
 test('background worker keeps OPEN_POPUP support alongside ACTIVATE_INSPECTOR messaging', () => {

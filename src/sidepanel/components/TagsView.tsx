@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Tags, Settings } from 'lucide-react';
+import { Hash, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { NoteCard } from './NoteCard';
 import { TagPill } from './TagPill';
 import { TagManager } from './TagManager';
@@ -112,90 +113,98 @@ export function TagsView({
   // Empty state: no tags at all
   if (tags.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
-          <Tags className="w-6 h-6 text-muted-foreground/40" />
-        </div>
-        <p className="text-sm font-medium text-muted-foreground mb-1">No tags yet</p>
-        <p className="text-xs text-muted-foreground/60">
-          Add tags to your notes to organize them by topic
-        </p>
-      </div>
+      <WorkspaceEmptyState
+        icon={<Tags className="h-5 w-5" />}
+        title="No tags yet"
+        description="Add tags to your notes to organize them by topic."
+      />
     );
   }
 
   return (
-    <div className="relative px-3 py-3 space-y-3">
+    <div className="relative space-y-4">
       {/* Tag Manager overlay */}
       {showManager && (
         <TagManager tags={tags} onClose={() => setShowManager(false)} />
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <Tags className="w-4 h-4 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">
-            {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
-          </span>
+      <div className="rounded-[20px] border border-[#ece7de] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6d7b70]">
+              <Tags className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Tags</p>
+              <p className="text-[13px] font-semibold text-[#173628]">
+                {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            className="h-9 rounded-[12px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 text-[12px] font-medium text-[#526357] hover:bg-[#f1eee7]"
+            title="Manage tags"
+            onClick={() => setShowManager(true)}
+          >
+            Manage Tags
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground"
-          title="Manage tags"
-          onClick={() => setShowManager(true)}
-        >
-          <Settings className="w-3.5 h-3.5" />
-        </Button>
-      </div>
 
-      {/* Tag cloud */}
-      <div className="flex flex-wrap gap-1.5 px-1">
-        {tags.map((tag) => (
-          <span key={tag.id} className="inline-flex items-center gap-1">
-            <TagPill
-              tag={tag}
-              size="md"
-              active={activeTagIds.has(tag.id)}
-              onClick={() => toggleTag(tag.id)}
-            />
-            <span className="text-[9px] text-muted-foreground/50 font-medium -ml-0.5">
-              {tagNoteCounts.get(tag.id) || 0}
-            </span>
-          </span>
-        ))}
-      </div>
-
-      {/* Active filter bar */}
-      {activeTags.length > 0 && (
-        <div className="flex items-center gap-1.5 px-1 py-1.5 bg-muted/30 rounded-lg">
-          <span className="text-[9px] text-muted-foreground/60 font-medium mr-0.5">
-            Filtering:
-          </span>
-          {activeTags.map((tag) => (
-            <TagPill
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <span
               key={tag.id}
-              tag={tag}
-              size="sm"
-              active
-              onRemove={() => removeTag(tag.id)}
-            />
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#f8f6f1] pr-2"
+            >
+              <TagPill
+                tag={tag}
+                size="md"
+                active={activeTagIds.has(tag.id)}
+                onClick={() => toggleTag(tag.id)}
+              />
+              <span className="text-[10px] font-medium text-[#8b968e]">
+                {tagNoteCounts.get(tag.id) || 0}
+              </span>
+            </span>
           ))}
         </div>
-      )}
 
-      {/* Filtered notes */}
+        {activeTags.length > 0 ? (
+          <div className="mt-4 rounded-[16px] bg-[#f8f6f1] px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9aa294]">
+              Filtering by
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {activeTags.map((tag) => (
+                <TagPill
+                  key={tag.id}
+                  tag={tag}
+                  size="sm"
+                  active
+                  onRemove={() => removeTag(tag.id)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {filteredNotes.length === 0 && activeTagIds.size > 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <p className="text-xs text-muted-foreground">No notes match the selected tags</p>
-        </div>
+        <WorkspaceEmptyState
+          icon={<Hash className="h-5 w-5" />}
+          title="No notes match the selected tags"
+          description="Choose another tag or clear the filter."
+        />
       ) : filteredNotes.length === 0 && searchQuery.trim() ? (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <p className="text-xs text-muted-foreground">No notes match your search</p>
-        </div>
+        <WorkspaceEmptyState
+          icon={<Hash className="h-5 w-5" />}
+          title="No notes match your search"
+          description={`Nothing matched "${searchQuery}".`}
+        />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredNotes.map((note) => (
             <NoteCard
               key={note.id}

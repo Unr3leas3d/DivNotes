@@ -388,7 +388,7 @@ export function FoldersView({
   }, [selectAll, clearSelection, selectedIds.size]);
 
   return (
-    <div ref={containerRef} tabIndex={0} className="px-3 py-3 outline-none" onKeyDown={handleContainerKeyDown}>
+    <div ref={containerRef} tabIndex={0} className="outline-none" onKeyDown={handleContainerKeyDown}>
       {/* Pinned Section */}
       <PinnedSection
         pinnedNotes={pinnedNotes}
@@ -400,19 +400,29 @@ export function FoldersView({
       />
 
       {/* Header with New Folder button */}
-      <div className="flex items-center justify-between px-1 mb-2">
-        <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-          Folders
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-foreground"
-          onClick={handleNewFolder}
-          title="New folder"
-        >
-          <FolderPlus className="w-3.5 h-3.5" />
-        </Button>
+      <div className="mb-4 rounded-[20px] border border-[#ece7de] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6d7b70]">
+              <Inbox className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Folders</p>
+              <p className="text-[13px] font-semibold text-[#173628]">
+                {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            className="h-9 rounded-[12px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 text-[12px] font-medium text-[#526357] hover:bg-[#f1eee7]"
+            onClick={handleNewFolder}
+            title="New folder"
+          >
+            <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
+            New Folder
+          </Button>
+        </div>
       </div>
 
       {/* Inbox row */}
