@@ -78,3 +78,13 @@ test('resolvePopupAuthStateChange ignores login promotion when session promotion
 
   assert.equal(nextState, null);
 });
+
+test('resolvePopupAuthStateChange ignores loading promotion when session promotion is not allowed', () => {
+  const nextState = resolvePopupAuthStateChange({
+    currentMode: 'loading',
+    sessionUser: { email: 'user@example.com' },
+    canPromoteFromSession: false,
+  });
+
+  assert.equal(nextState, null);
+});

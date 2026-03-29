@@ -26,7 +26,7 @@ export interface PopupBootstrapState {
 }
 
 interface PopupAuthStateChangeParams {
-  currentMode: PopupAuthMode;
+  currentMode: PopupAuthMode | 'loading';
   sessionUser: SessionUser | null;
   canPromoteFromSession: boolean;
 }
@@ -78,7 +78,7 @@ export function resolvePopupAuthStateChange({
       return null;
     }
 
-    if (currentMode === 'login' && !canPromoteFromSession) {
+    if ((currentMode === 'login' || currentMode === 'loading') && !canPromoteFromSession) {
       return null;
     }
 
