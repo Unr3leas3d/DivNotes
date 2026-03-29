@@ -84,6 +84,11 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(popupDashboard.includes('About'));
   assert.ok(popupDashboard.includes('Chrome Web Store'));
   assert.ok(popupDashboard.includes('Privacy Policy'));
+  assert.ok(popupDashboard.includes('const handleOpenSidePanel = async () => {'));
+  assert.ok(popupDashboard.includes('await workspace.actions.openSidePanel();'));
+  assert.ok(popupDashboard.includes('onOpenSidePanel={() => void handleOpenSidePanel()}'));
+  assert.ok(popupDashboard.includes("const chromeWebStoreUrl = 'https://divnotes.com';"));
+  assert.ok(popupDashboard.includes("const privacyPolicyUrl = 'https://divnotes.com/privacy';"));
 });
 
 test('content script styles switch from purple to Eden Bright green and cream treatments', () => {

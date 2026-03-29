@@ -47,8 +47,8 @@ const settingsLabels = {
     privacyPolicy: 'Privacy Policy',
 };
 
-const chromeWebStoreUrl = 'https://chromewebstore.google.com/';
-const privacyPolicyUrl = 'https://www.notion.so/';
+const chromeWebStoreUrl = 'https://divnotes.com';
+const privacyPolicyUrl = 'https://divnotes.com/privacy';
 const newFolderLabel = 'New Folder';
 
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
@@ -96,6 +96,16 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         setLocalActionError(null);
         await workspace.actions.activateInspector();
         window.close();
+    };
+
+    const handleOpenSidePanel = async () => {
+        setLocalActionError(null);
+        try {
+            await workspace.actions.openSidePanel();
+            window.close();
+        } catch {
+            // The shared action already surfaced a user-visible error state.
+        }
     };
 
     const handleOpenNote = (note: StoredNote) => {
@@ -248,7 +258,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onLogout={onLogout}
                         onExport={workspace.actions.exportNotes}
                         onImport={workspace.actions.importNotes}
-                        onOpenSidePanel={workspace.actions.openSidePanel}
+                        onOpenSidePanel={() => void handleOpenSidePanel()}
                         onClearAll={async () => {
                             const confirmed = window.confirm('Delete ALL notes? This cannot be undone.');
                             if (confirmed) {
