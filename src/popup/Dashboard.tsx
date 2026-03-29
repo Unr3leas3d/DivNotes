@@ -55,7 +55,7 @@ const newFolderLabel = 'New Folder';
 
 type PopupDialogState =
     | { type: 'new-folder'; value: string; error: string | null }
-    | { type: 'clear-all' }
+    | { type: 'clear-all'; error: string | null }
     | null;
 
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
@@ -184,14 +184,21 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
 
     const handleClearAllNotes = async () => {
         setDialogSubmitting(true);
-        setLocalActionError(null);
+        setDialogState((current) => (
+            current?.type === 'clear-all'
+                ? { ...current, error: null }
+                : current
+        ));
         try {
             await workspace.actions.clearAllNotes();
             setDialogState(null);
         } catch (caughtError) {
-            setLocalActionError(
-                caughtError instanceof Error ? caughtError.message : 'Failed to clear all notes'
-            );
+            const message = caughtError instanceof Error ? caughtError.message : 'Failed to clear all notes';
+            setDialogState((current) => (
+                current?.type === 'clear-all'
+                    ? { ...current, error: message }
+                    : current
+            ));
         } finally {
             setDialogSubmitting(false);
         }
@@ -316,7 +323,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onExport={workspace.actions.exportNotes}
                         onImport={workspace.actions.importNotes}
                         onOpenSidePanel={() => void handleOpenSidePanel()}
-                        onClearAll={() => setDialogState({ type: 'clear-all' })}
+                        onClearAll={() => setDialogState({ type: 'clear-all', error: null })}
                     />
                 );
             default:
@@ -330,7 +337,11 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             utilityAction={utilityAction}
             backLabel={backLabel}
             onBack={backLabel ? handleBack : undefined}
-            errorMessage={localActionError || workspace.error.actions}
+            errorMessage={
+                dialogState?.type === 'clear-all'
+                    ? localActionError
+                    : localActionError || workspace.error.actions
+            }
         >
             {content}
             <WorkspaceActionDialog
@@ -368,6 +379,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 description="This removes every saved note, folder, and tag in this profile. This cannot be undone."
                 confirmLabel="Clear All"
                 destructive
+                inlineError={dialogState?.type === 'clear-all' ? dialogState.error : null}
                 onConfirm={() => void handleClearAllNotes()}
                 isSubmitting={dialogSubmitting}
             />

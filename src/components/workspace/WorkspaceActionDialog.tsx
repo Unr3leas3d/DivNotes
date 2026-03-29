@@ -21,6 +21,7 @@ interface WorkspaceActionDialogProps {
   promptPlaceholder?: string;
   promptValue?: string;
   validationError?: string | null;
+  inlineError?: string | null;
   isSubmitting?: boolean;
   onPromptChange?: (value: string) => void;
   onConfirm: () => void | Promise<void>;
@@ -38,6 +39,7 @@ export function WorkspaceActionDialog({
   promptPlaceholder,
   promptValue,
   validationError,
+  inlineError,
   isSubmitting = false,
   onPromptChange,
   onConfirm,
@@ -74,6 +76,7 @@ export function WorkspaceActionDialog({
     event.preventDefault();
     handleConfirm();
   };
+  const errorMessage = inlineError ?? validationError;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -116,9 +119,9 @@ export function WorkspaceActionDialog({
             </div>
           ) : null}
 
-          {validationError ? (
+          {errorMessage ? (
             <p className="mt-3 rounded-[10px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.75)] px-2.5 py-2 text-[11px] text-[#b91c1c]">
-              {validationError}
+              {errorMessage}
             </p>
           ) : null}
 

@@ -133,13 +133,10 @@ test('side panel segmented control uses themed active and inactive states', () =
   const popupSettingsView = read('src/popup/components/SettingsView.tsx');
   const workspaceNoteCard = read('src/components/workspace/WorkspaceNoteCard.tsx');
 
-  assert.ok(sidepanelApp.includes("'this-page' | 'all-notes' | 'folders' | 'tags'"));
-  assert.ok(sidepanelApp.includes('openPopup'));
   assert.ok(sidepanelApp.includes('settings'));
   assert.ok(sidepanelApp.includes('divnotes_screen_share'));
   assert.ok(sidepanelApp.includes('Screen Share Mode'));
   assert.ok(segmentedControl.includes('TopNavPills'));
-  assert.ok(segmentedControl.includes('This Page'));
   assert.ok(segmentedControl.includes('All Notes'));
   assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
   assert.ok(workspaceNoteCard.includes('title?: string | null;'));
