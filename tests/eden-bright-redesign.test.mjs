@@ -128,16 +128,26 @@ test('content script styles switch from purple to Eden Bright green and cream tr
 test('side panel segmented control uses themed active and inactive states', () => {
   const sidepanelApp = read('src/sidepanel/App.tsx');
   const segmentedControl = read('src/sidepanel/components/SegmentedControl.tsx');
+  const sidepanelShell = read('src/sidepanel/components/SidePanelShell.tsx');
   const noteCard = read('src/sidepanel/components/NoteCard.tsx');
   const allNotesView = read('src/sidepanel/components/AllNotesView.tsx');
   const popupSettingsView = read('src/popup/components/SettingsView.tsx');
   const workspaceNoteCard = read('src/components/workspace/WorkspaceNoteCard.tsx');
+  const workspaceHook = read('src/lib/use-extension-workspace.ts');
 
+  assert.ok(!sidepanelApp.includes("'this-page' | 'all-notes' | 'folders' | 'tags'"));
+  assert.ok(!sidepanelApp.includes('ThisPageView'));
+  assert.ok(!sidepanelApp.includes('openPopup'));
   assert.ok(sidepanelApp.includes('settings'));
+  assert.ok(sidepanelApp.includes('WorkspaceActionDialog'));
   assert.ok(sidepanelApp.includes('divnotes_screen_share'));
   assert.ok(sidepanelApp.includes('Screen Share Mode'));
   assert.ok(segmentedControl.includes('TopNavPills'));
+  assert.ok(!segmentedControl.includes('This Page'));
   assert.ok(segmentedControl.includes('All Notes'));
+  assert.ok(sidepanelShell.includes('max-w-[720px]'));
+  assert.ok(workspaceHook.includes('sidePanelAllowedViews'));
+  assert.ok(workspaceHook.includes("const sidePanelAllowedViews: WorkspaceView[] = ['all-notes', 'folders', 'tags', 'settings'];"));
   assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
   assert.ok(workspaceNoteCard.includes('title?: string | null;'));
   assert.ok(workspaceNoteCard.includes('details?: React.ReactNode;'));

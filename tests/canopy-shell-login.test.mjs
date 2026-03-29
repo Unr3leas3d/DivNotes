@@ -40,3 +40,26 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(popupApp.includes('resolvePopupAuthStateChange'));
   assert.ok(popupApp.includes('allowSessionPromotionRef'));
 });
+
+test('sidepanel shell removes This Page and keeps a centered work surface', () => {
+  const sidepanelApp = read('src/sidepanel/App.tsx');
+  const segmentedControl = read('src/sidepanel/components/SegmentedControl.tsx');
+  const shell = read('src/sidepanel/components/SidePanelShell.tsx');
+  const foldersView = read('src/sidepanel/components/FoldersView.tsx');
+  const tagManager = read('src/sidepanel/components/TagManager.tsx');
+  const workspaceHook = read('src/lib/use-extension-workspace.ts');
+
+  assert.ok(!segmentedControl.includes('This Page'));
+  assert.ok(!sidepanelApp.includes('PanelsTopLeft'));
+  assert.ok(!sidepanelApp.includes('handleOpenPopup'));
+  assert.ok(!sidepanelApp.includes('window.confirm'));
+  assert.ok(!foldersView.includes('window.prompt'));
+  assert.ok(!foldersView.includes('window.alert'));
+  assert.ok(!foldersView.includes('window.confirm'));
+  assert.ok(!tagManager.includes('window.confirm'));
+  assert.ok(foldersView.includes('WorkspaceActionDialog'));
+  assert.ok(tagManager.includes('WorkspaceActionDialog'));
+  assert.ok(shell.includes('max-w-[720px]'));
+  assert.ok(workspaceHook.includes('sidePanelAllowedViews'));
+  assert.ok(workspaceHook.includes("const defaultView = options.shell === 'popup' ? 'this-page' : 'all-notes';"));
+});
