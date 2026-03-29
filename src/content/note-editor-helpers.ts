@@ -1,4 +1,4 @@
-import type { StoredFolder, StoredNote } from '../lib/types.ts';
+import type { StoredFolder, StoredNote, StoredTag } from '../lib/types.ts';
 
 type DomainNoteLike = Pick<StoredNote, 'hostname' | 'folderId'>;
 
@@ -102,6 +102,22 @@ function normalizeTagName(tag: string): string {
   return tag.trim().replace(/^#+/, '').toLowerCase();
 }
 
+function resolveTagLabel(
+  tag: string,
+  tagCatalog: readonly Pick<StoredTag, 'id' | 'name'>[]
+): string {
+  const normalized = normalizeTagName(tag);
+  if (!normalized) {
+    return '';
+  }
+
+  const matchedTag = tagCatalog.find(
+    (candidate) => candidate.id === tag || normalizeTagName(candidate.name) === normalized
+  );
+
+  return matchedTag ? normalizeTagName(matchedTag.name) : normalized;
+}
+
 export function formatEditorContent({ title, body }: EditorDraft): string {
   const trimmedTitle = title.trim();
 
@@ -157,6 +173,30 @@ export function getInitialManualTags(
   }
 
   return manualTags;
+}
+
+export function resolveStoredTagLabels(
+  tags: readonly string[],
+  tagCatalog: readonly Pick<StoredTag, 'id' | 'name'>[] = []
+): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  for (const tag of tags) {
+    if (typeof tag !== 'string') {
+      continue;
+    }
+
+    const resolvedLabel = resolveTagLabel(tag, tagCatalog);
+    if (!resolvedLabel || seen.has(resolvedLabel)) {
+      continue;
+    }
+
+    seen.add(resolvedLabel);
+    labels.push(resolvedLabel);
+  }
+
+  return labels;
 }
 
 function extractHashtagsFromEditorContent(content: string): string[] {

@@ -169,6 +169,30 @@ test('filterNotesBySearch resolves note tag ids against tag names', () => {
   assert.deepEqual(byTagName.map((note) => note.id), ['note-1']);
 });
 
+test('buildTagSummaries and filterNotesBySearch resolve tag names stored on notes', () => {
+  const noteWithTagNames: StoredNote = {
+    ...sampleNotes[0],
+    id: 'note-name-tags',
+    tags: ['research'],
+  };
+  const catalog: StoredTag[] = [
+    {
+      id: 'tag-1',
+      name: 'research',
+      color: '#1a5c2e',
+      createdAt: '2026-03-02T00:00:00.000Z',
+      updatedAt: '2026-03-02T00:00:00.000Z',
+    },
+  ];
+
+  const summaries = buildTagSummaries(catalog, [noteWithTagNames]);
+  assert.equal(summaries[0]?.count, 1);
+  assert.deepEqual(summaries[0]?.noteIds, ['note-name-tags']);
+
+  const matches = filterNotesBySearch([noteWithTagNames], 'research', catalog);
+  assert.deepEqual(matches.map((note) => note.id), ['note-name-tags']);
+});
+
 test('buildViewCounts returns shared pill counts for popup and side panel', () => {
   const counts = buildViewCounts({
     notes: sampleNotes,

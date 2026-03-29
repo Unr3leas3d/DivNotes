@@ -187,7 +187,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     : (noteIdx > -1 ? (notes[noteIdx].tags || []) : [])
             );
             if (noteIdx > -1) {
-                notes[noteIdx].tags = normalizedTagNames;
+                notes[noteIdx].tags = resolvedTagIds;
             }
 
             // Compute which note_tag associations are actually new

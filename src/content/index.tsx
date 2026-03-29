@@ -2,7 +2,7 @@
 // Pure DOM for inspector, note editor, and note badges
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import type { StoredFolder } from '../lib/types.ts';
+import type { StoredFolder, StoredTag } from '../lib/types.ts';
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
   buildEditorTagNames,
@@ -14,6 +14,7 @@ import {
   getTagChipLabels,
   hasMeaningfulEditorContent,
   parseEditorDraft,
+  resolveStoredTagLabels,
   savePageNotesToStorage,
 } from './note-editor-helpers.ts';
 import {
@@ -1290,8 +1291,9 @@ function saveNotesToStorage() {
 
 function loadNotesFromStorage() {
   const pageUrl = getPageUrl();
-  chrome.storage.local.get(['divnotes_notes'], (result) => {
+  chrome.storage.local.get(['divnotes_notes', 'divnotes_tags'], (result) => {
     const allNotes: StoredNote[] = result.divnotes_notes || [];
+    const allTags: StoredTag[] = result.divnotes_tags || [];
     const pageNotes = allNotes.filter(n => n.url === pageUrl);
     console.log('[Canopy] Loading', pageNotes.length, 'notes for this page');
 
@@ -1313,7 +1315,7 @@ function loadNotesFromStorage() {
           elementPosition: stored.elementPosition,
           selectedText: stored.selectedText,
           folderId: stored.folderId ?? null,
-          tags: stored.tags ?? [],
+          tags: resolveStoredTagLabels(stored.tags ?? [], allTags),
           pinned: stored.pinned ?? false,
           createdAt: stored.createdAt,
           badgeEl: null,

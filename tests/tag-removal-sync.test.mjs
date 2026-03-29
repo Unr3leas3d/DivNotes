@@ -124,7 +124,7 @@ test('SYNC_NOTE_TAGS removes stale note_tag links and queues durable deletes', a
   });
 
   assert.deepEqual(response, { success: true, tagIds: ['tag-keep'] });
-  assert.deepEqual(storageState.divnotes_notes[0].tags, ['keep']);
+  assert.deepEqual(storageState.divnotes_notes[0].tags, ['tag-keep']);
   assert.equal(storageState.divnotes_sync_queue.length, 1);
   assert.deepEqual(
     storageState.divnotes_sync_queue[0],

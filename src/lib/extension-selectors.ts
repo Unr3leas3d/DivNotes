@@ -38,6 +38,48 @@ function sortNotesNewestFirst(notes: StoredNote[]): StoredNote[] {
   });
 }
 
+function normalizeTagValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function noteHasTag(note: StoredNote, tag: StoredTag): boolean {
+  const normalizedTagId = normalizeTagValue(tag.id);
+  const normalizedTagName = normalizeTagValue(tag.name);
+
+  return note.tags.some((value) => {
+    const normalizedValue = normalizeTagValue(value);
+    return normalizedValue === normalizedTagId || normalizedValue === normalizedTagName;
+  });
+}
+
+function collectSearchableTagValues(note: StoredNote, tags: StoredTag[]): string[] {
+  const tagByValue = new Map<string, StoredTag>();
+
+  for (const tag of tags) {
+    tagByValue.set(normalizeTagValue(tag.id), tag);
+    tagByValue.set(normalizeTagValue(tag.name), tag);
+  }
+
+  const values = new Set<string>();
+
+  for (const value of note.tags) {
+    const normalizedValue = normalizeTagValue(value);
+    if (!normalizedValue) {
+      continue;
+    }
+
+    values.add(normalizedValue);
+
+    const matchedTag = tagByValue.get(normalizedValue);
+    if (matchedTag) {
+      values.add(normalizeTagValue(matchedTag.id));
+      values.add(normalizeTagValue(matchedTag.name));
+    }
+  }
+
+  return [...values];
+}
+
 function normalizeUrl(url: string | null): string | null {
   if (!url) {
     return null;
@@ -130,7 +172,7 @@ export function buildFolderSummaries(
 export function buildTagSummaries(tags: StoredTag[], notes: StoredNote[]): TagSummary[] {
   return [...tags]
     .map((tag) => {
-      const taggedNotes = sortNotesNewestFirst(notes.filter((note) => note.tags.includes(tag.id)));
+      const taggedNotes = sortNotesNewestFirst(notes.filter((note) => noteHasTag(note, tag)));
       return {
         tag,
         count: taggedNotes.length,
@@ -168,8 +210,6 @@ export function filterNotesBySearch(
     return sortNotesNewestFirst(notes);
   }
 
-  const tagNamesById = new Map(tags.map((tag) => [tag.id, tag.name.toLowerCase()]));
-
   return sortNotesNewestFirst(
     notes.filter((note) => {
       const searchableValues = [
@@ -180,7 +220,7 @@ export function filterNotesBySearch(
         note.elementTag,
         note.selectedText,
         note.tagLabel,
-        ...note.tags.map((tagId) => tagNamesById.get(tagId) || ''),
+        ...collectSearchableTagValues(note, tags),
       ];
 
       return searchableValues
