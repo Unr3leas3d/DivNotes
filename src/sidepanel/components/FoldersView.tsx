@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { FolderPlus, Inbox, ChevronDown, ChevronRight, Search, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { PinnedSection } from './PinnedSection';
 import { FolderTreeNodeItem } from './FolderTreeNodeItem';
 import { NoteCard } from './NoteCard';
@@ -27,6 +28,25 @@ interface FoldersViewProps {
   onRefresh?: () => void;
 }
 
+type FolderDialogState =
+  | { type: 'new-folder'; value: string; error: string | null }
+  | { type: 'new-subfolder'; parentId: string; value: string; error: string | null }
+  | { type: 'rename-folder'; folderId: string; value: string; error: string | null }
+  | { type: 'change-color'; folderId: string; value: string; error: string | null }
+  | { type: 'delete-folder'; folderId: string; error: string | null }
+  | { type: 'bulk-move'; value: string; error: string | null }
+  | { type: 'bulk-tag'; value: string; error: string | null }
+  | { type: 'bulk-delete'; error: string | null };
+
+interface FolderDialogConfig {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  destructive: boolean;
+  promptLabel?: string;
+  promptPlaceholder?: string;
+}
+
 export function FoldersView({
   notes,
   folders,
@@ -38,6 +58,9 @@ export function FoldersView({
 }: FoldersViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [inboxExpanded, setInboxExpanded] = useState(false);
+  const [dialogState, setDialogState] = useState<FolderDialogState | null>(null);
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
+  const [bulkActionError, setBulkActionError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Build the folder tree
@@ -58,6 +81,12 @@ export function FoldersView({
       prevNoteCount.current = notes.length;
     }
   }, [notes.length, clearSelection]);
+
+  useEffect(() => {
+    if (selectedIds.size < 2 && bulkActionError) {
+      setBulkActionError(null);
+    }
+  }, [bulkActionError, selectedIds.size]);
 
   // Drag and drop support
   const handleMoveNote = useCallback(async (noteId: string, folderId: string | null) => {
@@ -86,48 +115,15 @@ export function FoldersView({
     folders,
   });
 
-  const handleBulkMoveToFolder = useCallback(async () => {
-    const folderName = window.prompt('Enter folder name to move selected notes to:');
-    if (!folderName || !folderName.trim()) return;
+  const handleBulkMoveToFolder = useCallback(() => {
+    setBulkActionError(null);
+    setDialogState({ type: 'bulk-move', value: '', error: null });
+  }, []);
 
-    const targetFolder = folders.find(f => f.name.toLowerCase() === folderName.trim().toLowerCase());
-    const folderId = targetFolder?.id;
-    if (!folderId) {
-      window.alert(`Folder "${folderName}" not found. Please create it first.`);
-      return;
-    }
-
-    const service = await getNotesService();
-    for (const noteId of selectedIds) {
-      await service.update(noteId, { folderId });
-    }
-    clearSelection();
-    onRefresh?.();
-  }, [selectedIds, folders, clearSelection, onRefresh]);
-
-  const handleBulkAddTags = useCallback(async () => {
-    const tagName = window.prompt('Enter tag name to add to selected notes:');
-    if (!tagName || !tagName.trim()) return;
-
-    const tag = tags.find(t => t.name.toLowerCase() === tagName.trim().toLowerCase());
-    if (!tag) {
-      window.alert(`Tag "${tagName}" not found. Please create it first in Tag Manager.`);
-      return;
-    }
-
-    const tagsService = await getTagsService();
-    for (const noteId of selectedIds) {
-      const note = notes.find(n => n.id === noteId);
-      if (note) {
-        const currentTags = note.tags || [];
-        if (!currentTags.includes(tag.id)) {
-          await tagsService.setNoteTags(noteId, [...new Set([...currentTags, tag.id])]);
-        }
-      }
-    }
-    clearSelection();
-    onRefresh?.();
-  }, [selectedIds, tags, notes, clearSelection, onRefresh]);
+  const handleBulkAddTags = useCallback(() => {
+    setBulkActionError(null);
+    setDialogState({ type: 'bulk-tag', value: '', error: null });
+  }, []);
 
   const handleBulkPin = useCallback(async () => {
     const service = await getNotesService();
@@ -141,17 +137,10 @@ export function FoldersView({
     onRefresh?.();
   }, [selectedIds, notes, clearSelection, onRefresh]);
 
-  const handleBulkDelete = useCallback(async () => {
-    const confirmed = window.confirm(`Delete ${selectedIds.size} selected notes? This cannot be undone.`);
-    if (!confirmed) return;
-
-    const service = await getNotesService();
-    for (const noteId of selectedIds) {
-      await service.delete(noteId);
-    }
-    clearSelection();
-    onRefresh?.();
-  }, [selectedIds, clearSelection, onRefresh]);
+  const handleBulkDelete = useCallback(() => {
+    setBulkActionError(null);
+    setDialogState({ type: 'bulk-delete', error: null });
+  }, []);
 
   // Search filtering
   const filteredTree = useMemo(() => {
@@ -202,90 +191,45 @@ export function FoldersView({
     });
   }, []);
 
-  const handleNewFolder = useCallback(async () => {
-    const name = window.prompt('New folder name:');
-    if (!name || !name.trim()) return;
-
-    const order = getNextOrder(folders.filter(f => !f.parentId));
-    const newFolder: StoredFolder = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      parentId: null,
-      order,
-      color: null,
-      pinned: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const service = await getFoldersService();
-    await service.create(newFolder);
-  }, [folders]);
+  const handleNewFolder = useCallback(() => {
+    setDialogState({ type: 'new-folder', value: '', error: null });
+  }, []);
 
   const handleFolderClick = useCallback((folderId: string) => {
     toggleExpand(folderId);
   }, [toggleExpand]);
 
-  const handleNewSubfolder = useCallback(async (parentId: string) => {
-    const name = window.prompt('New subfolder name:');
-    if (!name || !name.trim()) return;
+  const handleNewSubfolder = useCallback((parentId: string) => {
+    setDialogState({ type: 'new-subfolder', parentId, value: '', error: null });
+  }, []);
 
-    const siblings = folders.filter(f => f.parentId === parentId);
-    const order = getNextOrder(siblings);
-    const newFolder: StoredFolder = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      parentId,
-      order,
-      color: null,
-      pinned: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  const handleRenameFolder = useCallback((folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
 
-    const service = await getFoldersService();
-    await service.create(newFolder);
-    // Expand parent so the new subfolder is visible
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      next.add(parentId);
-      return next;
+    setDialogState({
+      type: 'rename-folder',
+      folderId,
+      value: folder.name,
+      error: null,
     });
-    onRefresh?.();
-  }, [folders, onRefresh]);
+  }, [folders]);
 
-  const handleRenameFolder = useCallback(async (folderId: string) => {
+  const handleChangeFolderColor = useCallback((folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
 
-    const newName = window.prompt('Rename folder:', folder.name);
-    if (!newName || !newName.trim() || newName.trim() === folder.name) return;
+    const currentColorIndex = folder.color
+      ? TAG_COLORS.indexOf(folder.color as (typeof TAG_COLORS)[number])
+      : -1;
 
-    const service = await getFoldersService();
-    await service.update(folderId, { name: newName.trim() });
-    onRefresh?.();
-  }, [folders, onRefresh]);
-
-  const handleChangeFolderColor = useCallback(async (folderId: string) => {
-    const folder = folders.find(f => f.id === folderId);
-    if (!folder) return;
-
-    const colorOptions = TAG_COLORS.map((c, i) => `${i + 1}: ${c}`).join('\n');
-    const choice = window.prompt(
-      `Choose a color (1-${TAG_COLORS.length}):\n${colorOptions}\n\nEnter 0 to remove color.`
-    );
-    if (choice === null) return;
-
-    const num = parseInt(choice, 10);
-    let color: string | null = null;
-    if (num >= 1 && num <= TAG_COLORS.length) {
-      color = TAG_COLORS[num - 1];
-    }
-
-    const service = await getFoldersService();
-    await service.update(folderId, { color });
-    onRefresh?.();
-  }, [folders, onRefresh]);
+    setDialogState({
+      type: 'change-color',
+      folderId,
+      value: currentColorIndex >= 0 ? String(currentColorIndex + 1) : '0',
+      error: null,
+    });
+  }, [folders]);
 
   const handleToggleFolderPin = useCallback(async (folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
@@ -296,19 +240,12 @@ export function FoldersView({
     onRefresh?.();
   }, [folders, onRefresh]);
 
-  const handleDeleteFolder = useCallback(async (folderId: string) => {
+  const handleDeleteFolder = useCallback((folderId: string) => {
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
 
-    const confirmed = window.confirm(
-      `Delete folder "${folder.name}"? Notes inside will be moved to Inbox.`
-    );
-    if (!confirmed) return;
-
-    const service = await getFoldersService();
-    await service.delete(folderId);
-    onRefresh?.();
-  }, [folders, onRefresh]);
+    setDialogState({ type: 'delete-folder', folderId, error: null });
+  }, [folders]);
 
   const handleToggleNotePin = useCallback(async (noteId: string) => {
     const note = notes.find(n => n.id === noteId);
@@ -386,6 +323,325 @@ export function FoldersView({
       clearSelection();
     }
   }, [selectAll, clearSelection, selectedIds.size]);
+
+  const handleDialogPromptChange = useCallback((value: string) => {
+    setDialogState((current) => {
+      if (!current || !('value' in current)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        value,
+        error: null,
+      };
+    });
+  }, []);
+
+  const handleDialogConfirm = useCallback(async () => {
+    if (!dialogState) {
+      return;
+    }
+
+    const setCurrentDialogError = (message: string) => {
+      setDialogState((current) => {
+        if (!current || current.type !== dialogState.type) {
+          return current;
+        }
+
+        return {
+          ...current,
+          error: message,
+        };
+      });
+    };
+
+    setDialogSubmitting(true);
+
+    try {
+      switch (dialogState.type) {
+        case 'new-folder': {
+          const name = dialogState.value.trim();
+          if (!name) {
+            setCurrentDialogError('Enter a folder name.');
+            return;
+          }
+
+          const order = getNextOrder(folders.filter((folder) => !folder.parentId));
+          const timestamp = new Date().toISOString();
+          const newFolder: StoredFolder = {
+            id: crypto.randomUUID(),
+            name,
+            parentId: null,
+            order,
+            color: null,
+            pinned: false,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+
+          const service = await getFoldersService();
+          await service.create(newFolder);
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'new-subfolder': {
+          const name = dialogState.value.trim();
+          if (!name) {
+            setCurrentDialogError('Enter a folder name.');
+            return;
+          }
+
+          const siblings = folders.filter((folder) => folder.parentId === dialogState.parentId);
+          const order = getNextOrder(siblings);
+          const timestamp = new Date().toISOString();
+          const newFolder: StoredFolder = {
+            id: crypto.randomUUID(),
+            name,
+            parentId: dialogState.parentId,
+            order,
+            color: null,
+            pinned: false,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+
+          const service = await getFoldersService();
+          await service.create(newFolder);
+          setExpandedFolders((prev) => {
+            const next = new Set(prev);
+            next.add(dialogState.parentId);
+            return next;
+          });
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'rename-folder': {
+          const name = dialogState.value.trim();
+          const folder = folders.find((item) => item.id === dialogState.folderId);
+          if (!folder) {
+            setCurrentDialogError('This folder is no longer available.');
+            return;
+          }
+          if (!name) {
+            setCurrentDialogError('Enter a folder name.');
+            return;
+          }
+          if (name === folder.name) {
+            setDialogState(null);
+            return;
+          }
+
+          const service = await getFoldersService();
+          await service.update(dialogState.folderId, { name });
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'change-color': {
+          const value = dialogState.value.trim();
+          if (!/^\d+$/.test(value)) {
+            setCurrentDialogError(`Enter a number between 0 and ${TAG_COLORS.length}.`);
+            return;
+          }
+
+          const index = Number.parseInt(value, 10);
+          if (index < 0 || index > TAG_COLORS.length) {
+            setCurrentDialogError(`Enter a number between 0 and ${TAG_COLORS.length}.`);
+            return;
+          }
+
+          const color = index === 0 ? null : TAG_COLORS[index - 1];
+          const service = await getFoldersService();
+          await service.update(dialogState.folderId, { color });
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'delete-folder': {
+          const service = await getFoldersService();
+          await service.delete(dialogState.folderId);
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'bulk-move': {
+          const folderName = dialogState.value.trim();
+          if (!folderName) {
+            setCurrentDialogError('Enter a folder name.');
+            return;
+          }
+
+          const targetFolder = folders.find(
+            (folder) => folder.name.toLowerCase() === folderName.toLowerCase()
+          );
+          if (!targetFolder) {
+            setBulkActionError(`Folder "${folderName}" not found. Please create it first.`);
+            setDialogState(null);
+            return;
+          }
+
+          const service = await getNotesService();
+          for (const noteId of selectedIds) {
+            await service.update(noteId, { folderId: targetFolder.id });
+          }
+          clearSelection();
+          setBulkActionError(null);
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'bulk-tag': {
+          const tagName = dialogState.value.trim();
+          if (!tagName) {
+            setCurrentDialogError('Enter a tag name.');
+            return;
+          }
+
+          const targetTag = tags.find((tag) => tag.name.toLowerCase() === tagName.toLowerCase());
+          if (!targetTag) {
+            setBulkActionError(`Tag "${tagName}" not found. Please create it first in Tag Manager.`);
+            setDialogState(null);
+            return;
+          }
+
+          const tagsService = await getTagsService();
+          for (const noteId of selectedIds) {
+            const note = notes.find((item) => item.id === noteId);
+            if (!note) {
+              continue;
+            }
+
+            const currentTags = note.tags || [];
+            if (!currentTags.includes(targetTag.id)) {
+              await tagsService.setNoteTags(noteId, [...new Set([...currentTags, targetTag.id])]);
+            }
+          }
+          clearSelection();
+          setBulkActionError(null);
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+        case 'bulk-delete': {
+          const service = await getNotesService();
+          for (const noteId of selectedIds) {
+            await service.delete(noteId);
+          }
+          clearSelection();
+          setBulkActionError(null);
+          setDialogState(null);
+          onRefresh?.();
+          return;
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The action could not be completed.';
+      setCurrentDialogError(message);
+    } finally {
+      setDialogSubmitting(false);
+    }
+  }, [clearSelection, dialogState, folders, notes, onRefresh, selectedIds, tags]);
+
+  const dialogFolder = useMemo(() => {
+    if (!dialogState) {
+      return null;
+    }
+    if ('folderId' in dialogState) {
+      return folders.find((folder) => folder.id === dialogState.folderId) ?? null;
+    }
+    if (dialogState.type === 'new-subfolder') {
+      return folders.find((folder) => folder.id === dialogState.parentId) ?? null;
+    }
+    return null;
+  }, [dialogState, folders]);
+  const dialogPromptValue = dialogState && 'value' in dialogState ? dialogState.value : '';
+  const dialogValidationError =
+    dialogState && 'value' in dialogState ? dialogState.error : null;
+  const dialogInlineError =
+    dialogState && !('value' in dialogState) ? dialogState.error : null;
+  const dialogConfig = useMemo<FolderDialogConfig | null>(() => {
+    if (!dialogState) {
+      return null;
+    }
+
+    switch (dialogState.type) {
+      case 'new-folder':
+        return {
+          title: 'Create Folder',
+          description: 'Give this folder a clear name so notes stay easy to find.',
+          confirmLabel: 'Create Folder',
+          promptLabel: 'Folder Name',
+          promptPlaceholder: 'Folder name',
+          destructive: false,
+        };
+      case 'new-subfolder':
+        return {
+          title: 'Create Subfolder',
+          description: dialogFolder
+            ? `Add a subfolder inside "${dialogFolder.name}".`
+            : 'Add a subfolder inside this folder.',
+          confirmLabel: 'Create Subfolder',
+          promptLabel: 'Subfolder Name',
+          promptPlaceholder: 'Subfolder name',
+          destructive: false,
+        };
+      case 'rename-folder':
+        return {
+          title: 'Rename Folder',
+          description: 'Update the folder name without changing its notes or position.',
+          confirmLabel: 'Save Name',
+          promptLabel: 'Folder Name',
+          promptPlaceholder: 'Folder name',
+          destructive: false,
+        };
+      case 'change-color':
+        return {
+          title: 'Change Folder Color',
+          description: `Enter 0 to remove the color, or choose a number from 1 to ${TAG_COLORS.length}.`,
+          confirmLabel: 'Apply Color',
+          promptLabel: `Color Number (0-${TAG_COLORS.length})`,
+          promptPlaceholder: `0-${TAG_COLORS.length}`,
+          destructive: false,
+        };
+      case 'delete-folder':
+        return {
+          title: 'Delete Folder?',
+          description: dialogFolder
+            ? `Delete "${dialogFolder.name}"? Notes inside will be moved to Inbox.`
+            : 'Delete this folder? Notes inside will be moved to Inbox.',
+          confirmLabel: 'Delete Folder',
+          destructive: true,
+        };
+      case 'bulk-move':
+        return {
+          title: 'Move Selected Notes',
+          description: `Move ${selectedIds.size} selected notes into an existing folder.`,
+          confirmLabel: 'Move Notes',
+          promptLabel: 'Folder Name',
+          promptPlaceholder: 'Existing folder name',
+          destructive: false,
+        };
+      case 'bulk-tag':
+        return {
+          title: 'Add Tag To Selected Notes',
+          description: `Apply an existing tag to ${selectedIds.size} selected notes.`,
+          confirmLabel: 'Add Tag',
+          promptLabel: 'Tag Name',
+          promptPlaceholder: 'Existing tag name',
+          destructive: false,
+        };
+      case 'bulk-delete':
+        return {
+          title: 'Delete Selected Notes?',
+          description: `Delete ${selectedIds.size} selected notes? This cannot be undone.`,
+          confirmLabel: 'Delete Notes',
+          destructive: true,
+        };
+    }
+  }, [dialogFolder, dialogState, selectedIds.size]);
 
   return (
     <div ref={containerRef} tabIndex={0} className="outline-none" onKeyDown={handleContainerKeyDown}>
@@ -528,6 +784,16 @@ export function FoldersView({
         </div>
       )}
 
+      {selectedIds.size >= 2 && bulkActionError ? (
+        <div className="fixed inset-x-0 bottom-14 z-40 px-3">
+          <div className="mx-auto w-full max-w-[720px]">
+            <p className="rounded-[12px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.95)] px-3 py-2 text-[11px] text-[#b91c1c] shadow-[0_12px_30px_rgba(5,36,21,0.08)]">
+              {bulkActionError}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Bulk action bar */}
       <BulkActionBar
         count={selectedIds.size}
@@ -537,6 +803,29 @@ export function FoldersView({
         onDelete={handleBulkDelete}
         onClear={clearSelection}
       />
+
+      {dialogConfig ? (
+        <WorkspaceActionDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setDialogState(null);
+            }
+          }}
+          title={dialogConfig.title}
+          description={dialogConfig.description}
+          confirmLabel={dialogConfig.confirmLabel}
+          destructive={dialogConfig.destructive}
+          promptLabel={dialogConfig.promptLabel}
+          promptPlaceholder={dialogConfig.promptPlaceholder}
+          promptValue={dialogPromptValue}
+          validationError={dialogValidationError}
+          inlineError={dialogInlineError}
+          onPromptChange={handleDialogPromptChange}
+          onConfirm={() => void handleDialogConfirm()}
+          isSubmitting={dialogSubmitting}
+        />
+      ) : null}
     </div>
   );
 }

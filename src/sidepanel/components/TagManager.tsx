@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { X, Trash2, Check, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { getTagsService } from '@/lib/tags-service';
 import { TAG_COLORS } from '@/lib/types';
 import type { StoredTag } from '@/lib/types';
@@ -11,12 +12,18 @@ interface TagManagerProps {
   onClose: () => void;
 }
 
+type TagDialogState =
+  | { type: 'delete'; tagId: string; error: string | null }
+  | { type: 'merge'; keepId: string; removeId: string; error: string | null };
+
 export function TagManager({ tags, onClose }: TagManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [localTags, setLocalTags] = useState<StoredTag[]>(tags);
   const [noteCounts, setNoteCounts] = useState<Map<string, number>>(new Map());
+  const [dialogState, setDialogState] = useState<TagDialogState | null>(null);
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
 
   // Sync local tags with prop changes
   useEffect(() => {
@@ -88,21 +95,8 @@ export function TagManager({ tags, onClose }: TagManagerProps) {
     [saveEdit]
   );
 
-  const deleteTag = useCallback(async (tag: StoredTag) => {
-    const confirmed = window.confirm(
-      `Delete tag "${tag.name}"? It will be removed from all notes.`
-    );
-    if (!confirmed) return;
-
-    const service = await getTagsService();
-    await service.delete(tag.id);
-
-    setLocalTags((prev) => prev.filter((t) => t.id !== tag.id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(tag.id);
-      return next;
-    });
+  const deleteTag = useCallback((tag: StoredTag) => {
+    setDialogState({ type: 'delete', tagId: tag.id, error: null });
   }, []);
 
   const toggleSelection = useCallback((tagId: string) => {
@@ -117,43 +111,94 @@ export function TagManager({ tags, onClose }: TagManagerProps) {
     });
   }, []);
 
-  const mergeTags = useCallback(async () => {
+  const mergeTags = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length !== 2) return;
-
     const [keepId, removeId] = ids;
-    const keepTag = localTags.find((t) => t.id === keepId);
-    const removeTag = localTags.find((t) => t.id === removeId);
-    if (!keepTag || !removeTag) return;
+    setDialogState({ type: 'merge', keepId, removeId, error: null });
+  }, [selectedIds]);
 
-    const confirmed = window.confirm(
-      `Merge "${removeTag.name}" into "${keepTag.name}"? Notes from "${removeTag.name}" will be reassigned to "${keepTag.name}", then "${removeTag.name}" will be deleted.`
-    );
-    if (!confirmed) return;
-
-    const service = await getTagsService();
-
-    // Read notes and reassign tags, syncing each change via TagsService
-    const result = await chrome.storage.local.get(['divnotes_notes']);
-    const notes = result.divnotes_notes || [];
-
-    for (const note of notes) {
-      if (note.tags?.includes(removeId)) {
-        const newTags = note.tags.filter((t: string) => t !== removeId);
-        if (!newTags.includes(keepId)) {
-          newTags.push(keepId);
-        }
-        // Sync via TagsService so Supabase note_tags are updated
-        await service.setNoteTags(note.id, newTags);
-      }
+  const handleDialogConfirm = useCallback(async () => {
+    if (!dialogState) {
+      return;
     }
 
-    // Delete the merged-away tag (also removes from Supabase)
-    await service.delete(removeId);
+    const setCurrentDialogError = (message: string) => {
+      setDialogState((current) => {
+        if (!current || current.type !== dialogState.type) {
+          return current;
+        }
 
-    setLocalTags((prev) => prev.filter((t) => t.id !== removeId));
-    setSelectedIds(new Set());
-  }, [selectedIds, localTags]);
+        return {
+          ...current,
+          error: message,
+        };
+      });
+    };
+
+    setDialogSubmitting(true);
+
+    try {
+      if (dialogState.type === 'delete') {
+        const service = await getTagsService();
+        await service.delete(dialogState.tagId);
+
+        setLocalTags((prev) => prev.filter((tag) => tag.id !== dialogState.tagId));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(dialogState.tagId);
+          return next;
+        });
+        setDialogState(null);
+        return;
+      }
+
+      const keepTag = localTags.find((tag) => tag.id === dialogState.keepId);
+      const removeTag = localTags.find((tag) => tag.id === dialogState.removeId);
+      if (!keepTag || !removeTag) {
+        setCurrentDialogError('One of the selected tags is no longer available.');
+        return;
+      }
+
+      const service = await getTagsService();
+      const result = await chrome.storage.local.get(['divnotes_notes']);
+      const notes = result.divnotes_notes || [];
+
+      for (const note of notes) {
+        if (note.tags?.includes(dialogState.removeId)) {
+          const newTags = note.tags.filter((tagId: string) => tagId !== dialogState.removeId);
+          if (!newTags.includes(dialogState.keepId)) {
+            newTags.push(dialogState.keepId);
+          }
+          await service.setNoteTags(note.id, newTags);
+        }
+      }
+
+      await service.delete(dialogState.removeId);
+
+      setLocalTags((prev) => prev.filter((tag) => tag.id !== dialogState.removeId));
+      setSelectedIds(new Set());
+      setDialogState(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The action could not be completed.';
+      setCurrentDialogError(message);
+    } finally {
+      setDialogSubmitting(false);
+    }
+  }, [dialogState, localTags]);
+
+  const dialogDeleteTag =
+    dialogState?.type === 'delete'
+      ? localTags.find((tag) => tag.id === dialogState.tagId) ?? null
+      : null;
+  const dialogKeepTag =
+    dialogState?.type === 'merge'
+      ? localTags.find((tag) => tag.id === dialogState.keepId) ?? null
+      : null;
+  const dialogRemoveTag =
+    dialogState?.type === 'merge'
+      ? localTags.find((tag) => tag.id === dialogState.removeId) ?? null
+      : null;
 
   return (
     <div className="absolute inset-0 z-50 bg-background flex flex-col">
@@ -266,6 +311,32 @@ export function TagManager({ tags, onClose }: TagManagerProps) {
           </div>
         )}
       </div>
+
+      {dialogState ? (
+        <WorkspaceActionDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setDialogState(null);
+            }
+          }}
+          title={dialogState.type === 'delete' ? 'Delete Tag?' : 'Merge Tags?'}
+          description={
+            dialogState.type === 'delete'
+              ? dialogDeleteTag
+                ? `Delete tag "${dialogDeleteTag.name}"? It will be removed from all notes.`
+                : 'Delete this tag? It will be removed from all notes.'
+              : dialogKeepTag && dialogRemoveTag
+                ? `Merge "${dialogRemoveTag.name}" into "${dialogKeepTag.name}"? Notes from "${dialogRemoveTag.name}" will be reassigned to "${dialogKeepTag.name}", then "${dialogRemoveTag.name}" will be deleted.`
+                : 'Merge these tags? Notes from one tag will be reassigned to the other before deletion.'
+          }
+          confirmLabel={dialogState.type === 'delete' ? 'Delete Tag' : 'Merge Tags'}
+          destructive
+          inlineError={dialogState.error}
+          onConfirm={() => void handleDialogConfirm()}
+          isSubmitting={dialogSubmitting}
+        />
+      ) : null}
     </div>
   );
 }
