@@ -232,6 +232,13 @@ function removeSelectorPill() {
   }
 }
 
+function clearSelectedElement() {
+  if (selectedElement) {
+    selectedElement.classList.remove('canopy-selected');
+    selectedElement = null;
+  }
+}
+
 function showSelectorGuide(text = INSPECTOR_GUIDE_TEXT, confirmation = false) {
   if (selectorGuide) {
     selectorGuide.remove();
@@ -293,6 +300,7 @@ function deactivateInspector() {
   document.querySelectorAll('.canopy-highlight').forEach(el => {
     el.classList.remove('canopy-highlight');
   });
+  clearSelectedElement();
 }
 
 function onMouseOver(e: Event) {
@@ -1036,7 +1044,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
 function closeNoteEditor() {
   if (noteEditorContainer) { noteEditorContainer.remove(); noteEditorContainer = null; }
-  if (selectedElement) { selectedElement.classList.remove('canopy-selected'); selectedElement = null; }
+  clearSelectedElement();
 }
 
 // Safely render markdown
