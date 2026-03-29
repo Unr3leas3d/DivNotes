@@ -533,17 +533,33 @@ function showNoteCard(note: SavedNote) {
   note.expandedEl = card;
 }
 
-function deleteNote(id: string, skipStorage = false) {
+async function deleteNote(id: string, skipStorage = false) {
   const idx = savedNotes.findIndex(n => n.id === id);
   if (idx > -1) {
     const note = savedNotes[idx];
     if (note.badgeEl) note.badgeEl.remove();
     if (note.expandedEl) note.expandedEl.remove();
+    note.badgeEl = null;
+    note.expandedEl = null;
     note.element.classList.remove('canopy-has-note');
     clearTextHighlight(note);
     savedNotes.splice(idx, 1);
-    if (!skipStorage) saveNotesToStorage();
     updateNoteBadgeCount();
+
+    if (!skipStorage) {
+      try {
+        await saveNotesToStorage();
+      } catch (error) {
+        savedNotes.splice(idx, 0, note);
+        note.element.classList.add('canopy-has-note');
+        createNoteBadge(note);
+        if (note.selectedText) applyTextHighlight(note);
+        updateNoteBadgeCount();
+        console.error('[Canopy] Failed to delete note', error);
+        return;
+      }
+    }
+
     console.log('[Canopy] Note deleted');
   }
 }
@@ -573,13 +589,17 @@ function moveNote(note: SavedNote) {
     (e.target as HTMLElement).classList.remove('canopy-highlight');
     removeSelectorPill();
   };
-  const onPick = (e: Event) => {
+  const onPick = async (e: Event) => {
     e.preventDefault();
     e.stopPropagation();
     const newEl = e.target as HTMLElement;
     if (isCanopyUiTarget(newEl)) return;
     newEl.classList.remove('canopy-highlight');
     cleanup();
+
+    const previousElement = note.element;
+    const previousSelector = note.elementSelector;
+    const previousInfo = note.elementInfo;
 
     // Re-attach note to new element
     note.element.classList.remove('canopy-has-note');
@@ -595,7 +615,17 @@ function moveNote(note: SavedNote) {
     // Move badge
     if (note.badgeEl) note.badgeEl.remove();
     createNoteBadge(note);
-    saveNotesToStorage();
+    try {
+      await saveNotesToStorage();
+    } catch (error) {
+      note.element.classList.remove('canopy-has-note');
+      note.element = previousElement;
+      note.elementSelector = previousSelector;
+      note.elementInfo = previousInfo;
+      createNoteBadge(note);
+      console.error('[Canopy] Failed to move note', error);
+      return;
+    }
     console.log('[Canopy] Note moved to', note.elementSelector);
   };
   const onKey = (e: KeyboardEvent) => {
