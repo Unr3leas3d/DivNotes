@@ -333,6 +333,7 @@ export function TagManager({ tags, onClose }: TagManagerProps) {
           confirmLabel={dialogState.type === 'delete' ? 'Delete Tag' : 'Merge Tags'}
           destructive
           inlineError={dialogState.error}
+          contentClassName={dialogState.type === 'merge' ? 'max-w-[440px]' : 'max-w-[400px]'}
           onConfirm={() => void handleDialogConfirm()}
           isSubmitting={dialogSubmitting}
         />

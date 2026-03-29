@@ -784,13 +784,16 @@ export function FoldersView({
         </div>
       )}
 
-      {selectedIds.size >= 2 && bulkActionError ? (
-        <div className="fixed inset-x-0 bottom-14 z-40 px-3">
-          <div className="mx-auto w-full max-w-[720px]">
-            <p className="rounded-[12px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.95)] px-3 py-2 text-[11px] text-[#b91c1c] shadow-[0_12px_30px_rgba(5,36,21,0.08)]">
+      {selectedIds.size >= 2 ? (
+        <div className="pb-14 pt-3">
+          {bulkActionError ? (
+            <p
+              aria-live="polite"
+              className="rounded-[12px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.92)] px-3 py-2 text-[11px] text-[#b91c1c]"
+            >
               {bulkActionError}
             </p>
-          </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -821,6 +824,13 @@ export function FoldersView({
           promptValue={dialogPromptValue}
           validationError={dialogValidationError}
           inlineError={dialogInlineError}
+          contentClassName={
+            dialogState?.type === 'bulk-move' ||
+            dialogState?.type === 'bulk-tag' ||
+            dialogState?.type === 'bulk-delete'
+              ? 'max-w-[420px]'
+              : undefined
+          }
           onPromptChange={handleDialogPromptChange}
           onConfirm={() => void handleDialogConfirm()}
           isSubmitting={dialogSubmitting}

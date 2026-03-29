@@ -23,6 +23,7 @@ interface WorkspaceActionDialogProps {
   validationError?: string | null;
   inlineError?: string | null;
   isSubmitting?: boolean;
+  contentClassName?: string;
   onPromptChange?: (value: string) => void;
   onConfirm: () => void | Promise<void>;
   onOpenChange: (open: boolean) => void;
@@ -41,6 +42,7 @@ export function WorkspaceActionDialog({
   validationError,
   inlineError,
   isSubmitting = false,
+  contentClassName,
   onPromptChange,
   onConfirm,
   onOpenChange,
@@ -81,6 +83,7 @@ export function WorkspaceActionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
+        className={contentClassName}
         showCloseButton
         closeButtonDisabled={isSubmitting}
         onEscapeKeyDown={(event) => {
