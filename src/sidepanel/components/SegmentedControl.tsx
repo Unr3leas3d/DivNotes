@@ -2,7 +2,7 @@ import React from 'react';
 
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 
-export type ViewMode = 'this-page' | 'all-notes' | 'folders' | 'tags';
+export type ViewMode = 'all-notes' | 'folders' | 'tags';
 
 interface SegmentedControlProps {
   value: ViewMode;
@@ -10,7 +10,6 @@ interface SegmentedControlProps {
 }
 
 const items: Array<{ value: ViewMode; label: string }> = [
-  { value: 'this-page', label: 'This Page' },
   { value: 'all-notes', label: 'All Notes' },
   { value: 'folders', label: 'Folders' },
   { value: 'tags', label: 'Tags' },

@@ -67,12 +67,16 @@ export function SidePanelShell({
       </div>
 
       {errorMessage ? (
-        <div className="mx-5 mt-4 rounded-[14px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.9)] px-3 py-2 text-[11px] text-[#b91c1c]">
-          {errorMessage}
+        <div className="mx-auto w-full max-w-[720px] px-5 pt-4">
+          <div className="rounded-[14px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.9)] px-3 py-2 text-[11px] text-[#b91c1c]">
+            {errorMessage}
+          </div>
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-[720px] px-5 py-4">{children}</div>
+      </div>
     </div>
   );
 }

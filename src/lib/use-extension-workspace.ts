@@ -82,7 +82,23 @@ function resetWorkspaceServices() {
   resetTagsService();
 }
 
+const popupAllowedViews: WorkspaceView[] = [
+  'this-page',
+  'all-notes',
+  'folders',
+  'tags',
+  'settings',
+];
+
+const sidePanelAllowedViews: WorkspaceView[] = ['all-notes', 'folders', 'tags', 'settings'];
+
 export function useExtensionWorkspace(options: { shell: ShellType }) {
+  const allowedViews = useMemo(
+    () => (options.shell === 'popup' ? popupAllowedViews : sidePanelAllowedViews),
+    [options.shell]
+  );
+  const defaultView = options.shell === 'popup' ? 'this-page' : 'all-notes';
+
   const [auth, setAuth] = useState<WorkspaceAuth>({
     mode: 'loading',
     email: '',
@@ -107,9 +123,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     data: null,
     actions: null,
   });
-  const [activeView, setActiveView] = useState<WorkspaceView>(
-    options.shell === 'popup' ? 'this-page' : 'all-notes'
-  );
+  const [activeView, setActiveView] = useState<WorkspaceView>(defaultView);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const authModeRef = useRef<AuthMode>('loading');
@@ -373,9 +387,12 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     [currentPage.url, data.folders, data.notes, data.tags]
   );
 
-  const setView = useCallback((nextView: WorkspaceView) => {
-    setActiveView(nextView);
-  }, []);
+  const setView = useCallback(
+    (nextView: WorkspaceView) => {
+      setActiveView(allowedViews.includes(nextView) ? nextView : defaultView);
+    },
+    [allowedViews, defaultView]
+  );
 
   const actions = useMemo(
     () =>
