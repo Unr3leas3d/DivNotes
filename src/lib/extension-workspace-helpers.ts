@@ -66,22 +66,56 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
   return [...map.values()];
 }
 
+function normalizeTagName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function buildCanonicalTagLookup(tags: StoredTag[]): Map<string, string> {
+  const lookup = new Map<string, string>();
+
+  for (const tag of tags) {
+    lookup.set(tag.id, tag.id);
+    lookup.set(normalizeTagName(tag.name), tag.id);
+  }
+
+  return lookup;
+}
+
+function canonicalizeNoteTags(note: StoredNote, tagLookup: Map<string, string>): StoredNote {
+  const canonicalTagIds = new Set<string>();
+
+  for (const tagValue of note.tags) {
+    const canonicalTagId = tagLookup.get(tagValue) || tagLookup.get(normalizeTagName(tagValue));
+    canonicalTagIds.add(canonicalTagId || tagValue);
+  }
+
+  return {
+    ...note,
+    tags: [...canonicalTagIds],
+  };
+}
+
 export function mergeImportedWorkspaceData(
   existing: WorkspaceData,
   parsed: { notes?: unknown; folders?: unknown; tags?: unknown }
 ): WorkspaceData {
+  const notes = dedupeById([
+    ...existing.notes,
+    ...normalizeImportArray<StoredNote>(parsed.notes),
+  ]);
+  const folders = dedupeById([
+    ...existing.folders,
+    ...normalizeImportArray<StoredFolder>(parsed.folders),
+  ]);
+  const tags = dedupeById([
+    ...existing.tags,
+    ...normalizeImportArray<StoredTag>(parsed.tags),
+  ]);
+  const canonicalTagLookup = buildCanonicalTagLookup(tags);
+
   return {
-    notes: dedupeById([
-      ...existing.notes,
-      ...normalizeImportArray<StoredNote>(parsed.notes),
-    ]),
-    folders: dedupeById([
-      ...existing.folders,
-      ...normalizeImportArray<StoredFolder>(parsed.folders),
-    ]),
-    tags: dedupeById([
-      ...existing.tags,
-      ...normalizeImportArray<StoredTag>(parsed.tags),
-    ]),
+    notes: notes.map((note) => canonicalizeNoteTags(note, canonicalTagLookup)),
+    folders,
+    tags,
   };
 }
