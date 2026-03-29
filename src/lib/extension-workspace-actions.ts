@@ -64,7 +64,15 @@ export function createExtensionWorkspaceActions(
     openPopup: async () => {
       clearActionError();
       try {
-        await chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+        const response = await chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+        if (!response?.success) {
+          const message =
+            typeof response?.error === 'string' && response.error.length > 0
+              ? response.error
+              : 'Failed to open popup';
+          setActionError(message);
+          throw new Error(message);
+        }
       } catch (caughtError) {
         setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to open popup');
         throw caughtError;
