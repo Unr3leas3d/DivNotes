@@ -94,12 +94,14 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
 test('content script styles switch from purple to Eden Bright green and cream treatments', () => {
   const contentScript = read('src/content/index.tsx');
   const overlayUi = read('src/content/overlay-ui.ts');
+  const editorSurface = read('src/content/editor-surface.ts');
 
   assert.ok(contentScript.includes("outline: 2px solid rgba(26, 92, 46, 0.8) !important;"));
   assert.ok(contentScript.includes('Click to add a note · ESC to cancel'));
   assert.ok(contentScript.includes('Element selected · Opening note editor…'));
   assert.ok(contentScript.includes('createPlacedNoteBadge'));
   assert.ok(contentScript.includes('createPageNoteCountPill'));
+  assert.ok(contentScript.includes('createEditorSurface'));
   assert.ok(contentScript.includes('function clearSelectedElement() {'));
   assert.ok(contentScript.includes('clearSelectedElement();'));
   assert.ok(contentScript.includes("console.error('[Canopy] Failed to delete note', error);"));
@@ -114,6 +116,13 @@ test('content script styles switch from purple to Eden Bright green and cream tr
   assert.ok(overlayUi.includes("border: '1px solid rgba(5,36,21,0.06)'"));
   assert.ok(overlayUi.includes("setDataAttribute(pill, 'canopyOverlay', 'selector-guide')"));
   assert.ok(overlayUi.includes("pointerEvents: 'auto'"));
+  assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('div'), 'canopy-editor-shell')"));
+  assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('input'), 'canopy-editor-title')"));
+  assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('textarea'), 'canopy-editor-body')"));
+  assert.ok(editorSurface.includes("'canopy-close'"));
+  assert.ok(editorSurface.includes("'canopy-delete'"));
+  assert.ok(editorSurface.includes("'canopy-add-tag'"));
+  assert.ok(editorSurface.includes("createPrimarySaveButton(doc, state)"));
 });
 
 test('side panel segmented control uses themed active and inactive states', () => {
