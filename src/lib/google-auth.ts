@@ -10,9 +10,14 @@ interface GoogleAuthDependencies {
   exchangeCodeForSession: (
     code: string
   ) => Promise<{ data: { user: { email?: string | null } | null }; error: Error | null }>;
+  canContinue?: () => boolean;
+  signOut?: () => Promise<{ error?: Error | null } | void>;
 }
 
 export async function signInWithGoogleInExtension(deps: GoogleAuthDependencies) {
+  const canContinue = deps.canContinue ?? (() => true);
+  const staleFlowError = () => new Error('Google sign-in was superseded by a newer auth choice.');
+
   const redirectTo = deps.getRedirectURL();
   const { data, error } = await deps.signInWithOAuth({
     provider: 'google',
@@ -44,9 +49,24 @@ export async function signInWithGoogleInExtension(deps: GoogleAuthDependencies) 
     throw new Error('Google sign-in did not return an authorization code.');
   }
 
+  if (!canContinue()) {
+    throw staleFlowError();
+  }
+
   const { data: sessionData, error: exchangeError } = await deps.exchangeCodeForSession(code);
   if (exchangeError || !sessionData.user) {
     throw exchangeError ?? new Error('Google sign-in did not create a session.');
+  }
+
+  if (!canContinue()) {
+    if (deps.signOut) {
+      try {
+        await deps.signOut();
+      } catch {
+        // Best-effort cleanup: stale flow must still fail even if sign out fails.
+      }
+    }
+    throw staleFlowError();
   }
 
   const email = sessionData.user.email?.trim();

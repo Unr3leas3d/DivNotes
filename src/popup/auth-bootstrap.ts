@@ -28,6 +28,7 @@ export interface PopupBootstrapState {
 interface PopupAuthStateChangeParams {
   currentMode: PopupAuthMode;
   sessionUser: SessionUser | null;
+  canPromoteFromSession: boolean;
 }
 
 interface PopupAuthStateChangeResult {
@@ -70,9 +71,14 @@ export async function resolvePopupBootstrapState(
 export function resolvePopupAuthStateChange({
   currentMode,
   sessionUser,
+  canPromoteFromSession,
 }: PopupAuthStateChangeParams): PopupAuthStateChangeResult | null {
   if (sessionUser) {
     if (currentMode === 'local') {
+      return null;
+    }
+
+    if (currentMode === 'login' && !canPromoteFromSession) {
       return null;
     }
 

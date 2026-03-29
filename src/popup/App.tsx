@@ -14,6 +14,7 @@ export default function App() {
     const [userEmail, setUserEmail] = useState('');
     const [authError, setAuthError] = useState<string | null>(null);
     const authModeRef = React.useRef<AuthMode>('loading');
+    const allowSessionPromotionRef = React.useRef(false);
 
     // Keep ref in sync with state
     useEffect(() => {
@@ -57,6 +58,7 @@ export default function App() {
                 const nextState = resolvePopupAuthStateChange({
                     currentMode: authModeRef.current,
                     sessionUser: session?.user ?? null,
+                    canPromoteFromSession: allowSessionPromotionRef.current,
                 });
                 if (!nextState) {
                     return;
@@ -64,6 +66,9 @@ export default function App() {
 
                 setAuthMode(nextState.mode);
                 setUserEmail(nextState.email);
+                if (nextState.mode === 'authenticated') {
+                    allowSessionPromotionRef.current = false;
+                }
                 if (nextState.clearAuthError) {
                     setAuthError(null);
                 }
@@ -74,6 +79,7 @@ export default function App() {
     }, []);
 
     const handleLogin = (email: string) => {
+        allowSessionPromotionRef.current = false;
         setAuthError(null);
         chrome.storage.local.set({ divnotes_auth: { mode: 'authenticated', email } });
         setUserEmail(email);
@@ -81,6 +87,7 @@ export default function App() {
     };
 
     const handleUseLocally = () => {
+        allowSessionPromotionRef.current = false;
         setAuthError(null);
         chrome.storage.local.set({ divnotes_auth: { mode: 'local' } });
         setAuthMode('local');
@@ -124,7 +131,13 @@ export default function App() {
             {isLoggedIn ? (
                 <Dashboard email={displayEmail} onLogout={handleLogout} isLocalMode={authMode === 'local'} />
             ) : (
-                <LoginForm onLogin={handleLogin} onUseLocally={handleUseLocally} />
+                <LoginForm
+                    onLogin={handleLogin}
+                    onUseLocally={handleUseLocally}
+                    onGoogleSessionPromotionChange={(allowed) => {
+                        allowSessionPromotionRef.current = allowed;
+                    }}
+                />
             )}
         </div>
     );

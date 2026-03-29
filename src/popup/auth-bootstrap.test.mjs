@@ -49,6 +49,7 @@ test('resolvePopupAuthStateChange ignores session promotion while current mode i
   const nextState = resolvePopupAuthStateChange({
     currentMode: 'local',
     sessionUser: { email: 'user@example.com' },
+    canPromoteFromSession: true,
   });
 
   assert.equal(nextState, null);
@@ -58,6 +59,7 @@ test('resolvePopupAuthStateChange promotes authenticated mode when current mode 
   const nextState = resolvePopupAuthStateChange({
     currentMode: 'login',
     sessionUser: { email: 'user@example.com' },
+    canPromoteFromSession: true,
   });
 
   assert.deepEqual(nextState, {
@@ -65,4 +67,14 @@ test('resolvePopupAuthStateChange promotes authenticated mode when current mode 
     email: 'user@example.com',
     clearAuthError: true,
   });
+});
+
+test('resolvePopupAuthStateChange ignores login promotion when session promotion is not allowed', () => {
+  const nextState = resolvePopupAuthStateChange({
+    currentMode: 'login',
+    sessionUser: { email: 'user@example.com' },
+    canPromoteFromSession: false,
+  });
+
+  assert.equal(nextState, null);
 });

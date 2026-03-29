@@ -22,6 +22,8 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(loginForm.includes('Use Local Only'));
   assert.ok(loginForm.includes('createAuthIntentGuard'));
   assert.ok(loginForm.includes('isCurrentIntent(currentIntent)'));
+  assert.ok(loginForm.includes('onGoogleSessionPromotionChange'));
+  assert.ok(loginForm.includes('signOut: () => supabase.auth.signOut()'));
   assert.ok(popupShell.includes('sticky top-0'));
   assert.ok(popupShell.includes('overflow-hidden'));
   assert.ok(popupShell.includes('text-center'));
@@ -36,4 +38,5 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(popupApp.includes('h-[500px]'));
   assert.ok(popupApp.includes('authError'));
   assert.ok(popupApp.includes('resolvePopupAuthStateChange'));
+  assert.ok(popupApp.includes('allowSessionPromotionRef'));
 });

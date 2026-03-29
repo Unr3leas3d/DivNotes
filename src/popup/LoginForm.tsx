@@ -11,9 +11,10 @@ import { createAuthIntentGuard } from './auth-intent';
 interface LoginFormProps {
     onLogin: (email: string) => void;
     onUseLocally: () => void;
+    onGoogleSessionPromotionChange: (allowed: boolean) => void;
 }
 
-export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
+export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChange }: LoginFormProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +58,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
 
     const handleGoogleSignIn = async () => {
         const currentIntent = authIntentGuardRef.current.beginIntent();
+        onGoogleSessionPromotionChange(true);
         setIsLoading(true);
         setError('');
 
@@ -66,6 +68,8 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
                 signInWithOAuth: (credentials) => supabase.auth.signInWithOAuth(credentials),
                 launchWebAuthFlow: (details) => chrome.identity.launchWebAuthFlow(details),
                 exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+                canContinue: () => authIntentGuardRef.current.isCurrentIntent(currentIntent),
+                signOut: () => supabase.auth.signOut(),
             });
 
             if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
@@ -78,12 +82,14 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
         } finally {
             if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
                 setIsLoading(false);
+                onGoogleSessionPromotionChange(false);
             }
         }
     };
 
     const handleShowEmailForm = () => {
         authIntentGuardRef.current.invalidateCurrentIntent();
+        onGoogleSessionPromotionChange(false);
         setIsLoading(false);
         setError('');
         setShowEmailForm(true);
@@ -91,6 +97,7 @@ export function LoginForm({ onLogin, onUseLocally }: LoginFormProps) {
 
     const handleUseLocalOnly = () => {
         authIntentGuardRef.current.invalidateCurrentIntent();
+        onGoogleSessionPromotionChange(false);
         setIsLoading(false);
         setError('');
         onUseLocally();

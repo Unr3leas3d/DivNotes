@@ -111,3 +111,33 @@ test('signInWithGoogleInExtension fails when session user email is missing', asy
     /email/i
   );
 });
+
+test('signInWithGoogleInExtension signs out and rejects when flow is stale after session exchange', async () => {
+  let signOutCalls = 0;
+  let canContinue = true;
+
+  await assert.rejects(
+    signInWithGoogleInExtension({
+      getRedirectURL: () => 'https://extension-id.chromiumapp.org/',
+      signInWithOAuth: async () => ({
+        data: { provider: 'google', url: 'https://supabase.example/google-start' },
+        error: null,
+      }),
+      launchWebAuthFlow: async () => 'https://extension-id.chromiumapp.org/?code=oauth-code',
+      exchangeCodeForSession: async () => {
+        canContinue = false;
+        return {
+          data: { user: { email: 'user@example.com' } },
+          error: null,
+        };
+      },
+      canContinue: () => canContinue,
+      signOut: async () => {
+        signOutCalls += 1;
+      },
+    }),
+    /superseded/i
+  );
+
+  assert.equal(signOutCalls, 1);
+});
