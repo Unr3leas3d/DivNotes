@@ -107,6 +107,7 @@ test('side panel segmented control uses themed active and inactive states', () =
   const noteCard = read('src/sidepanel/components/NoteCard.tsx');
   const allNotesView = read('src/sidepanel/components/AllNotesView.tsx');
   const popupSettingsView = read('src/popup/components/SettingsView.tsx');
+  const workspaceNoteCard = read('src/components/workspace/WorkspaceNoteCard.tsx');
 
   assert.ok(sidepanelApp.includes("'this-page' | 'all-notes' | 'folders' | 'tags'"));
   assert.ok(sidepanelApp.includes('openPopup'));
@@ -117,16 +118,17 @@ test('side panel segmented control uses themed active and inactive states', () =
   assert.ok(segmentedControl.includes('This Page'));
   assert.ok(segmentedControl.includes('All Notes'));
   assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
+  assert.ok(workspaceNoteCard.includes('title?: string | null;'));
+  assert.ok(workspaceNoteCard.includes('details?: React.ReactNode;'));
+  assert.ok(noteCard.includes('WorkspaceNoteCard'));
   assert.ok(noteCard.includes('const [expanded, setExpanded] = useState(false);'));
   assert.ok(noteCard.includes('DOMPurify.sanitize'));
   assert.ok(noteCard.includes('marked.parse'));
   assert.ok(noteCard.includes('Scroll to element'));
-  assert.ok(noteCard.includes('line-clamp-2'));
   assert.ok(noteCard.includes('dangerouslySetInnerHTML'));
   assert.ok(allNotesView.includes('<PinnedSection'));
   assert.ok(popupSettingsView.includes('showSidePanelAction = true'));
   assert.ok(popupSettingsView.includes('{showSidePanelAction ? ('));
-  assert.ok(noteCard.includes('Scroll to element'));
 });
 
 test('background worker keeps OPEN_POPUP support alongside ACTIVATE_INSPECTOR messaging', () => {

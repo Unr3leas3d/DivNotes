@@ -9,9 +9,12 @@ type CardDensity = 'compact' | 'comfortable';
 interface WorkspaceNoteCardProps {
   note: StoredNote;
   density?: CardDensity;
+  title?: string | null;
+  preview?: string | null;
   folderName?: string | null;
   tagNames?: string[];
   onOpen: (note: StoredNote) => void;
+  details?: React.ReactNode;
   action?: React.ReactNode;
 }
 
@@ -32,12 +35,15 @@ function formatTimestamp(value: string) {
 export function WorkspaceNoteCard({
   note,
   density = 'comfortable',
+  title,
+  preview,
   folderName,
   tagNames = [],
   onOpen,
+  details,
   action,
 }: WorkspaceNoteCardProps) {
-  const preview = useMemo(() => {
+  const derivedPreview = useMemo(() => {
     const flattened = stripMarkdown(note.content);
     const limit = density === 'compact' ? 96 : 148;
 
@@ -48,6 +54,7 @@ export function WorkspaceNoteCard({
     return `${flattened.slice(0, limit).trimEnd()}...`;
   }, [density, note.content]);
 
+  const resolvedPreview = preview ?? derivedPreview;
   const visibleTags = tagNames.slice(0, density === 'compact' ? 1 : 2);
   const overflowTagCount = tagNames.length - visibleTags.length;
 
@@ -76,16 +83,32 @@ export function WorkspaceNoteCard({
               {note.pinned ? <Pin className="ml-auto h-3 w-3 text-[#6ead71]" /> : null}
             </div>
 
-            <p
-              className={cn(
-                'mt-2 text-[#1f3528]',
-                density === 'compact'
-                  ? 'line-clamp-2 text-[12px] leading-[1.45]'
-                  : 'line-clamp-3 text-[12.5px] leading-[1.55]'
-              )}
-            >
-              {preview || 'Untitled note'}
-            </p>
+            {title ? (
+              <>
+                <h3 className="mt-2 text-[13px] font-semibold leading-[1.35] text-[#173628]">{title}</h3>
+                <p
+                  className={cn(
+                    'mt-1 text-[#5f6d63]',
+                    density === 'compact'
+                      ? 'line-clamp-2 text-[12px] leading-[1.45]'
+                      : 'line-clamp-3 text-[12px] leading-[1.55]'
+                  )}
+                >
+                  {resolvedPreview || 'Open the note to read more.'}
+                </p>
+              </>
+            ) : (
+              <p
+                className={cn(
+                  'mt-2 text-[#1f3528]',
+                  density === 'compact'
+                    ? 'line-clamp-2 text-[12px] leading-[1.45]'
+                    : 'line-clamp-3 text-[12.5px] leading-[1.55]'
+                )}
+              >
+                {resolvedPreview || 'Untitled note'}
+              </p>
+            )}
 
             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-[#8b968e]">
               <span className="truncate">{note.pageTitle || note.hostname}</span>
@@ -111,6 +134,7 @@ export function WorkspaceNoteCard({
           </div>
         </div>
       </button>
+      {details ? <div className="border-t border-[#f0ece4] px-3.5 py-3">{details}</div> : null}
       {action ? <div className="border-t border-[#f0ece4] px-3.5 py-2.5">{action}</div> : null}
     </div>
   );
