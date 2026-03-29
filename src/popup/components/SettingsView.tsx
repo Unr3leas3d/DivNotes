@@ -29,7 +29,8 @@ interface SettingsViewProps {
   onExport: () => void | Promise<void>;
   onImport: () => void | Promise<void>;
   onClearAll: () => void | Promise<void>;
-  onOpenSidePanel: () => void | Promise<void>;
+  onOpenSidePanel?: () => void | Promise<void>;
+  showSidePanelAction?: boolean;
 }
 
 function Section({
@@ -89,6 +90,7 @@ export function SettingsView({
   onImport,
   onClearAll,
   onOpenSidePanel,
+  showSidePanelAction = true,
 }: SettingsViewProps) {
   return (
     <div className="space-y-4">
@@ -126,7 +128,9 @@ export function SettingsView({
         </div>
         <ActionButton label={labels.exportNotes} onClick={onExport} />
         <ActionButton label={labels.importNotes} onClick={onImport} />
-        <ActionButton label={labels.openSidePanel} onClick={onOpenSidePanel} />
+        {showSidePanelAction ? (
+          <ActionButton label={labels.openSidePanel} onClick={onOpenSidePanel || (() => {})} />
+        ) : null}
         <ActionButton label={labels.clearAllNotes} onClick={onClearAll} destructive />
       </Section>
 

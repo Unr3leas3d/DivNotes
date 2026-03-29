@@ -15,7 +15,6 @@ interface SettingsViewProps {
   onExport: () => void | Promise<void>;
   onImport: () => void | Promise<void>;
   onClearAll: () => void | Promise<void>;
-  onOpenPopup: () => void | Promise<void>;
 }
 
 const sectionTitles = {
@@ -29,7 +28,7 @@ const labels = {
   exportNotes: 'Export Notes',
   importNotes: 'Import Notes',
   clearAllNotes: 'Clear All Notes',
-  openSidePanel: 'Open Popup',
+  openSidePanel: 'Open Side Panel',
   version: 'Version',
   chromeWebStore: 'Chrome Web Store',
   privacyPolicy: 'Privacy Policy',
@@ -52,7 +51,7 @@ export function SettingsView(props: SettingsViewProps) {
       onExport={props.onExport}
       onImport={props.onImport}
       onClearAll={props.onClearAll}
-      onOpenSidePanel={props.onOpenPopup}
+      showSidePanelAction={false}
     />
   );
 }

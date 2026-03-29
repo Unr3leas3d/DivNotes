@@ -6,6 +6,7 @@ import type { DomainGroup } from '@/lib/extension-selectors';
 import { filterNotesBySearch } from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
 import { NoteCard } from './NoteCard';
+import { PinnedSection } from './PinnedSection';
 
 interface AllNotesViewProps {
   groupedNotes: DomainGroup[];
@@ -32,6 +33,10 @@ export function AllNotesView({
 }: AllNotesViewProps) {
   const filteredNotes = useMemo(() => filterNotesBySearch(notes, query), [notes, query]);
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
+  const pinnedNotes = useMemo(
+    () => filteredNotes.filter((note) => note.pinned),
+    [filteredNotes]
+  );
   const visibleGroups = useMemo(() => {
     if (!query.trim()) {
       return groupedNotes;
@@ -84,6 +89,13 @@ export function AllNotesView({
 
   return (
     <div className="space-y-4">
+      <PinnedSection
+        pinnedNotes={pinnedNotes}
+        tags={tags}
+        onNoteClick={onOpenNote}
+        onDeleteNote={onDeleteNote}
+      />
+
       {visibleGroups.map((group) => (
         <section key={group.hostname} className="rounded-[20px] border border-[#ece7de] bg-[#f8f6f1] p-4">
           <div className="mb-3 flex items-center gap-3">

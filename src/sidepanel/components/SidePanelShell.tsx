@@ -5,6 +5,7 @@ interface SidePanelShellProps {
   navigation?: React.ReactNode;
   actions?: React.ReactNode;
   toolbar?: React.ReactNode;
+  statusBanner?: React.ReactNode;
   backLabel?: string;
   onBack?: () => void;
   errorMessage?: string | null;
@@ -31,6 +32,7 @@ export function SidePanelShell({
   navigation,
   actions,
   toolbar,
+  statusBanner,
   backLabel,
   onBack,
   errorMessage,
@@ -61,6 +63,7 @@ export function SidePanelShell({
         </div>
         {toolbar ? <div className="mt-4">{toolbar}</div> : null}
         {navigation ? <div className="mt-4">{navigation}</div> : null}
+        {statusBanner ? <div className="mt-4">{statusBanner}</div> : null}
       </div>
 
       {errorMessage ? (

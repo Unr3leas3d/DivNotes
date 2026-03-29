@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FilePlus2, Search, Settings2, PanelsTopLeft, LogIn } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
@@ -32,6 +32,7 @@ export default function App() {
   const previousViewRef = useRef<MainSidePanelView>('all-notes');
   const [searchQuery, setSearchQuery] = useState('');
   const [localActionError, setLocalActionError] = useState<string | null>(null);
+  const [screenShareMode, setScreenShareMode] = useState(false);
 
   const foldersById = useMemo(
     () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
@@ -44,6 +45,21 @@ export default function App() {
       : (workspace.view.active as MainSidePanelView);
 
   const loadingContent = workspace.loading.currentPage || workspace.loading.data;
+
+  useEffect(() => {
+    chrome.storage.local.get(['divnotes_screen_share'], (result) => {
+      setScreenShareMode(Boolean(result.divnotes_screen_share));
+    });
+
+    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      if (changes.divnotes_screen_share) {
+        setScreenShareMode(Boolean(changes.divnotes_screen_share.newValue));
+      }
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
 
   const handleOpenNote = (note: StoredNote) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -161,7 +177,6 @@ export default function App() {
     workspace.view.active === 'settings' ? undefined : (
       <SegmentedControl
         value={activeMainView}
-        counts={workspace.counts}
         onChange={handleViewChange}
       />
     );
@@ -204,6 +219,15 @@ export default function App() {
       actions={headerActions}
       toolbar={toolbar}
       navigation={navigation}
+      statusBanner={
+        screenShareMode ? (
+          <div className="flex items-center gap-2 rounded-[14px] border border-[rgba(220,38,38,0.14)] bg-[rgba(220,38,38,0.08)] px-3 py-2 text-[11px] font-medium text-[#991b1b]">
+            <span className="h-2 w-2 rounded-full bg-[#dc2626] animate-pulse" />
+            Screen Share Mode active. Notes stay hidden on the page until you turn it off.
+            <span className="ml-auto text-[10px] font-normal text-[#b45309]">Cmd+Shift+P</span>
+          </div>
+        ) : null
+      }
       backLabel={workspace.view.active === 'settings' ? 'Settings' : undefined}
       onBack={workspace.view.active === 'settings' ? handleBack : undefined}
       errorMessage={localActionError || workspace.error.actions}
@@ -270,7 +294,6 @@ export default function App() {
           onLogout={workspace.actions.logout}
           onExport={workspace.actions.exportNotes}
           onImport={workspace.actions.importNotes}
-          onOpenPopup={() => void handleOpenPopup()}
           onClearAll={async () => {
             const confirmed = window.confirm('Delete ALL notes? This cannot be undone.');
             if (confirmed) {

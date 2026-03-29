@@ -105,14 +105,27 @@ test('side panel segmented control uses themed active and inactive states', () =
   const sidepanelApp = read('src/sidepanel/App.tsx');
   const segmentedControl = read('src/sidepanel/components/SegmentedControl.tsx');
   const noteCard = read('src/sidepanel/components/NoteCard.tsx');
+  const allNotesView = read('src/sidepanel/components/AllNotesView.tsx');
+  const popupSettingsView = read('src/popup/components/SettingsView.tsx');
 
   assert.ok(sidepanelApp.includes("'this-page' | 'all-notes' | 'folders' | 'tags'"));
   assert.ok(sidepanelApp.includes('openPopup'));
   assert.ok(sidepanelApp.includes('settings'));
-  assert.ok(segmentedControl.includes("bg-primary text-primary-foreground font-semibold shadow-card"));
-  assert.ok(segmentedControl.includes("bg-muted text-foreground hover:bg-secondary"));
+  assert.ok(sidepanelApp.includes('divnotes_screen_share'));
+  assert.ok(sidepanelApp.includes('Screen Share Mode'));
+  assert.ok(segmentedControl.includes('TopNavPills'));
   assert.ok(segmentedControl.includes('This Page'));
   assert.ok(segmentedControl.includes('All Notes'));
+  assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
+  assert.ok(noteCard.includes('const [expanded, setExpanded] = useState(false);'));
+  assert.ok(noteCard.includes('DOMPurify.sanitize'));
+  assert.ok(noteCard.includes('marked.parse'));
+  assert.ok(noteCard.includes('Scroll to element'));
+  assert.ok(noteCard.includes('line-clamp-2'));
+  assert.ok(noteCard.includes('dangerouslySetInnerHTML'));
+  assert.ok(allNotesView.includes('<PinnedSection'));
+  assert.ok(popupSettingsView.includes('showSidePanelAction = true'));
+  assert.ok(popupSettingsView.includes('{showSidePanelAction ? ('));
   assert.ok(noteCard.includes('Scroll to element'));
 });
 
