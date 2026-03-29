@@ -120,7 +120,10 @@ test('side panel segmented control uses themed active and inactive states', () =
   assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
   assert.ok(workspaceNoteCard.includes('title?: string | null;'));
   assert.ok(workspaceNoteCard.includes('details?: React.ReactNode;'));
+  assert.ok(workspaceNoteCard.includes("interactionMode?: 'open' | 'toggle';"));
+  assert.ok(workspaceNoteCard.includes("aria-expanded={interactionMode === 'toggle' ? expanded : undefined}"));
   assert.ok(noteCard.includes('WorkspaceNoteCard'));
+  assert.ok(noteCard.includes('interactionMode="toggle"'));
   assert.ok(noteCard.includes('const [expanded, setExpanded] = useState(false);'));
   assert.ok(noteCard.includes('DOMPurify.sanitize'));
   assert.ok(noteCard.includes('marked.parse'));

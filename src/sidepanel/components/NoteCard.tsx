@@ -152,6 +152,8 @@ export function NoteCard({
         folderName={showFolderPath ? folderPath || null : null}
         tagNames={tagNames}
         onOpen={() => setExpanded((current) => !current)}
+        interactionMode="toggle"
+        expanded={expanded}
         details={
           expanded ? (
             <div

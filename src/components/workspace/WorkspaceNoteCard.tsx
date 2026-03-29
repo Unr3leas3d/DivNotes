@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ExternalLink, FolderOpen, Hash, Pin } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, Hash, Pin } from 'lucide-react';
 
 import type { StoredNote } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,8 @@ interface WorkspaceNoteCardProps {
   folderName?: string | null;
   tagNames?: string[];
   onOpen: (note: StoredNote) => void;
+  interactionMode?: 'open' | 'toggle';
+  expanded?: boolean;
   details?: React.ReactNode;
   action?: React.ReactNode;
 }
@@ -40,6 +42,8 @@ export function WorkspaceNoteCard({
   folderName,
   tagNames = [],
   onOpen,
+  interactionMode = 'open',
+  expanded = false,
   details,
   action,
 }: WorkspaceNoteCardProps) {
@@ -68,6 +72,8 @@ export function WorkspaceNoteCard({
       <button
         type="button"
         onClick={() => onOpen(note)}
+        aria-expanded={interactionMode === 'toggle' ? expanded : undefined}
+        aria-label={interactionMode === 'toggle' ? (expanded ? 'Collapse note details' : 'Expand note details') : 'Open note'}
         className={cn(
           'w-full text-left transition-colors hover:bg-[#fbfaf6]',
           density === 'compact' ? 'px-3 py-3' : 'px-3.5 py-3.5'
@@ -129,7 +135,11 @@ export function WorkspaceNoteCard({
           </div>
 
           <div className="flex flex-col items-end gap-2 text-[#95a097]">
-            <ExternalLink className="h-3.5 w-3.5" />
+            {interactionMode === 'toggle' ? (
+              expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
+            ) : (
+              <ExternalLink className="h-3.5 w-3.5" />
+            )}
             <span className="text-[10px]">{formatTimestamp(note.createdAt)}</span>
           </div>
         </div>
