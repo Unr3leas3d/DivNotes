@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { LoginForm } from './LoginForm';
 import { Dashboard } from './Dashboard';
+import { resetFoldersService } from '@/lib/folders-service';
+import { resetNotesService } from '@/lib/notes-service';
 import { supabase } from '@/lib/supabase';
+import { resetTagsService } from '@/lib/tags-service';
 
 type AuthMode = 'loading' | 'login' | 'local' | 'authenticated';
 
@@ -68,7 +71,10 @@ export default function App() {
         if (authMode === 'authenticated') {
             await supabase.auth.signOut();
         }
-        chrome.storage.local.remove('divnotes_auth');
+        await chrome.storage.local.remove('divnotes_auth');
+        resetNotesService();
+        resetFoldersService();
+        resetTagsService();
         setAuthMode('login');
         setUserEmail('');
     };

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Settings2 } from 'lucide-react';
 
 import { TopNavPills } from '@/components/workspace/TopNavPills';
@@ -54,6 +54,7 @@ const newFolderLabel = 'New Folder';
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const workspace = useExtensionWorkspace({ shell: 'popup' });
     const previousViewRef = useRef<MainPopupView>('this-page');
+    const [localActionError, setLocalActionError] = useState<string | null>(null);
     const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
     const foldersById = useMemo(
         () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
@@ -67,17 +68,20 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         : (workspace.view.active as MainPopupView);
 
     const handleMainViewChange = (nextView: string) => {
+        setLocalActionError(null);
         previousViewRef.current = nextView as MainPopupView;
         workspace.actions.clearFilters();
         workspace.setView(nextView as MainPopupView);
     };
 
     const handleOpenSettings = () => {
+        setLocalActionError(null);
         previousViewRef.current = activeMainView;
         workspace.setView('settings');
     };
 
     const handleBack = () => {
+        setLocalActionError(null);
         if (workspace.view.active === 'settings') {
             workspace.setView(previousViewRef.current);
             return;
@@ -89,6 +93,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     };
 
     const handleAddNote = async () => {
+        setLocalActionError(null);
         await workspace.actions.activateInspector();
         window.close();
     };
@@ -109,26 +114,32 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     };
 
     const handleCreateFolder = async () => {
+        setLocalActionError(null);
         const name = window.prompt(`${newFolderLabel} name:`);
         if (!name || !name.trim()) {
             return;
         }
+        try {
+            const service = await getFoldersService();
+            const siblings = workspace.data.folders.filter((folder) => folder.parentId === null);
+            const folder: StoredFolder = {
+                id: crypto.randomUUID(),
+                name: name.trim(),
+                parentId: null,
+                order: getNextOrder(siblings),
+                color: null,
+                pinned: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
 
-        const service = await getFoldersService();
-        const siblings = workspace.data.folders.filter((folder) => folder.parentId === null);
-        const folder: StoredFolder = {
-            id: crypto.randomUUID(),
-            name: name.trim(),
-            parentId: null,
-            order: getNextOrder(siblings),
-            color: null,
-            pinned: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-
-        await service.create(folder);
-        workspace.setView('folders');
+            await service.create(folder);
+            workspace.setView('folders');
+        } catch (caughtError) {
+            setLocalActionError(
+                caughtError instanceof Error ? caughtError.message : 'Failed to create folder'
+            );
+        }
     };
 
     const utilityAction = (() => {
@@ -257,7 +268,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             utilityAction={utilityAction}
             backLabel={backLabel}
             onBack={backLabel ? handleBack : undefined}
-            errorMessage={workspace.error.actions}
+            errorMessage={localActionError || workspace.error.actions}
         >
             {content}
         </PopupShell>
