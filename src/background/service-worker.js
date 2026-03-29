@@ -113,10 +113,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === 'UPDATE_BADGE_COUNT') {
-        const count = message.count || 0;
-        chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
-        chrome.action.setBadgeBackgroundColor({ color: '#7c3aed' });
-        chrome.action.setBadgeTextColor({ color: '#ffffff' });
         sendResponse({ success: true });
         return true;
     }
@@ -299,8 +295,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
 });
 
-// Update badge color on tab switch
-chrome.tabs.onActivated.addListener(() => {
-    chrome.action.setBadgeBackgroundColor({ color: '#7c3aed' });
-    chrome.action.setBadgeTextColor({ color: '#ffffff' });
-});

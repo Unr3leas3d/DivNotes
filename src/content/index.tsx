@@ -190,15 +190,9 @@ function updateAllBadgePositions() {
 window.addEventListener('scroll', updateAllBadgePositions, { passive: true });
 window.addEventListener('resize', updateAllBadgePositions, { passive: true });
 
-// ==================== NOTE COUNT BADGE ====================
+// ==================== NOTE COUNT PILL ====================
 function updateNoteBadgeCount() {
   syncPageNoteCountPill();
-  try {
-    chrome.runtime.sendMessage({
-      type: 'UPDATE_BADGE_COUNT',
-      count: savedNotes.length,
-    });
-  } catch { /* extension context may be invalid */ }
 }
 
 function syncPageNoteCountPill() {

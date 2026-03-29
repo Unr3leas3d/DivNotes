@@ -1,18 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
   <rect width="128" height="128" rx="32" fill="#052415"/>
-  <svg x="21" y="21" width="86" height="86" viewBox="0 0 68 68" fill="none">
-    <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" stroke-width="2" stroke-linecap="round"/>
-    <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M33 36 C22 30 10 28 6 30" stroke="#F5EFE9" stroke-width="1.6" stroke-linecap="round"/>
-    <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" stroke-width="2" stroke-linecap="round"/>
-    <path d="M33 36 C38 24 48 14 56 10" stroke="#F5EFE9" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M33 36 C33 26 30 14 24 6" stroke="#F5EFE9" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="6" cy="6" r="2.5" fill="#ABFFC0"/>
-    <circle cx="62" cy="6" r="3" fill="#ABFFC0"/>
-    <circle cx="6" cy="30" r="2" fill="#ABFFC0"/>
-    <circle cx="62" cy="18" r="2.5" fill="#ABFFC0"/>
-    <circle cx="56" cy="10" r="2" fill="#ABFFC0"/>
-    <circle cx="24" cy="6" r="2.5" fill="#ABFFC0"/>
-  </svg>
+  <!-- Letter C as filled shape -->
+  <path d="M84.5 43.2C79.1 34.5 70.5 29 61 29C44.4 29 31 43.1 31 60.5C31 77.9 44.4 92 61 92C70.8 92 79.6 86.2 85 77L76.5 72.5C73 78.5 67.5 82.5 61 82.5C50.2 82.5 41.5 72.6 41.5 60.5C41.5 48.4 50.2 38.5 61 38.5C67.2 38.5 72.7 42 76.2 47.5L84.5 43.2Z" fill="#F5EFE9"/>
+  <!-- Accent dot -->
+  <circle cx="95" cy="35" r="6" fill="#ABFFC0"/>
 </svg>
