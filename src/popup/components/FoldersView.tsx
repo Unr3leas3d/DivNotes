@@ -15,6 +15,7 @@ interface FoldersViewProps {
   loading: boolean;
   error: string | null;
   onSelectFolder: (folderId: string) => void;
+  onCreateFolder: () => void;
   onOpenNote: (note: StoredNote) => void;
 }
 
@@ -27,6 +28,7 @@ export function FoldersView({
   loading,
   error,
   onSelectFolder,
+  onCreateFolder,
   onOpenNote,
 }: FoldersViewProps) {
   const selectedSummary = useMemo(
@@ -113,6 +115,13 @@ export function FoldersView({
 
   return (
     <div className="space-y-2.5">
+      <button
+        type="button"
+        onClick={onCreateFolder}
+        className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-[#d8ddd3] bg-[#f8f6f1] px-4 py-4 text-[13px] font-semibold text-[#536457] transition-colors hover:bg-[#f1eee7]"
+      >
+        New Folder
+      </button>
       {folderSummaries.map((summary) => {
         const parentFolder = summary.folder.parentId ? foldersById.get(summary.folder.parentId) : null;
 

@@ -29,10 +29,9 @@ import type {
   WorkspaceAuth,
   WorkspaceData,
   WorkspaceDerived,
-  WorkspaceView,
 } from './extension-workspace-types';
 
-export type { WorkspaceView } from './extension-workspace-types';
+export type WorkspaceView = 'this-page' | 'all-notes' | 'folders' | 'tags' | 'settings';
 
 export function useExtensionWorkspace(options: { shell: ShellType }) {
   const [auth, setAuth] = useState<WorkspaceAuth>({

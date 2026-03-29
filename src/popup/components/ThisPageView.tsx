@@ -56,6 +56,9 @@ export function ThisPageView({
         <p className="mt-1 text-[11px] text-[#8c978f]">
           {currentPage.hostname || 'Canopy can add notes when a regular page is open.'}
         </p>
+        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9aa294]">
+          {notes.length} {notes.length === 1 ? 'note' : 'notes'} on this page
+        </p>
         <button
           type="button"
           onClick={onAddNote}

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { FolderPlus, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ const settingsSectionTitles = {
     account: 'Account',
     data: 'Data',
     about: 'About',
+    root: 'Settings',
 };
 
 const settingsLabels = {
@@ -135,19 +136,6 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             return null;
         }
 
-        if (workspace.view.active === 'folders') {
-            return (
-                <Button
-                    type="button"
-                    onClick={() => void handleCreateFolder()}
-                    className="h-9 rounded-[12px] bg-[#173628] px-3 text-[12px] font-semibold text-[#f5efe9] hover:bg-[#0f2d20]"
-                >
-                    <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
-                    {newFolderLabel}
-                </Button>
-            );
-        }
-
         return (
             <Button
                 type="button"
@@ -163,7 +151,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     })();
 
     const backLabel = workspace.view.active === 'settings'
-        ? settingsSectionTitles.account
+        ? settingsSectionTitles.root
         : workspace.view.active === 'folders' && workspace.view.folderId
             ? 'Folders'
             : undefined;
@@ -172,11 +160,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         ? undefined
         : (
             <TopNavPills
-                items={navItems.map((item) => ({
-                    value: item.value,
-                    label: item.label,
-                    count: workspace.counts[item.value],
-                }))}
+                items={navItems}
                 value={activeMainView}
                 onChange={handleMainViewChange}
             />
@@ -219,6 +203,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         loading={workspace.loading.data}
                         error={workspace.error.data}
                         onSelectFolder={workspace.actions.setFolderDetail}
+                        onCreateFolder={() => void handleCreateFolder()}
                         onOpenNote={handleOpenNote}
                     />
                 );
