@@ -76,3 +76,38 @@ test('signInWithGoogleInExtension rejects a callback with no auth code', async (
     /authorization code/i
   );
 });
+
+test('signInWithGoogleInExtension propagates OAuth callback errors', async () => {
+  await assert.rejects(
+    signInWithGoogleInExtension({
+      getRedirectURL: () => 'https://extension-id.chromiumapp.org/',
+      signInWithOAuth: async () => ({
+        data: { provider: 'google', url: 'https://supabase.example/google-start' },
+        error: null,
+      }),
+      launchWebAuthFlow: async () => 'https://extension-id.chromiumapp.org/?error=access_denied',
+      exchangeCodeForSession: async () => {
+        throw new Error('should not run');
+      },
+    }),
+    /access_denied/i
+  );
+});
+
+test('signInWithGoogleInExtension fails when session user email is missing', async () => {
+  await assert.rejects(
+    signInWithGoogleInExtension({
+      getRedirectURL: () => 'https://extension-id.chromiumapp.org/',
+      signInWithOAuth: async () => ({
+        data: { provider: 'google', url: 'https://supabase.example/google-start' },
+        error: null,
+      }),
+      launchWebAuthFlow: async () => 'https://extension-id.chromiumapp.org/?code=oauth-code',
+      exchangeCodeForSession: async () => ({
+        data: { user: { email: null } },
+        error: null,
+      }),
+    }),
+    /email/i
+  );
+});

@@ -49,5 +49,10 @@ export async function signInWithGoogleInExtension(deps: GoogleAuthDependencies) 
     throw exchangeError ?? new Error('Google sign-in did not create a session.');
   }
 
-  return { email: sessionData.user.email ?? '' };
+  const email = sessionData.user.email?.trim();
+  if (!email) {
+    throw new Error('Google sign-in did not return a user email.');
+  }
+
+  return { email };
 }
