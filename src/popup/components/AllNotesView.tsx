@@ -26,8 +26,9 @@ export function AllNotesView({
   onOpenNote,
 }: AllNotesViewProps) {
   const [query, setQuery] = useState('');
+  const tags = useMemo(() => [...tagsById.values()], [tagsById]);
 
-  const filteredNotes = useMemo(() => filterNotesBySearch(notes, query), [notes, query]);
+  const filteredNotes = useMemo(() => filterNotesBySearch(notes, query, tags), [notes, query, tags]);
   const visibleGroups = useMemo(
     () => (query.trim() ? groupNotesByHostname(filteredNotes) : groupedNotes),
     [filteredNotes, groupedNotes, query]

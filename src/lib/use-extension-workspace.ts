@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { getFoldersService } from './folders-service';
-import { getNotesService } from './notes-service';
-import { getTagsService } from './tags-service';
+import { getFoldersService, resetFoldersService } from './folders-service';
+import { getNotesService, resetNotesService } from './notes-service';
+import { getTagsService, resetTagsService } from './tags-service';
 import { supabase } from './supabase';
 import {
   buildFolderSummaries,
@@ -32,6 +32,55 @@ import type {
 } from './extension-workspace-types';
 
 export type WorkspaceView = 'this-page' | 'all-notes' | 'folders' | 'tags' | 'settings';
+
+interface StoredWorkspaceAuth {
+  mode?: AuthMode;
+  email?: string;
+}
+
+function buildLoginAuth(): WorkspaceAuth {
+  return {
+    mode: 'login',
+    email: '',
+    label: '',
+    isLocalMode: false,
+    isAuthenticated: false,
+  };
+}
+
+function buildWorkspaceAuth(
+  storedAuth: StoredWorkspaceAuth | null | undefined,
+  fallbackEmail = ''
+): WorkspaceAuth {
+  if (storedAuth?.mode === 'local') {
+    return {
+      mode: 'local',
+      email: '',
+      label: 'Local Mode',
+      isLocalMode: true,
+      isAuthenticated: true,
+    };
+  }
+
+  if (storedAuth?.mode === 'authenticated') {
+    const email = fallbackEmail || storedAuth.email || '';
+    return {
+      mode: 'authenticated',
+      email,
+      label: email,
+      isLocalMode: false,
+      isAuthenticated: true,
+    };
+  }
+
+  return buildLoginAuth();
+}
+
+function resetWorkspaceServices() {
+  resetNotesService();
+  resetFoldersService();
+  resetTagsService();
+}
 
 export function useExtensionWorkspace(options: { shell: ShellType }) {
   const [auth, setAuth] = useState<WorkspaceAuth>({
@@ -91,18 +140,13 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
 
       try {
         const result = await chrome.storage.local.get(['divnotes_auth']);
+        const storedAuth = result.divnotes_auth as StoredWorkspaceAuth | undefined;
         if (cancelled) {
           return;
         }
 
-        if (result.divnotes_auth?.mode === 'local') {
-          setAuth({
-            mode: 'local',
-            email: '',
-            label: 'Local Mode',
-            isLocalMode: true,
-            isAuthenticated: true,
-          });
+        if (storedAuth?.mode === 'local') {
+          setAuth(buildWorkspaceAuth(storedAuth));
           return;
         }
 
@@ -114,39 +158,29 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
           return;
         }
 
-        if (session?.user) {
+        if (storedAuth?.mode === 'authenticated') {
+          const email = session?.user?.email || storedAuth.email || '';
+          setAuth(buildWorkspaceAuth(storedAuth, email));
+          if (session?.user) {
+            await chrome.storage.local.set({
+              divnotes_auth: { mode: 'authenticated', email },
+            });
+          }
+        } else if (session?.user) {
           const email = session.user.email || '';
-          setAuth({
-            mode: 'authenticated',
-            email,
-            label: email,
-            isLocalMode: false,
-            isAuthenticated: true,
-          });
+          setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, email));
           await chrome.storage.local.set({
             divnotes_auth: { mode: 'authenticated', email },
           });
         } else {
-          setAuth({
-            mode: 'login',
-            email: '',
-            label: '',
-            isLocalMode: false,
-            isAuthenticated: false,
-          });
+          setAuth(buildLoginAuth());
         }
       } catch (caughtError) {
         if (cancelled) {
           return;
         }
 
-        setAuth({
-          mode: 'login',
-          email: '',
-          label: '',
-          isLocalMode: false,
-          isAuthenticated: false,
-        });
+        setAuth(buildLoginAuth());
         setError((current) => ({
           ...current,
           auth:
@@ -168,29 +202,42 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
         return;
       }
 
+      if (authModeRef.current === 'local') {
+        return;
+      }
+
       if (session?.user) {
         const email = session.user.email || '';
-        setAuth({
-          mode: 'authenticated',
-          email,
-          label: email,
-          isLocalMode: false,
-          isAuthenticated: true,
+        void chrome.storage.local.set({
+          divnotes_auth: { mode: 'authenticated', email },
         });
+        setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, email));
       } else if (authModeRef.current === 'authenticated') {
-        setAuth({
-          mode: 'login',
-          email: '',
-          label: '',
-          isLocalMode: false,
-          isAuthenticated: false,
-        });
+        void chrome.storage.local.remove('divnotes_auth');
+        setAuth(buildLoginAuth());
       }
     });
+
+    const storageListener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (cancelled || areaName !== 'local' || !changes.divnotes_auth) {
+        return;
+      }
+
+      resetWorkspaceServices();
+      setError((current) => ({ ...current, auth: null }));
+      setAuth(buildWorkspaceAuth(changes.divnotes_auth.newValue as StoredWorkspaceAuth | undefined));
+      setLoading((current) => ({ ...current, auth: false }));
+    };
+
+    chrome.storage.onChanged.addListener(storageListener);
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      chrome.storage.onChanged.removeListener(storageListener);
     };
   }, []);
 
@@ -282,7 +329,14 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
 
     void hydrateData();
 
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+    const listener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName !== 'local') {
+        return;
+      }
+
       setData((current) => ({
         notes: changes.divnotes_notes ? changes.divnotes_notes.newValue || [] : current.notes,
         folders: changes.divnotes_folders
@@ -297,7 +351,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
       cancelled = true;
       chrome.storage.onChanged.removeListener(listener);
     };
-  }, []);
+  }, [auth.mode]);
 
   const derived = useMemo<WorkspaceDerived>(() => {
     return {

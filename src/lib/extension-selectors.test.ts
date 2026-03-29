@@ -157,11 +157,16 @@ test('buildFolderSummaries computes sorted counts and filtered note ids per fold
 });
 
 test('filterNotesBySearch matches note metadata and returns newest-first results', () => {
-  const byInfo = filterNotesBySearch(sampleNotes, 'second');
+  const byInfo = filterNotesBySearch(sampleNotes, 'second', sampleTags);
   assert.deepEqual(byInfo.map((note) => note.id), ['note-2']);
 
-  const byPageTitle = filterNotesBySearch(sampleNotes, 'docs');
+  const byPageTitle = filterNotesBySearch(sampleNotes, 'docs', sampleTags);
   assert.deepEqual(byPageTitle.map((note) => note.id), ['note-2', 'note-1']);
+});
+
+test('filterNotesBySearch resolves note tag ids against tag names', () => {
+  const byTagName = filterNotesBySearch(sampleNotes, 'research', sampleTags);
+  assert.deepEqual(byTagName.map((note) => note.id), ['note-1']);
 });
 
 test('buildViewCounts returns shared pill counts for popup and side panel', () => {

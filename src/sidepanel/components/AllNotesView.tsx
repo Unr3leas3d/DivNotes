@@ -31,7 +31,7 @@ export function AllNotesView({
   onOpenNote,
   onDeleteNote,
 }: AllNotesViewProps) {
-  const filteredNotes = useMemo(() => filterNotesBySearch(notes, query), [notes, query]);
+  const filteredNotes = useMemo(() => filterNotesBySearch(notes, query, tags), [notes, query, tags]);
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
   const pinnedNotes = useMemo(
     () => filteredNotes.filter((note) => note.pinned),

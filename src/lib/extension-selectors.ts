@@ -158,15 +158,21 @@ export function buildViewCounts(
   };
 }
 
-export function filterNotesBySearch(notes: StoredNote[], query: string): StoredNote[] {
+export function filterNotesBySearch(
+  notes: StoredNote[],
+  query: string,
+  tags: StoredTag[] = []
+): StoredNote[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) {
     return sortNotesNewestFirst(notes);
   }
 
+  const tagNamesById = new Map(tags.map((tag) => [tag.id, tag.name.toLowerCase()]));
+
   return sortNotesNewestFirst(
-    notes.filter((note) =>
-      [
+    notes.filter((note) => {
+      const searchableValues = [
         note.content,
         note.hostname,
         note.pageTitle,
@@ -174,9 +180,12 @@ export function filterNotesBySearch(notes: StoredNote[], query: string): StoredN
         note.elementTag,
         note.selectedText,
         note.tagLabel,
-      ]
+        ...note.tags.map((tagId) => tagNamesById.get(tagId) || ''),
+      ];
+
+      return searchableValues
         .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedQuery))
-    )
+        .some((value) => value.toLowerCase().includes(normalizedQuery));
+    })
   );
 }
