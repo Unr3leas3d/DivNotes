@@ -31,5 +31,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false, // No URL-based auth in extensions
+        flowType: 'pkce',
     },
 });

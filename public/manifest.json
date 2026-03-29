@@ -39,7 +39,8 @@
         "tabs",
         "storage",
         "sidePanel",
-        "contextMenus"
+        "contextMenus",
+        "identity"
     ],
     "commands": {
         "toggle-notes": {
