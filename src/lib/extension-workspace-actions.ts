@@ -65,6 +65,36 @@ function tagToDbRow(tag: StoredTag, userId: string) {
   };
 }
 
+export function pruneImportedWorkspaceQueueEntries(
+  queue: SyncQueueItem[],
+  imported: Pick<WorkspaceData, 'notes' | 'folders' | 'tags'>
+): SyncQueueItem[] {
+  const importedNoteIds = new Set(imported.notes.map((note) => note.id));
+  const importedFolderIds = new Set(imported.folders.map((folder) => folder.id));
+  const importedTagIds = new Set(imported.tags.map((tag) => tag.id));
+
+  return queue.filter((item) => {
+    if (item.entityType === 'note' && importedNoteIds.has(item.entityId)) {
+      return false;
+    }
+
+    if (item.entityType === 'folder' && importedFolderIds.has(item.entityId)) {
+      return false;
+    }
+
+    if (item.entityType === 'tag' && importedTagIds.has(item.entityId)) {
+      return false;
+    }
+
+    if (item.entityType === 'note_tag') {
+      const [noteId] = item.entityId.split(':');
+      return !importedNoteIds.has(noteId);
+    }
+
+    return true;
+  });
+}
+
 function buildImportedNoteTagOperations(
   existing: WorkspaceData,
   merged: WorkspaceData,
@@ -104,15 +134,15 @@ function buildImportedNoteTagOperations(
   return operations;
 }
 
-async function enqueueSyncOperations(
-  operations: Array<Pick<SyncQueueItem, 'action' | 'entityId' | 'entityType' | 'payload'>>
+async function persistImportedQueueEntries(
+  operations: Array<Pick<SyncQueueItem, 'action' | 'entityId' | 'entityType' | 'payload'>>,
+  imported: Pick<WorkspaceData, 'notes' | 'folders' | 'tags'>
 ) {
-  if (operations.length === 0) {
-    return;
-  }
-
   const result = await chrome.storage.local.get(['divnotes_sync_queue']);
-  const existingQueue = (result.divnotes_sync_queue || []) as SyncQueueItem[];
+  const prunedQueue = pruneImportedWorkspaceQueueEntries(
+    (result.divnotes_sync_queue || []) as SyncQueueItem[],
+    imported
+  );
   const queuedOperations: SyncQueueItem[] = operations.map((operation) => ({
     id: crypto.randomUUID(),
     timestamp: Date.now(),
@@ -120,7 +150,7 @@ async function enqueueSyncOperations(
   }));
 
   await chrome.storage.local.set({
-    divnotes_sync_queue: [...existingQueue, ...queuedOperations],
+    divnotes_sync_queue: [...prunedQueue, ...queuedOperations],
   });
 }
 
@@ -164,7 +194,11 @@ async function persistImportedWorkspaceData(
   } = await supabase.auth.getSession();
 
   if (!session?.user) {
-    await enqueueSyncOperations(queuedImportOperations);
+    await persistImportedQueueEntries(queuedImportOperations, {
+      notes: importedNotes,
+      folders: importedFolders,
+      tags: importedTags,
+    });
     return;
   }
 
@@ -221,8 +255,18 @@ async function persistImportedWorkspaceData(
         })
       );
     }
+
+    await persistImportedQueueEntries([], {
+      notes: importedNotes,
+      folders: importedFolders,
+      tags: importedTags,
+    });
   } catch {
-    await enqueueSyncOperations(queuedImportOperations);
+    await persistImportedQueueEntries(queuedImportOperations, {
+      notes: importedNotes,
+      folders: importedFolders,
+      tags: importedTags,
+    });
   }
 }
 
