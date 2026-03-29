@@ -100,12 +100,16 @@ test('content script styles switch from purple to Eden Bright green and cream tr
   assert.ok(contentScript.includes('Element selected · Opening note editor…'));
   assert.ok(contentScript.includes('createPlacedNoteBadge'));
   assert.ok(contentScript.includes('createPageNoteCountPill'));
+  assert.ok(contentScript.includes('.canopy-has-note {'));
+  assert.ok(contentScript.includes('outline: 1px solid rgba(171, 255, 192, 0.28) !important;'));
+  assert.ok(contentScript.includes('let pendingEditorOpenTimeout: ReturnType<typeof setTimeout> | null = null;'));
   assert.ok(overlayUi.includes("background: '#052415'"));
   assert.ok(overlayUi.includes("width: '22px'"));
   assert.ok(overlayUi.includes("height: '22px'"));
   assert.ok(overlayUi.includes("background: '#FAFAF7'"));
   assert.ok(overlayUi.includes("border: '1px solid rgba(5,36,21,0.06)'"));
   assert.ok(overlayUi.includes("setDataAttribute(pill, 'canopyOverlay', 'selector-guide')"));
+  assert.ok(overlayUi.includes("pointerEvents: 'auto'"));
 });
 
 test('side panel segmented control uses themed active and inactive states', () => {

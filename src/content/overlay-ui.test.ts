@@ -103,6 +103,7 @@ test('createSelectorGuide renders bottom-center guidance pill text', () => {
 
   assert.equal(guide.textContent, 'Click to add a note · ESC to cancel');
   assert.equal(guide.dataset.canopyOverlay, 'selector-guide');
+  assert.equal(guide.style.pointerEvents, 'auto');
 });
 
 test('createHoverSelectorPill renders the element tag and selector path', () => {

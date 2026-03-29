@@ -148,7 +148,7 @@ export function createSelectorGuide<TElement extends OverlayElement>(
     fontWeight: '500',
     letterSpacing: '0.01em',
     zIndex: '2147483647',
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
   });
   return pill;
 }

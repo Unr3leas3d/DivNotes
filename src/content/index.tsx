@@ -85,6 +85,8 @@ highlightStyle.textContent = `
   }
   .canopy-has-note {
     position: relative !important;
+    outline: 1px solid rgba(171, 255, 192, 0.28) !important;
+    outline-offset: 1px !important;
   }
   ::highlight(canopy-text-selection) {
     background-color: rgba(171, 255, 192, 0.3) !important;
@@ -265,6 +267,10 @@ function showHoverSelectorPill(target: HTMLElement) {
 // ==================== INSPECTOR ====================
 function activateInspector() {
   if (isInspecting) return;
+  if (pendingEditorOpenTimeout) {
+    clearTimeout(pendingEditorOpenTimeout);
+    pendingEditorOpenTimeout = null;
+  }
   isInspecting = true;
   console.log('[Canopy] Inspector activated');
   showSelectorGuide();
@@ -275,6 +281,10 @@ function activateInspector() {
 
 function deactivateInspector() {
   isInspecting = false;
+  if (pendingEditorOpenTimeout) {
+    clearTimeout(pendingEditorOpenTimeout);
+    pendingEditorOpenTimeout = null;
+  }
   hideSelectorGuide();
   removeSelectorPill();
   document.removeEventListener('mouseover', onMouseOver, true);
@@ -311,13 +321,13 @@ function onClick(e: Event) {
   isInspecting = false;
   document.removeEventListener('mouseover', onMouseOver, true);
   document.removeEventListener('click', onClick, true);
-  document.removeEventListener('keydown', onKeyDown, true);
   removeSelectorPill();
   showSelectorGuide(SELECTED_CONFIRMATION_TEXT, true);
   if (pendingEditorOpenTimeout) {
     clearTimeout(pendingEditorOpenTimeout);
   }
   pendingEditorOpenTimeout = setTimeout(() => {
+    document.removeEventListener('keydown', onKeyDown, true);
     hideSelectorGuide();
     pendingEditorOpenTimeout = null;
     showNoteEditor(target);
