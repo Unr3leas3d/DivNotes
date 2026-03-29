@@ -105,11 +105,20 @@ export function FoldersView({
 
   if (folderSummaries.length === 0) {
     return (
-      <WorkspaceEmptyState
-        icon={<Folder className="h-5 w-5" />}
-        title="Organize notes into folders"
-        description="Create a folder to keep related notes together."
-      />
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          onClick={onCreateFolder}
+          className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-[#d8ddd3] bg-[#f8f6f1] px-4 py-4 text-[13px] font-semibold text-[#536457] transition-colors hover:bg-[#f1eee7]"
+        >
+          New Folder
+        </button>
+        <WorkspaceEmptyState
+          icon={<Folder className="h-5 w-5" />}
+          title="Organize notes into folders"
+          description="Create a folder to keep related notes together."
+        />
+      </div>
     );
   }
 
