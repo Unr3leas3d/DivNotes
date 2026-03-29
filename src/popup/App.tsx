@@ -75,8 +75,8 @@ export default function App() {
 
     if (authMode === 'loading') {
         return (
-            <div className="w-[380px] min-h-[500px] bg-background text-foreground flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="flex min-h-[500px] w-[380px] items-center justify-center bg-[#fcfbf7] text-[#173628]">
+                <div className="h-6 w-6 rounded-full border-2 border-[#d9e3dc] border-t-[#173628] animate-spin" />
             </div>
         );
     }
@@ -85,7 +85,7 @@ export default function App() {
     const displayEmail = authMode === 'local' ? 'Local Mode' : userEmail;
 
     return (
-        <div className="w-[380px] min-h-[500px] bg-background text-foreground">
+        <div className="w-[380px] min-h-[500px] bg-[#fcfbf7] text-[#173628]">
             {isLoggedIn ? (
                 <Dashboard email={displayEmail} onLogout={handleLogout} isLocalMode={authMode === 'local'} />
             ) : (

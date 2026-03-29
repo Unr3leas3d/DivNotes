@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
+import { FolderPlus, Settings2 } from 'lucide-react';
+
+import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import {
-    StickyNote,
-    MousePointerClick,
-    PanelRightOpen,
-    LogOut,
-    ExternalLink,
-    FileText,
-    Globe,
-    Keyboard,
-    Download,
-    Upload,
-    HardDrive,
-    Trash2,
-} from 'lucide-react';
+import { getFoldersService } from '@/lib/folders-service';
+import { getNextOrder } from '@/lib/tag-utils';
+import { useExtensionWorkspace, type WorkspaceView } from '@/lib/use-extension-workspace';
+import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
+import { PopupShell } from './components/PopupShell';
+import { ThisPageView } from './components/ThisPageView';
+import { AllNotesView } from './components/AllNotesView';
+import { FoldersView } from './components/FoldersView';
+import { TagsView } from './components/TagsView';
+import { SettingsView } from './components/SettingsView';
 
 interface DashboardProps {
     email: string;
@@ -23,313 +20,261 @@ interface DashboardProps {
     isLocalMode: boolean;
 }
 
-interface StoredNote {
-    id: string;
-    url: string;
-    hostname: string;
-    pageTitle: string;
-    elementSelector: string;
-    elementTag: string;
-    content: string;
-    createdAt: string;
-}
+type MainPopupView = Exclude<WorkspaceView, 'settings'>;
+
+const navItems: Array<{ value: MainPopupView; label: string }> = [
+    { value: 'this-page', label: 'This Page' },
+    { value: 'all-notes', label: 'All Notes' },
+    { value: 'folders', label: 'Folders' },
+    { value: 'tags', label: 'Tags' },
+];
+
+const settingsSectionTitles = {
+    account: 'Account',
+    data: 'Data',
+    about: 'About',
+};
+
+const settingsLabels = {
+    localMode: 'Local Mode',
+    exportNotes: 'Export Notes',
+    importNotes: 'Import Notes',
+    clearAllNotes: 'Clear All Notes',
+    openSidePanel: 'Open Side Panel',
+    version: 'Version',
+    chromeWebStore: 'Chrome Web Store',
+    privacyPolicy: 'Privacy Policy',
+};
+
+const chromeWebStoreUrl = 'https://chromewebstore.google.com/';
+const privacyPolicyUrl = 'https://www.notion.so/';
+const newFolderLabel = 'New Folder';
 
 export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
-    const [notes, setNotes] = useState<StoredNote[]>([]);
-    const [noteCount, setNoteCount] = useState(0);
-    const [importing, setImporting] = useState(false);
+    const workspace = useExtensionWorkspace({ shell: 'popup' });
+    const previousViewRef = useRef<MainPopupView>('this-page');
+    const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
+    const foldersById = useMemo(
+        () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
+        [workspace.data.folders]
+    );
+    const tagsById = useMemo(() => new Map(workspace.data.tags.map((tag) => [tag.id, tag])), [workspace.data.tags]);
 
-    // Load notes from storage
-    useEffect(() => {
-        chrome.storage.local.get(['divnotes_notes'], (result) => {
-            const allNotes: StoredNote[] = result.divnotes_notes || [];
-            setNotes(allNotes);
-            setNoteCount(allNotes.length);
-        });
+    const loadingContent = workspace.loading.currentPage || workspace.loading.data;
+    const activeMainView = workspace.view.active === 'settings'
+        ? previousViewRef.current
+        : (workspace.view.active as MainPopupView);
 
-        // Listen for note changes
-        const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
-            if (changes.divnotes_notes) {
-                const updated: StoredNote[] = changes.divnotes_notes.newValue || [];
-                setNotes(updated);
-                setNoteCount(updated.length);
-            }
-        };
-        chrome.storage.onChanged.addListener(listener);
-        return () => chrome.storage.onChanged.removeListener(listener);
-    }, []);
-
-    const handleSelectElement = () => {
-        chrome.runtime.sendMessage({ type: 'ACTIVATE_INSPECTOR' }, () => {
-            setTimeout(() => window.close(), 100);
-        });
+    const handleMainViewChange = (nextView: string) => {
+        previousViewRef.current = nextView as MainPopupView;
+        workspace.actions.clearFilters();
+        workspace.setView(nextView as MainPopupView);
     };
 
-    const handleOpenSidePanel = () => {
-        chrome.windows.getCurrent((win) => {
-            if (win.id) {
-                chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL', windowId: win.id });
-                window.close();
-            }
-        });
+    const handleOpenSettings = () => {
+        previousViewRef.current = activeMainView;
+        workspace.setView('settings');
     };
 
-    const handleToggleNotes = () => {
-        chrome.runtime.sendMessage({ type: 'TOGGLE_NOTES' }, () => {
-            setTimeout(() => window.close(), 100);
-        });
-    };
+    const handleBack = () => {
+        if (workspace.view.active === 'settings') {
+            workspace.setView(previousViewRef.current);
+            return;
+        }
 
-    const handleExport = () => {
-        chrome.storage.local.get(['divnotes_notes'], (result) => {
-            const data = {
-                version: 1,
-                exportedAt: new Date().toISOString(),
-                notes: result.divnotes_notes || [],
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `canopy-export-${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-    };
-
-    const handleImport = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file) return;
-            setImporting(true);
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const data = JSON.parse(ev.target?.result as string);
-                    if (data.notes && Array.isArray(data.notes)) {
-                        // Merge with existing notes (deduplicate by id)
-                        chrome.storage.local.get(['divnotes_notes'], (result) => {
-                            const existing: StoredNote[] = result.divnotes_notes || [];
-                            const existingIds = new Set(existing.map((n: StoredNote) => n.id));
-                            const newNotes = data.notes.filter((n: StoredNote) => !existingIds.has(n.id));
-                            const merged = [...existing, ...newNotes];
-                            chrome.storage.local.set({ divnotes_notes: merged }, () => {
-                                setImporting(false);
-                            });
-                        });
-                    } else {
-                        console.error('[Canopy] Invalid import file format');
-                        setImporting(false);
-                    }
-                } catch (err) {
-                    console.error('[Canopy] Import error:', err);
-                    setImporting(false);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    };
-
-    // Get current tab's notes
-    const recentNotes = notes.slice(-5).reverse();
-
-    const handlePurge = () => {
-        if (confirm('Delete ALL notes? This cannot be undone.')) {
-            chrome.storage.local.set({ divnotes_notes: [] });
+        if (workspace.view.active === 'folders' && workspace.view.folderId) {
+            workspace.actions.setFolderDetail(null);
         }
     };
 
+    const handleAddNote = async () => {
+        await workspace.actions.activateInspector();
+        window.close();
+    };
+
+    const handleOpenNote = (note: StoredNote) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const currentTab = tabs[0];
+            if (currentTab?.url === note.url && currentTab?.id) {
+                chrome.tabs.sendMessage(currentTab.id, {
+                    type: 'SCROLL_TO_NOTE',
+                    selector: note.elementSelector,
+                });
+            } else if (currentTab?.id) {
+                chrome.tabs.update(currentTab.id, { url: note.url });
+            }
+            window.close();
+        });
+    };
+
+    const handleCreateFolder = async () => {
+        const name = window.prompt(`${newFolderLabel} name:`);
+        if (!name || !name.trim()) {
+            return;
+        }
+
+        const service = await getFoldersService();
+        const siblings = workspace.data.folders.filter((folder) => folder.parentId === null);
+        const folder: StoredFolder = {
+            id: crypto.randomUUID(),
+            name: name.trim(),
+            parentId: null,
+            order: getNextOrder(siblings),
+            color: null,
+            pinned: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        await service.create(folder);
+        workspace.setView('folders');
+    };
+
+    const utilityAction = (() => {
+        if (workspace.view.active === 'settings' || (workspace.view.active === 'folders' && workspace.view.folderId)) {
+            return null;
+        }
+
+        if (workspace.view.active === 'folders') {
+            return (
+                <Button
+                    type="button"
+                    onClick={() => void handleCreateFolder()}
+                    className="h-9 rounded-[12px] bg-[#173628] px-3 text-[12px] font-semibold text-[#f5efe9] hover:bg-[#0f2d20]"
+                >
+                    <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
+                    {newFolderLabel}
+                </Button>
+            );
+        }
+
+        return (
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleOpenSettings}
+                className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+                aria-label="Open settings"
+            >
+                <Settings2 className="h-4 w-4" />
+            </Button>
+        );
+    })();
+
+    const backLabel = workspace.view.active === 'settings'
+        ? settingsSectionTitles.account
+        : workspace.view.active === 'folders' && workspace.view.folderId
+            ? 'Folders'
+            : undefined;
+
+    const navigation = workspace.view.active === 'settings' || (workspace.view.active === 'folders' && workspace.view.folderId)
+        ? undefined
+        : (
+            <TopNavPills
+                items={navItems.map((item) => ({
+                    value: item.value,
+                    label: item.label,
+                    count: workspace.counts[item.value],
+                }))}
+                value={activeMainView}
+                onChange={handleMainViewChange}
+            />
+        );
+
+    const content = (() => {
+        switch (workspace.view.active) {
+            case 'this-page':
+                return (
+                    <ThisPageView
+                        currentPage={workspace.currentPage}
+                        notes={workspace.derived.thisPageNotes}
+                        loading={loadingContent}
+                        error={workspace.error.currentPage || workspace.error.data}
+                        tagsById={tagsById}
+                        onAddNote={() => void handleAddNote()}
+                        onOpenNote={handleOpenNote}
+                    />
+                );
+            case 'all-notes':
+                return (
+                    <AllNotesView
+                        groupedNotes={workspace.derived.groupedNotes}
+                        notes={workspace.data.notes}
+                        foldersById={foldersById}
+                        tagsById={tagsById}
+                        loading={loadingContent}
+                        error={workspace.error.data}
+                        onOpenNote={handleOpenNote}
+                    />
+                );
+            case 'folders':
+                return (
+                    <FoldersView
+                        folderSummaries={workspace.derived.folderSummaries}
+                        foldersById={foldersById}
+                        notesById={notesById}
+                        tagsById={tagsById}
+                        selectedFolderId={workspace.view.folderId}
+                        loading={workspace.loading.data}
+                        error={workspace.error.data}
+                        onSelectFolder={workspace.actions.setFolderDetail}
+                        onOpenNote={handleOpenNote}
+                    />
+                );
+            case 'tags':
+                return (
+                    <TagsView
+                        tagSummaries={workspace.derived.tagSummaries}
+                        selectedTagId={workspace.view.tagId}
+                        notes={workspace.data.notes}
+                        foldersById={foldersById}
+                        tagsById={tagsById}
+                        loading={workspace.loading.data}
+                        error={workspace.error.data}
+                        onSelectTag={workspace.actions.setTagFilter}
+                        onOpenNote={handleOpenNote}
+                    />
+                );
+            case 'settings':
+                return (
+                    <SettingsView
+                        sectionTitles={settingsSectionTitles}
+                        labels={settingsLabels}
+                        email={email}
+                        isLocalMode={isLocalMode}
+                        version={chrome.runtime.getManifest().version}
+                        noteCount={workspace.data.notes.length}
+                        folderCount={workspace.data.folders.length}
+                        tagCount={workspace.data.tags.length}
+                        chromeWebStoreUrl={chromeWebStoreUrl}
+                        privacyPolicyUrl={privacyPolicyUrl}
+                        onLogout={onLogout}
+                        onExport={workspace.actions.exportNotes}
+                        onImport={workspace.actions.importNotes}
+                        onOpenSidePanel={workspace.actions.openSidePanel}
+                        onClearAll={async () => {
+                            const confirmed = window.confirm('Delete ALL notes? This cannot be undone.');
+                            if (confirmed) {
+                                await workspace.actions.clearAllNotes();
+                            }
+                        }}
+                    />
+                );
+            default:
+                return null;
+        }
+    })();
+
     return (
-        <div className="flex flex-col min-h-[500px]">
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-[#052415] flex items-center justify-center flex-shrink-0">
-                        <svg width="18" height="18" viewBox="0 0 68 68" fill="none">
-                            <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
-                            <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
-                            <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 className="font-serif text-[15px] text-[#052415] tracking-[-0.3px]">Canopy</h1>
-                        <p className="text-[11px] text-muted-foreground truncate max-w-[180px] flex items-center gap-1">
-                            {isLocalMode && <HardDrive className="w-3 h-3" />}
-                            {email}
-                        </p>
-                    </div>
-                </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    onClick={onLogout}
-                >
-                    <LogOut className="w-4 h-4" />
-                </Button>
-            </div>
-
-            <Separator className="opacity-50" />
-
-            {/* Actions */}
-            <div className="px-5 py-4 space-y-2">
-                <Button
-                    className="w-full justify-start gap-3 h-11 text-sm"
-                    onClick={handleSelectElement}
-                >
-                    <MousePointerClick className="w-4 h-4" />
-                    Select Element
-                    <span className="ml-auto text-[10px] opacity-50 font-mono">⌘⇧S</span>
-                </Button>
-
-                <div className="grid grid-cols-2 gap-2">
-                    <Button
-                        variant="secondary"
-                        className="justify-start gap-1.5 h-10 text-xs"
-                        onClick={handleToggleNotes}
-                    >
-                        <Keyboard className="w-3.5 h-3.5" />
-                        Toggle
-                        <span className="ml-auto text-[10px] opacity-50 font-mono">⌘⇧N</span>
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        className="justify-start gap-2 h-10 text-xs"
-                        onClick={handleOpenSidePanel}
-                    >
-                        <PanelRightOpen className="w-3.5 h-3.5" />
-                        Side Panel
-                    </Button>
-                </div>
-            </div>
-
-            <Separator className="opacity-50" />
-
-            {/* Notes Count + Import/Export */}
-            <div className="px-5 py-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">All notes</span>
-                    </div>
-                    <span className="text-xs font-medium bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
-                        {noteCount} {noteCount === 1 ? 'note' : 'notes'}
-                    </span>
-                </div>
-
-                {/* Import/Export buttons */}
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-border/40"
-                        onClick={handleExport}
-                        disabled={noteCount === 0}
-                    >
-                        <Download className="w-3 h-3" />
-                        Export
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-border/40"
-                        onClick={handleImport}
-                        disabled={importing}
-                    >
-                        <Upload className="w-3 h-3" />
-                        {importing ? 'Importing...' : 'Import'}
-                    </Button>
-                </div>
-
-                {/* Clear All */}
-                {noteCount > 0 && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full h-7 text-[11px] text-destructive/70 hover:text-destructive mt-1"
-                        onClick={handlePurge}
-                    >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Clear All Notes
-                    </Button>
-                )}
-            </div>
-
-            <Separator className="opacity-50" />
-
-            {/* Recent Notes */}
-            <div className="flex-1 px-5 py-3 overflow-y-auto">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                    Recent Notes
-                </p>
-                {recentNotes.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <StickyNote className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                        <p className="text-xs text-muted-foreground/60">No notes yet</p>
-                        <p className="text-[10px] text-muted-foreground/40 mt-1">
-                            Click "Select Element" to start annotating
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {recentNotes.map((note) => (
-                            <Card
-                                key={note.id}
-                                className="border-border/40 bg-card/30 hover:bg-card/60 transition-colors cursor-pointer group"
-                                onClick={() => {
-                                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                                        const currentTab = tabs[0];
-                                        if (currentTab?.url === note.url && currentTab?.id) {
-                                            chrome.tabs.sendMessage(currentTab.id, {
-                                                type: 'SCROLL_TO_NOTE',
-                                                selector: note.elementSelector,
-                                            });
-                                        } else if (currentTab?.id) {
-                                            chrome.tabs.update(currentTab.id, { url: note.url });
-                                        }
-                                    });
-                                }}
-                            >
-                                <CardContent className="p-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                                                    &lt;{note.elementTag}&gt;
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground truncate">
-                                                    {note.hostname}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-foreground/90 line-clamp-2">
-                                                {note.content}
-                                            </p>
-                                            <div className="flex items-center gap-1.5 mt-1.5">
-                                                <FileText className="w-3 h-3 text-muted-foreground/60" />
-                                                <span className="text-[10px] text-muted-foreground/60 truncate">
-                                                    {note.pageTitle || note.hostname}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground/40 ml-auto">
-                                                    {new Date(note.createdAt).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0 mt-0.5" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+        <PopupShell
+            navigation={navigation}
+            utilityAction={utilityAction}
+            backLabel={backLabel}
+            onBack={backLabel ? handleBack : undefined}
+            errorMessage={workspace.error.actions}
+        >
+            {content}
+        </PopupShell>
     );
 }

@@ -49,6 +49,8 @@ test('tag colors switch to the green palette from the approved redesign', () => 
 
 test('popup auth flow matches the Paper-driven redesign shell', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
+  const popupDashboard = read('src/popup/Dashboard.tsx');
+  const workspaceHook = read('src/lib/use-extension-workspace.ts');
 
   assert.ok(loginForm.includes('const [showEmailForm, setShowEmailForm] = useState(false);'));
   assert.ok(
@@ -67,6 +69,21 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
   assert.ok(loginForm.includes('Think on top of the web.'));
+  assert.ok(
+    workspaceHook.includes(
+      "export type WorkspaceView = 'this-page' | 'all-notes' | 'folders' | 'tags' | 'settings';"
+    )
+  );
+  assert.ok(popupDashboard.includes('This Page'));
+  assert.ok(popupDashboard.includes('All Notes'));
+  assert.ok(popupDashboard.includes('Folders'));
+  assert.ok(popupDashboard.includes('Tags'));
+  assert.ok(popupDashboard.includes('New Folder'));
+  assert.ok(popupDashboard.includes('Account'));
+  assert.ok(popupDashboard.includes('Data'));
+  assert.ok(popupDashboard.includes('About'));
+  assert.ok(popupDashboard.includes('Chrome Web Store'));
+  assert.ok(popupDashboard.includes('Privacy Policy'));
 });
 
 test('content script styles switch from purple to Eden Bright green and cream treatments', () => {
