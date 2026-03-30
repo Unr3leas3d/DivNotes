@@ -34,7 +34,6 @@ export default function App() {
   const workspace = useExtensionWorkspace({ shell: 'sidepanel' });
   const previousViewRef = useRef<MainSidePanelView>('all-notes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [localActionError, setLocalActionError] = useState<string | null>(null);
   const [screenShareMode, setScreenShareMode] = useState(false);
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [clearAllDialogError, setClearAllDialogError] = useState<string | null>(null);
@@ -90,7 +89,6 @@ export default function App() {
   };
 
   const handleAddNote = async () => {
-    setLocalActionError(null);
     try {
       await workspace.actions.activateInspector();
     } catch {
@@ -99,18 +97,15 @@ export default function App() {
   };
 
   const handleOpenSettings = () => {
-    setLocalActionError(null);
     previousViewRef.current = activeMainView;
     workspace.setView('settings');
   };
 
   const handleBack = () => {
-    setLocalActionError(null);
     workspace.setView(previousViewRef.current);
   };
 
   const handleViewChange = (nextView: ViewMode) => {
-    setLocalActionError(null);
     previousViewRef.current = nextView;
     setSearchQuery('');
     workspace.actions.clearFilters();
@@ -181,7 +176,7 @@ export default function App() {
 
   if (!workspace.auth.isAuthenticated) {
     return (
-      <SidePanelShell actions={headerActions} errorMessage={localActionError || workspace.error.actions}>
+      <SidePanelShell actions={headerActions} errorMessage={workspace.error.actions}>
         <WorkspaceEmptyState
           icon={<LogIn className="h-5 w-5" />}
           title="Sign in to use the side panel"
@@ -208,7 +203,7 @@ export default function App() {
         }
         backLabel={workspace.view.active === 'settings' ? 'Settings' : undefined}
         onBack={workspace.view.active === 'settings' ? handleBack : undefined}
-        errorMessage={localActionError || workspace.error.actions}
+        errorMessage={workspace.error.actions}
       >
         {workspace.view.active === 'all-notes' ? (
           <AllNotesView
@@ -260,7 +255,6 @@ export default function App() {
             onExport={workspace.actions.exportNotes}
             onImport={workspace.actions.importNotes}
             onClearAll={() => {
-              setLocalActionError(null);
               setClearAllDialogError(null);
               setClearAllDialogOpen(true);
             }}
