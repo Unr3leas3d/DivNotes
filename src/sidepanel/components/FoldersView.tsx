@@ -25,6 +25,7 @@ interface FoldersViewProps {
   searchQuery: string;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
   onRefresh?: () => void;
 }
 
@@ -54,6 +55,7 @@ export function FoldersView({
   searchQuery,
   onDeleteNote,
   onNavigateNote,
+  onEditNote,
   onRefresh,
 }: FoldersViewProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -651,6 +653,7 @@ export function FoldersView({
         pinnedFolders={pinnedFolders}
         tags={tags}
         onNoteClick={onNavigateNote}
+        onEditNote={onEditNote}
         onFolderClick={handleFolderClick}
         onDeleteNote={onDeleteNote}
       />
@@ -724,6 +727,7 @@ export function FoldersView({
                 tags={tags}
                 onDelete={onDeleteNote}
                 onNavigate={onNavigateNote}
+                onEdit={onEditNote}
                 selected={selectedIds.has(note.id)}
                 onSelectClick={toggleSelect}
                 draggable
@@ -747,6 +751,7 @@ export function FoldersView({
           onToggleExpand={toggleExpand}
           onDeleteNote={onDeleteNote}
           onNavigateNote={onNavigateNote}
+          onEditNote={onEditNote}
           onToggleNotePin={handleToggleNotePin}
           onNewSubfolder={handleNewSubfolder}
           onRenameFolder={handleRenameFolder}

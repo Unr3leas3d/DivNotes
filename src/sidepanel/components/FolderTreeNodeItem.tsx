@@ -15,6 +15,7 @@ interface FolderTreeNodeItemProps {
   onToggleExpand: (folderId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
   onToggleNotePin?: (noteId: string) => void;
   onNewSubfolder?: (parentId: string) => void;
   onRenameFolder?: (folderId: string) => void;
@@ -42,6 +43,7 @@ export function FolderTreeNodeItem({
   onToggleExpand,
   onDeleteNote,
   onNavigateNote,
+  onEditNote,
   onToggleNotePin,
   onNewSubfolder,
   onRenameFolder,
@@ -151,6 +153,7 @@ export function FolderTreeNodeItem({
               onToggleExpand={onToggleExpand}
               onDeleteNote={onDeleteNote}
               onNavigateNote={onNavigateNote}
+              onEditNote={onEditNote}
               onToggleNotePin={onToggleNotePin}
               onNewSubfolder={onNewSubfolder}
               onRenameFolder={onRenameFolder}
@@ -182,6 +185,7 @@ export function FolderTreeNodeItem({
                   tags={tags}
                   onDelete={onDeleteNote}
                   onNavigate={onNavigateNote}
+                  onEdit={onEditNote}
                   onTogglePin={onToggleNotePin}
                   selected={selectedNoteIds?.has(note.id)}
                   onSelectClick={onNoteSelectClick}

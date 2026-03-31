@@ -17,6 +17,7 @@ interface TagsViewProps {
   error: string | null;
   onSelectTag: (tagId: string | null) => void;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function TagsView({
@@ -29,6 +30,7 @@ export function TagsView({
   error,
   onSelectTag,
   onOpenNote,
+  onEditNote,
 }: TagsViewProps) {
   const tags = useMemo(() => [...tagsById.values()], [tagsById]);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
@@ -121,6 +123,7 @@ export function TagsView({
               density="compact"
               note={note}
               onOpen={onOpenNote}
+              onEdit={onEditNote}
               folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
               tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
             />

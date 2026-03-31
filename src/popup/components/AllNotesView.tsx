@@ -19,6 +19,7 @@ interface AllNotesViewProps {
   loading: boolean;
   error: string | null;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function AllNotesView({
@@ -29,6 +30,7 @@ export function AllNotesView({
   loading,
   error,
   onOpenNote,
+  onEditNote,
 }: AllNotesViewProps) {
   const [query, setQuery] = useState('');
   const tags = useMemo(() => [...tagsById.values()], [tagsById]);
@@ -119,6 +121,7 @@ export function AllNotesView({
                       folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
                       tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
                       onOpen={onOpenNote}
+                      onEdit={onEditNote}
                     />
                   );
                 })}

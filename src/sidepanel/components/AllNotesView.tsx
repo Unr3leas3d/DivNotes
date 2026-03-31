@@ -17,6 +17,7 @@ interface AllNotesViewProps {
   error: string | null;
   query: string;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
   onDeleteNote: (noteId: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function AllNotesView({
   error,
   query,
   onOpenNote,
+  onEditNote,
   onDeleteNote,
 }: AllNotesViewProps) {
   const filteredNotes = useMemo(() => filterNotesBySearch(notes, query, tags), [notes, query, tags]);
@@ -93,6 +95,7 @@ export function AllNotesView({
         pinnedNotes={pinnedNotes}
         tags={tags}
         onNoteClick={onOpenNote}
+        onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
       />
 
@@ -125,6 +128,7 @@ export function AllNotesView({
                   tags={tags}
                   onDelete={onDeleteNote}
                   onNavigate={onOpenNote}
+                  onEdit={onEditNote}
                   showFolderPath
                   folderPath={note.folderId ? foldersById.get(note.folderId)?.name : undefined}
                 />

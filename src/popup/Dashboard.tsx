@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { PanelsTopLeft, Settings2 } from 'lucide-react';
 
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
-import { workspaceNoteEditEventName } from '@/components/workspace/WorkspaceNoteCard';
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
 import { getFoldersService } from '@/lib/folders-service';
@@ -134,20 +133,9 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         });
         window.close();
     };
-
-    useEffect(() => {
-        const listener = (event: Event) => {
-            const customEvent = event as CustomEvent<StoredNote>;
-            if (!customEvent.detail?.id) {
-                return;
-            }
-
-            setEditingNoteId(customEvent.detail.id);
-        };
-
-        window.addEventListener(workspaceNoteEditEventName, listener);
-        return () => window.removeEventListener(workspaceNoteEditEventName, listener);
-    }, []);
+    const handleEditNote = (note: StoredNote) => {
+        setEditingNoteId(note.id);
+    };
 
     const handleCreateFolder = () => {
         setDialogState({ type: 'new-folder', value: '', error: null });
@@ -278,6 +266,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         tagsById={tagsById}
                         onAddNote={() => void handleAddNote()}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'all-notes':
@@ -290,6 +279,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         loading={loadingContent}
                         error={workspace.error.data}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'folders':
@@ -305,6 +295,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onSelectFolder={workspace.actions.setFolderDetail}
                         onCreateFolder={() => void handleCreateFolder()}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'tags':
@@ -319,6 +310,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         error={workspace.error.data}
                         onSelectTag={workspace.actions.setTagFilter}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'settings':
@@ -398,7 +390,6 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 <WorkspaceNoteEditorDialog
                     note={editingNote}
                     folders={workspace.data.folders}
-                    tags={workspace.data.tags}
                     open={Boolean(editingNote)}
                     onOpenChange={(open) => {
                         if (!open) {

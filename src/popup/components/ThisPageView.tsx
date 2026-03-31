@@ -15,6 +15,7 @@ interface ThisPageViewProps {
   tagsById: Map<string, StoredTag>;
   onAddNote: () => void;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function ThisPageView({
@@ -25,6 +26,7 @@ export function ThisPageView({
   tagsById,
   onAddNote,
   onOpenNote,
+  onEditNote,
 }: ThisPageViewProps) {
   const tags = useMemo(() => [...tagsById.values()], [tagsById]);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
@@ -79,6 +81,7 @@ export function ThisPageView({
               key={note.id}
               note={note}
               onOpen={onOpenNote}
+              onEdit={onEditNote}
               tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
             />
           ))}

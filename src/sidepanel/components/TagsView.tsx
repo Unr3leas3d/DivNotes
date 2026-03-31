@@ -16,6 +16,7 @@ interface TagsViewProps {
   searchQuery: string;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function TagsView({
@@ -25,6 +26,7 @@ export function TagsView({
   searchQuery,
   onDeleteNote,
   onNavigateNote,
+  onEditNote,
 }: TagsViewProps) {
   const [activeTagIds, setActiveTagIds] = useState<Set<string>>(new Set());
   const [showManager, setShowManager] = useState(false);
@@ -188,6 +190,7 @@ export function TagsView({
               tags={tags}
               onDelete={onDeleteNote}
               onNavigate={onNavigateNote}
+              onEdit={onEditNote}
               showFolderPath
               folderPath={getFolderPath(note)}
             />

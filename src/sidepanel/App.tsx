@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
-import { workspaceNoteEditEventName } from '@/components/workspace/WorkspaceNoteCard';
 import { getNotesService } from '@/lib/notes-service';
 import { useExtensionWorkspace } from '@/lib/use-extension-workspace';
 import type { StoredNote } from '@/lib/types';
@@ -74,20 +73,6 @@ export default function App() {
     return () => chrome.storage.onChanged.removeListener(listener);
   }, []);
 
-  useEffect(() => {
-    const listener = (event: Event) => {
-      const customEvent = event as CustomEvent<StoredNote>;
-      if (!customEvent.detail?.id) {
-        return;
-      }
-
-      setEditingNoteId(customEvent.detail.id);
-    };
-
-    window.addEventListener(workspaceNoteEditEventName, listener);
-    return () => window.removeEventListener(workspaceNoteEditEventName, listener);
-  }, []);
-
   const handleOpenNote = (note: StoredNote) => {
     chrome.runtime.sendMessage({
       type: 'OPEN_NOTE_TARGET',
@@ -105,6 +90,10 @@ export default function App() {
   const handleDeleteNote = async (noteId: string) => {
     const service = await getNotesService();
     await service.delete(noteId);
+  };
+
+  const handleEditNote = (note: StoredNote) => {
+    setEditingNoteId(note.id);
   };
 
   const handleAddNote = async () => {
@@ -234,6 +223,7 @@ export default function App() {
             error={workspace.error.data}
             query={searchQuery}
             onOpenNote={handleOpenNote}
+            onEditNote={handleEditNote}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
           />
         ) : null}
@@ -246,6 +236,7 @@ export default function App() {
             searchQuery={searchQuery}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
             onNavigateNote={handleOpenNote}
+            onEditNote={handleEditNote}
           />
         ) : null}
 
@@ -257,6 +248,7 @@ export default function App() {
             searchQuery={searchQuery}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
             onNavigateNote={handleOpenNote}
+            onEditNote={handleEditNote}
           />
         ) : null}
 
@@ -319,7 +311,6 @@ export default function App() {
         <WorkspaceNoteEditorDialog
           note={editingNote}
           folders={workspace.data.folders}
-          tags={workspace.data.tags}
           open={Boolean(editingNote)}
           onOpenChange={(open) => {
             if (!open) {

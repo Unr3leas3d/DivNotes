@@ -10,14 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 import { getNotesService } from '@/lib/notes-service';
-import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
+import type { StoredFolder, StoredNote } from '@/lib/types';
 
 interface WorkspaceNoteEditorDialogProps {
   note: StoredNote;
   folders: StoredFolder[];
-  tags: StoredTag[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
@@ -26,21 +24,18 @@ interface WorkspaceNoteEditorDialogProps {
 export function WorkspaceNoteEditorDialog({
   note,
   folders,
-  tags,
   open,
   onOpenChange,
   onSaved,
 }: WorkspaceNoteEditorDialogProps) {
   const [draft, setDraft] = useState(note.content);
   const [selectedFolderId, setSelectedFolderId] = useState<string>(note.folderId ?? '');
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(note.tags);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(note.content);
     setSelectedFolderId(note.folderId ?? '');
-    setSelectedTagIds(note.tags);
     setError(null);
   }, [note, open]);
 
@@ -48,17 +43,6 @@ export function WorkspaceNoteEditorDialog({
     () => [...folders].sort((left, right) => left.name.localeCompare(right.name)),
     [folders]
   );
-
-  const sortedTags = useMemo(
-    () => [...tags].sort((left, right) => left.name.localeCompare(right.name)),
-    [tags]
-  );
-
-  const toggleTagId = (tagId: string) => {
-    setSelectedTagIds((current) =>
-      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]
-    );
-  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -69,7 +53,6 @@ export function WorkspaceNoteEditorDialog({
       await notesService.update(note.id, {
         content: draft,
         folderId: selectedFolderId || null,
-        tags: selectedTagIds,
       });
       onSaved();
       onOpenChange(false);
@@ -154,35 +137,6 @@ export function WorkspaceNoteEditorDialog({
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]">Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {sortedTags.length === 0 ? (
-                  <span className="text-[12px] text-[#8b968f]">No tags available yet.</span>
-                ) : (
-                  sortedTags.map((tag) => {
-                    const active = selectedTagIds.includes(tag.id);
-
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTagId(tag.id)}
-                        className={cn(
-                          'rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors',
-                          active
-                            ? 'border-[#173628] bg-[#173628] text-[#f5efe9]'
-                            : 'border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]'
-                        )}
-                      >
-                        {tag.name}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
             </div>
 
             {error ? (

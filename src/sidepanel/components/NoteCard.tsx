@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { Pin, Trash2 } from 'lucide-react';
 
-import { WorkspaceNoteCard, dispatchWorkspaceNoteEdit } from '@/components/workspace/WorkspaceNoteCard';
+import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import { createTagResolver } from '@/lib/extension-selectors';
 import { cn } from '@/lib/utils';
 import type { StoredNote, StoredTag } from '@/lib/types';
@@ -13,6 +13,7 @@ interface NoteCardProps {
   tags: StoredTag[];
   onDelete: (noteId: string) => void;
   onNavigate: (note: StoredNote) => void;
+  onEdit: (note: StoredNote) => void;
   onTogglePin?: (noteId: string) => void;
   showFolderPath?: boolean;
   folderPath?: string;
@@ -98,6 +99,7 @@ export function NoteCard({
   tags,
   onDelete,
   onNavigate,
+  onEdit,
   onTogglePin,
   showFolderPath,
   folderPath,
@@ -163,7 +165,7 @@ export function NoteCard({
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                dispatchWorkspaceNoteEdit(note);
+                onEdit(note);
               }}
               className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
             >

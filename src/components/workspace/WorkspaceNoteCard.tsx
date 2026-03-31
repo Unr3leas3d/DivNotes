@@ -6,12 +6,6 @@ import { cn } from '@/lib/utils';
 
 type CardDensity = 'compact' | 'comfortable';
 
-export const workspaceNoteEditEventName = 'divnotes:edit-workspace-note';
-
-export function dispatchWorkspaceNoteEdit(note: StoredNote) {
-  window.dispatchEvent(new CustomEvent<StoredNote>(workspaceNoteEditEventName, { detail: note }));
-}
-
 interface WorkspaceNoteCardProps {
   note: StoredNote;
   density?: CardDensity;
@@ -70,13 +64,13 @@ export function WorkspaceNoteCard({
   const visibleTags = tagNames.slice(0, density === 'compact' ? 1 : 2);
   const overflowTagCount = tagNames.length - visibleTags.length;
   const resolvedAction = action ?? (
-    interactionMode === 'open' ? (
+    interactionMode === 'open' && onEdit ? (
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            (onEdit ?? dispatchWorkspaceNoteEdit)(note);
+            onEdit(note);
           }}
           className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
         >

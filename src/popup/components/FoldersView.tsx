@@ -17,6 +17,7 @@ interface FoldersViewProps {
   onSelectFolder: (folderId: string) => void;
   onCreateFolder: () => void;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function FoldersView({
@@ -30,6 +31,7 @@ export function FoldersView({
   onSelectFolder,
   onCreateFolder,
   onOpenNote,
+  onEditNote,
 }: FoldersViewProps) {
   const selectedSummary = useMemo(
     () => folderSummaries.find((summary) => summary.folder.id === selectedFolderId) || null,
@@ -92,6 +94,7 @@ export function FoldersView({
                   note={note}
                   density="compact"
                   onOpen={onOpenNote}
+                  onEdit={onEditNote}
                   folderName={selectedSummary.folder.name}
                   tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
                 />

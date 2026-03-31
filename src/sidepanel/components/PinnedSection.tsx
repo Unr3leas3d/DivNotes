@@ -9,6 +9,7 @@ interface PinnedSectionProps {
   pinnedFolders?: StoredFolder[];
   tags: StoredTag[];
   onNoteClick?: (note: StoredNote) => void;
+  onEditNote?: (note: StoredNote) => void;
   onFolderClick?: (folderId: string) => void;
   onDeleteNote?: (noteId: string) => void;
   onTogglePin?: (noteId: string) => void;
@@ -19,6 +20,7 @@ export function PinnedSection({
   pinnedFolders = [],
   tags,
   onNoteClick,
+  onEditNote,
   onFolderClick,
   onDeleteNote,
   onTogglePin,
@@ -74,6 +76,7 @@ export function PinnedSection({
               tags={tags}
               onDelete={onDeleteNote || (() => {})}
               onNavigate={onNoteClick || (() => {})}
+              onEdit={onEditNote || (() => {})}
               onTogglePin={onTogglePin}
             />
           ))}
