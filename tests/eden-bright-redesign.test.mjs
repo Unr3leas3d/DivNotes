@@ -51,6 +51,7 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
   const popupShell = read('src/popup/components/PopupShell.tsx');
   const popupDashboard = read('src/popup/Dashboard.tsx');
+  const popupThisPageView = read('src/popup/components/ThisPageView.tsx');
   const popupApp = read('src/popup/App.tsx');
   const workspaceHook = read('src/lib/use-extension-workspace.ts');
 
@@ -91,6 +92,8 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(popupDashboard.includes('const handleOpenSidePanel = async () => {'));
   assert.ok(popupDashboard.includes('await workspace.actions.openSidePanel();'));
   assert.ok(popupDashboard.includes('onOpenSidePanel={() => void handleOpenSidePanel()}'));
+  assert.ok(!popupThisPageView.includes('No notes on this page yet'));
+  assert.ok(!popupThisPageView.includes('Select an element and attach the first note for this page.'));
   assert.ok(popupDashboard.includes("const chromeWebStoreUrl = 'https://divnotes.com';"));
   assert.ok(popupDashboard.includes("const privacyPolicyUrl = 'https://divnotes.com/privacy';"));
 });

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { FilePlus2, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
@@ -72,13 +72,7 @@ export function ThisPageView({
         </button>
       </div>
 
-      {notes.length === 0 ? (
-        <WorkspaceEmptyState
-          icon={<FilePlus2 className="h-5 w-5" />}
-          title="No notes on this page yet"
-          description="Select an element and attach the first note for this page."
-        />
-      ) : (
+      {notes.length > 0 ? (
         <div className="space-y-2.5">
           {notes.map((note) => (
             <WorkspaceNoteCard
@@ -89,7 +83,7 @@ export function ThisPageView({
             />
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

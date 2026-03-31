@@ -12,6 +12,7 @@ test('popup login and shell match the approved batch-1 structure', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
   const popupShell = read('src/popup/components/PopupShell.tsx');
   const popupDashboard = read('src/popup/Dashboard.tsx');
+  const popupThisPageView = read('src/popup/components/ThisPageView.tsx');
   const popupApp = read('src/popup/App.tsx');
   const manifest = JSON.parse(read('public/manifest.json'));
 
@@ -35,6 +36,8 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(popupShell.includes('font-semibold'));
   assert.ok(!popupDashboard.includes('window.prompt'));
   assert.ok(!popupDashboard.includes('window.confirm'));
+  assert.ok(!popupThisPageView.includes('No notes on this page yet'));
+  assert.ok(!popupThisPageView.includes('Select an element and attach the first note for this page.'));
   assert.ok(popupDashboard.includes('WorkspaceActionDialog'));
   assert.ok(popupDashboard.includes('handleOpenSidePanel'));
   assert.ok(popupDashboard.includes('PanelsTopLeft'));
