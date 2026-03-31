@@ -63,9 +63,13 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
   assert.ok(loginForm.includes('Think on top of the web.'));
+  assert.ok(loginForm.includes('pt-8'));
+  assert.ok(loginForm.includes('mt-8'));
+  assert.ok(!loginForm.includes('mt-12'));
   assert.ok(popupShell.includes('sticky top-0'));
   assert.ok(popupShell.includes('overflow-hidden'));
-  assert.ok(popupShell.includes('text-center'));
+  assert.ok(popupShell.includes('text-left'));
+  assert.ok(!popupShell.includes('text-center'));
   assert.ok(popupApp.includes('h-[500px]'));
   assert.ok(popupApp.includes('overflow-hidden'));
   assert.ok(popupApp.includes('authError'));

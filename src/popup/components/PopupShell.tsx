@@ -49,7 +49,7 @@ export function PopupShell({
             </button>
           ) : null}
           <CanopyMark />
-          <div className="min-w-0 flex-1 text-center">
+          <div className="min-w-0 flex-1 text-left">
             <p className="font-serif text-[19px] font-semibold tracking-[-0.35px] text-[#173628]">Canopy</p>
             <p className="text-[11px] font-semibold text-[#8f998f]">
               {backLabel ? backLabel : 'Think on top of the web.'}

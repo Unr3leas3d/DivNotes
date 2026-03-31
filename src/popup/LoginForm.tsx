@@ -162,9 +162,9 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
 
     return (
         <div className="flex min-h-[500px] flex-col bg-[#fcfbf7]">
-            <div className="mx-auto flex w-full max-w-[316px] flex-1 flex-col justify-center px-7 pb-6 pt-11">
+            <div className="mx-auto flex w-full max-w-[316px] flex-1 flex-col justify-center px-7 pb-4 pt-8">
                 <div className="flex flex-col items-center">
-                    <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#0b2417] shadow-[0_10px_24px_rgba(5,36,21,0.14)]">
+                    <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#0b2417] shadow-[0_10px_24px_rgba(5,36,21,0.14)]">
                         <svg width="28" height="28" viewBox="0 0 68 68" fill="none">
                             <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
                             <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
@@ -178,12 +178,12 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
                     <h1 className="text-center font-serif text-[32px] font-semibold leading-[1.12] tracking-[-0.7px] text-[#173628]">
                         Think on top of the web.
                     </h1>
-                    <p className="mt-7 max-w-[260px] text-center text-[14px] leading-[1.45] text-[#9aa294]">
+                    <p className="mt-5 max-w-[260px] text-center text-[14px] leading-[1.45] text-[#9aa294]">
                         Attach notes to any element on any page.
                     </p>
                 </div>
 
-                <div className="mt-12 flex flex-col gap-3.5">
+                <div className="mt-8 flex flex-col gap-3">
                     <button
                         type="button"
                         onClick={handleGoogleSignIn}
@@ -233,7 +233,7 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
                 {error && <p className="mt-3 text-center text-xs text-destructive">{error}</p>}
             </div>
 
-            <div className="px-10 pb-4 text-center">
+            <div className="px-10 pb-3 text-center">
                 <p className="text-[10px] leading-[1.45] text-[#aba79c]">
                     By continuing, you agree to our Terms of Service and Privacy Policy.
                 </p>
