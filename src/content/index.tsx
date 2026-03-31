@@ -920,22 +920,56 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
   const bindTagRow = () => {
     const addTagButton = tagRow?.querySelector('[data-canopy-add-tag]') as HTMLButtonElement | null;
-    addTagButton?.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const nextTag = window.prompt('Add a tag', '');
-      if (!nextTag) {
-        return;
-      }
+    const tagInput = tagRow?.querySelector('[data-canopy-tag-input]') as HTMLInputElement | null;
+    const confirmButton = tagRow?.querySelector('[data-canopy-add-tag-confirm]') as HTMLButtonElement | null;
 
-      const normalized = nextTag.trim().replace(/^#+/, '').toLowerCase();
-      if (!normalized) {
-        return;
-      }
+    const commitTag = () => {
+      if (!tagInput) return;
+      const normalized = tagInput.value.trim().replace(/^#+/, '').toLowerCase();
+      tagInput.value = '';
+      if (tagInput) tagInput.style.display = 'none';
+      if (confirmButton) confirmButton.style.display = 'none';
+      if (addTagButton) addTagButton.style.display = '';
+
+      if (!normalized) return;
 
       if (!manualTags.includes(normalized)) {
         manualTags = [...manualTags, normalized];
       }
       renderTagRow();
+    };
+
+    const cancelTag = () => {
+      if (tagInput) {
+        tagInput.value = '';
+        tagInput.style.display = 'none';
+      }
+      if (confirmButton) confirmButton.style.display = 'none';
+      if (addTagButton) addTagButton.style.display = '';
+    };
+
+    addTagButton?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (addTagButton) addTagButton.style.display = 'none';
+      if (tagInput) {
+        tagInput.style.display = '';
+        tagInput.focus();
+      }
+      if (confirmButton) confirmButton.style.display = '';
+    });
+
+    tagInput?.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.key === 'Enter') {
+        commitTag();
+      } else if (event.key === 'Escape') {
+        cancelTag();
+      }
+    });
+
+    confirmButton?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      commitTag();
     });
   };
 

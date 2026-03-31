@@ -207,6 +207,22 @@ export function createTagRow(doc: EditorSurfaceDocument, tagLabels: readonly str
   );
   row.appendChild(addTagButton);
 
+  const tagInput = doc.createElement('input');
+  tagInput.setAttribute('data-canopy-tag-input', '');
+  tagInput.setAttribute('type', 'text');
+  tagInput.setAttribute('placeholder', 'tag name');
+  tagInput.style.cssText =
+    'display:none;padding:4px 8px;border:1px solid rgba(5,36,21,0.1);border-radius:6px;font-size:11px;color:#052415;width:100px;';
+  row.appendChild(tagInput);
+
+  const confirmButton = createButton(
+    doc,
+    'Add tag',
+    'canopy-add-tag-confirm',
+    'display:none;padding:4px 8px;border:none;background:rgba(5,36,21,0.08);color:#1a5c2e;font-size:11px;border-radius:6px;cursor:pointer;'
+  );
+  row.appendChild(confirmButton);
+
   return row;
 }
 

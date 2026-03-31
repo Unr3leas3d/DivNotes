@@ -19,6 +19,18 @@ test('workspace surfaces delegate note navigation through the background worker'
   assert.ok(serviceWorker.includes('chrome.tabs.onUpdated.addListener'));
 });
 
+test('note navigation copy is renamed and content tag entry no longer uses window.prompt', () => {
+  const workspaceCard = read('src/components/workspace/WorkspaceNoteCard.tsx');
+  const sidepanelNoteCard = read('src/sidepanel/components/NoteCard.tsx');
+  const contentIndex = read('src/content/index.tsx');
+  const editorSurface = read('src/content/editor-surface.ts');
+
+  assert.ok(sidepanelNoteCard.includes('Go to note'));
+  assert.ok(!sidepanelNoteCard.includes('Scroll to element'));
+  assert.ok(!contentIndex.includes('window.prompt'));
+  assert.ok(editorSurface.includes('data-canopy-tag-input'));
+});
+
 test('popup Google auth surfaces actionable inline failures', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
   const googleAuth = read('src/lib/google-auth.ts');

@@ -182,6 +182,14 @@ test('createEditorSurface renders header actions for an existing note and keeps 
   assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-cancel]'), null);
 });
 
+test('createEditorSurface renders inline tag entry controls instead of relying on browser prompts', () => {
+  const fakeDocument = createFakeDocument();
+
+  const surface = createEditorSurface(fakeDocument, sampleState);
+  assert.equal(surface.querySelector('[data-canopy-tag-input]')?.tagName, 'INPUT');
+  assert.equal(surface.querySelector('[data-canopy-add-tag-confirm]')?.textContent, 'Add tag');
+});
+
 test('createEditorSurface disables save, omits delete for new notes, and still provides header close', () => {
   const fakeDocument = createFakeDocument();
 

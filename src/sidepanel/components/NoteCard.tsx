@@ -167,7 +167,7 @@ export function NoteCard({
               }}
               className="inline-flex items-center justify-center rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
             >
-              Scroll to element
+              Go to note
             </button>
             {onTogglePin ? (
               <button
