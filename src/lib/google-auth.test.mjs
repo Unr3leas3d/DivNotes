@@ -141,3 +141,15 @@ test('signInWithGoogleInExtension signs out and rejects when flow is stale after
 
   assert.equal(signOutCalls, 1);
 });
+
+test('signInWithGoogleInExtension surfaces signInWithOAuth startup failures', async () => {
+  await assert.rejects(
+    signInWithGoogleInExtension({
+      getRedirectURL: () => 'https://extension-id.chromiumapp.org/',
+      signInWithOAuth: async () => ({ data: { url: null }, error: new Error('provider disabled') }),
+      launchWebAuthFlow: async () => undefined,
+      exchangeCodeForSession: async () => ({ data: { user: null }, error: null }),
+    }),
+    /provider disabled/i
+  );
+});
