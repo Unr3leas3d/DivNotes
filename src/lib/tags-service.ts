@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
-import type { StoredTag, SyncQueueItem } from './types';
-import { assignRandomColor } from './tag-utils';
+import { supabase } from './supabase.ts';
+import type { StoredTag, SyncQueueItem } from './types.ts';
+import { assignRandomColor } from './tag-utils.ts';
 
 export interface TagsService {
   create(tag: StoredTag): Promise<void>;

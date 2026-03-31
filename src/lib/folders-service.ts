@@ -1,7 +1,7 @@
-import { supabase } from './supabase';
-import type { StoredFolder, SyncQueueItem } from './types';
-import { getDescendantFolderIds } from './tree-utils';
-import { getNextOrder } from './tag-utils';
+import { supabase } from './supabase.ts';
+import type { StoredFolder, SyncQueueItem } from './types.ts';
+import { getDescendantFolderIds } from './tree-utils.ts';
+import { getNextOrder } from './tag-utils.ts';
 
 export interface FoldersService {
   create(folder: StoredFolder): Promise<void>;

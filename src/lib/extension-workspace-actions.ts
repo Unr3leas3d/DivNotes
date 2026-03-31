@@ -1,17 +1,17 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
-import { resetFoldersService } from './folders-service';
-import { type SyncQueueItem } from './types';
-import { resetNotesService } from './notes-service';
-import { resetTagsService } from './tags-service';
-import { supabase } from './supabase';
+import { resetFoldersService } from './folders-service.ts';
+import { type SyncQueueItem } from './types.ts';
+import { resetNotesService } from './notes-service.ts';
+import { resetTagsService } from './tags-service.ts';
+import { supabase } from './supabase.ts';
 import {
   getCurrentTab,
   mergeImportedWorkspaceData,
   readExtensionWorkspaceStorage,
-} from './extension-workspace-helpers';
-import type { AuthMode, WorkspaceAuth, WorkspaceData } from './extension-workspace-types';
-import type { StoredFolder, StoredNote, StoredTag } from './types';
+} from './extension-workspace-helpers.ts';
+import type { AuthMode, WorkspaceAuth, WorkspaceData } from './extension-workspace-types.ts';
+import type { StoredFolder, StoredNote, StoredTag } from './types.ts';
 
 function normalizeImportedItems<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];

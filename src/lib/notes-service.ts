@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { StoredNote, SyncQueueItem } from './types';
+import { supabase } from './supabase.ts';
+import type { StoredNote, SyncQueueItem } from './types.ts';
 export type { StoredNote, SyncQueueItem };
 
 export function withNoteDefaults(note: Partial<StoredNote> & { id: string }): StoredNote {
