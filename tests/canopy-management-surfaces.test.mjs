@@ -29,6 +29,7 @@ test('popup and sidepanel wire a shared workspace note editor dialog', () => {
   const sidepanelAllNotesView = read('src/sidepanel/components/AllNotesView.tsx');
   const sidepanelFoldersView = read('src/sidepanel/components/FoldersView.tsx');
   const sidepanelTagsView = read('src/sidepanel/components/TagsView.tsx');
+  const sidepanelNoteCard = read('src/sidepanel/components/NoteCard.tsx');
   const workspaceEditor = read('src/components/workspace/WorkspaceNoteEditorDialog.tsx');
   const workspaceCard = read('src/components/workspace/WorkspaceNoteCard.tsx');
 
@@ -48,4 +49,5 @@ test('popup and sidepanel wire a shared workspace note editor dialog', () => {
   assert.ok(sidepanelAllNotesView.includes('onEditNote'));
   assert.ok(sidepanelFoldersView.includes('onEditNote'));
   assert.ok(sidepanelTagsView.includes('onEditNote'));
+  assert.ok(sidepanelNoteCard.includes('onEdit?: (note: StoredNote) => void;'));
 });

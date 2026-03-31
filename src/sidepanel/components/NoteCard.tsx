@@ -13,7 +13,7 @@ interface NoteCardProps {
   tags: StoredTag[];
   onDelete: (noteId: string) => void;
   onNavigate: (note: StoredNote) => void;
-  onEdit: (note: StoredNote) => void;
+  onEdit?: (note: StoredNote) => void;
   onTogglePin?: (noteId: string) => void;
   showFolderPath?: boolean;
   folderPath?: string;
@@ -161,16 +161,18 @@ export function NoteCard({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onEdit(note);
-              }}
-              className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
-            >
-              Edit note
-            </button>
+            {onEdit ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdit(note);
+                }}
+                className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+              >
+                Edit note
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={(event) => {
