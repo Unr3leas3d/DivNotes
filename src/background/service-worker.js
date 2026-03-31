@@ -91,6 +91,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 chrome.tabs.sendMessage(tab.id, {
                     type: 'SCROLL_TO_NOTE',
                     selector: note.elementSelector,
+                    note: {
+                        elementSelector: note.elementSelector,
+                        elementXPath: note.elementXPath,
+                        elementTextHash: note.elementTextHash,
+                        elementPosition: note.elementPosition,
+                        elementTag: note.elementTag,
+                        url: note.url,
+                    },
                 });
                 sendResponse({ success: true });
                 return;
@@ -109,6 +117,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         chrome.tabs.sendMessage(tabId, {
                             type: 'SCROLL_TO_NOTE',
                             selector: pending.elementSelector,
+                            note: {
+                                elementSelector: pending.elementSelector,
+                                elementXPath: pending.elementXPath,
+                                elementTextHash: pending.elementTextHash,
+                                elementPosition: pending.elementPosition,
+                                elementTag: pending.elementTag,
+                                url: pending.url,
+                            },
                         });
                     }
                 }

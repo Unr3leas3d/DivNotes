@@ -17,6 +17,7 @@ import {
   resolveStoredTagLabels,
   savePageNotesToStorage,
 } from './note-editor-helpers.ts';
+import { findMatchingElement } from './note-targeting.ts';
 import {
   createHoverSelectorPill,
   createNotePreviewCardShell,
@@ -1347,9 +1348,11 @@ chrome.runtime.onMessage.addListener((message) => {
     showNoteEditor(el, undefined, text);
     sel.removeAllRanges(); // clear default selection to avoid visual clutter
   }
-  if (message.type === 'SCROLL_TO_NOTE' && message.selector) {
+  if (message.type === 'SCROLL_TO_NOTE' && (message.selector || message.note)) {
     try {
-      const el = document.querySelector(message.selector) as HTMLElement;
+      const el = (message.note
+        ? findMatchingElement(document, message.note)
+        : document.querySelector(message.selector)) as HTMLElement;
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Flash highlight
