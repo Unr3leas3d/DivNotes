@@ -242,10 +242,15 @@ export default function App() {
 
         {workspace.view.active === 'tags' ? (
           <TagsView
+            tagSummaries={workspace.derived.tagSummaries}
+            selectedTagIds={workspace.view.tagIds}
             notes={workspace.data.notes}
             folders={workspace.data.folders}
-            tags={workspace.data.tags}
+            loading={workspace.loading.data}
+            error={workspace.error.data}
             searchQuery={searchQuery}
+            onToggleTag={workspace.actions.toggleTagFilter}
+            onClearFilters={workspace.actions.clearFilters}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
             onNavigateNote={handleOpenNote}
             onEditNote={handleEditNote}

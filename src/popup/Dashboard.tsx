@@ -302,13 +302,13 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 return (
                     <TagsView
                         tagSummaries={workspace.derived.tagSummaries}
-                        selectedTagId={workspace.view.tagId}
+                        selectedTagIds={workspace.view.tagIds}
                         notes={workspace.data.notes}
                         foldersById={foldersById}
-                        tagsById={tagsById}
                         loading={workspace.loading.data}
                         error={workspace.error.data}
-                        onSelectTag={workspace.actions.setTagFilter}
+                        onToggleTag={workspace.actions.toggleTagFilter}
+                        onClearFilters={workspace.actions.clearFilters}
                         onOpenNote={handleOpenNote}
                         onEditNote={handleEditNote}
                     />

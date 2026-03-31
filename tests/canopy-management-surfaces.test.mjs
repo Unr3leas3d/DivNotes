@@ -19,6 +19,41 @@ test('workspace view state stores multiple active tag filters and clear-filters 
   assert.ok(workspaceActions.includes('clearFilters: () => {'));
 });
 
+test('all-notes views collapse every site group after the first visible hostname', () => {
+  const popupAllNotesView = read('src/popup/components/AllNotesView.tsx');
+  const sidepanelAllNotesView = read('src/sidepanel/components/AllNotesView.tsx');
+
+  assert.ok(popupAllNotesView.includes('aria-expanded'));
+  assert.ok(sidepanelAllNotesView.includes('aria-expanded'));
+  assert.ok(popupAllNotesView.includes('visibleGroups[0]'));
+  assert.ok(sidepanelAllNotesView.includes('visibleGroups[0]'));
+  assert.ok(!popupAllNotesView.includes('group.pageTitle'));
+  assert.ok(!sidepanelAllNotesView.includes('group.pageTitle'));
+});
+
+test('tag views use shared multi-tag filters and hide notes until filters exist', () => {
+  const popupDashboard = read('src/popup/Dashboard.tsx');
+  const popupTagsView = read('src/popup/components/TagsView.tsx');
+  const sidepanelApp = read('src/sidepanel/App.tsx');
+  const sidepanelTagsView = read('src/sidepanel/components/TagsView.tsx');
+  const workspaceTagFilterBar = read('src/components/workspace/WorkspaceTagFilterBar.tsx');
+
+  assert.ok(popupDashboard.includes('workspace.view.tagIds'));
+  assert.ok(popupDashboard.includes('workspace.actions.toggleTagFilter'));
+  assert.ok(popupDashboard.includes('workspace.actions.clearFilters'));
+  assert.ok(sidepanelApp.includes('workspace.view.tagIds'));
+  assert.ok(sidepanelApp.includes('workspace.actions.toggleTagFilter'));
+  assert.ok(sidepanelApp.includes('workspace.actions.clearFilters'));
+  assert.ok(popupTagsView.includes('WorkspaceTagFilterBar'));
+  assert.ok(sidepanelTagsView.includes('WorkspaceTagFilterBar'));
+  assert.ok(popupTagsView.includes('selectedTagIds.length === 0'));
+  assert.ok(sidepanelTagsView.includes('selectedTagIds.length === 0'));
+  assert.ok(sidepanelTagsView.includes('WorkspaceEmptyState'));
+  assert.ok(!sidepanelTagsView.includes('useState<Set<string>>'));
+  assert.ok(workspaceTagFilterBar.includes('Clear filters'));
+  assert.ok(workspaceTagFilterBar.includes('selectedTagIds.length'));
+});
+
 test('popup and sidepanel wire a shared workspace note editor dialog', () => {
   const popupDashboard = read('src/popup/Dashboard.tsx');
   const popupThisPageView = read('src/popup/components/ThisPageView.tsx');

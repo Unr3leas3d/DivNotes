@@ -1,46 +1,46 @@
 import React, { useMemo } from 'react';
-import { Hash, Tags } from 'lucide-react';
+import { Tags } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
+import { WorkspaceTagFilterBar } from '@/components/workspace/WorkspaceTagFilterBar';
 import { createTagResolver, type TagSummary } from '@/lib/extension-selectors';
-import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import type { StoredFolder, StoredNote } from '@/lib/types';
 
 interface TagsViewProps {
   tagSummaries: TagSummary[];
-  selectedTagId: string | null;
+  selectedTagIds: string[];
   notes: StoredNote[];
   foldersById: Map<string, StoredFolder>;
-  tagsById: Map<string, StoredTag>;
   loading: boolean;
   error: string | null;
-  onSelectTag: (tagId: string | null) => void;
+  onToggleTag: (tagId: string) => void;
+  onClearFilters: () => void;
   onOpenNote: (note: StoredNote) => void;
   onEditNote: (note: StoredNote) => void;
 }
 
 export function TagsView({
   tagSummaries,
-  selectedTagId,
+  selectedTagIds,
   notes,
   foldersById,
-  tagsById,
   loading,
   error,
-  onSelectTag,
+  onToggleTag,
+  onClearFilters,
   onOpenNote,
   onEditNote,
 }: TagsViewProps) {
-  const tags = useMemo(() => [...tagsById.values()], [tagsById]);
+  const tags = useMemo(() => tagSummaries.map((summary) => summary.tag), [tagSummaries]);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
   const filteredNotes = useMemo(() => {
-    if (!selectedTagId) {
-      return notes.filter((note) => note.tags.length > 0);
+    if (selectedTagIds.length === 0) {
+      return [];
     }
 
-    return notes.filter((note) => tagResolver.noteHasTagValue(note, selectedTagId));
-  }, [notes, selectedTagId, tagResolver]);
+    return notes.filter((note) => tagResolver.noteHasAllTagValues(note, selectedTagIds));
+  }, [notes, selectedTagIds, tagResolver]);
 
   if (loading) {
     return (
@@ -75,45 +75,33 @@ export function TagsView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => onSelectTag(null)}
-          className={cn(
-            'rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors',
-            selectedTagId === null
-              ? 'border-[#173628] bg-[#173628] text-[#f5efe9]'
-              : 'border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]'
-          )}
-        >
-          All Tags
-        </button>
-        {tagSummaries.map((summary) => (
-          <button
-            key={summary.tag.id}
-            type="button"
-            onClick={() => onSelectTag(summary.tag.id)}
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors',
-              selectedTagId === summary.tag.id
-                ? 'border-[#173628] bg-[#173628] text-[#f5efe9]'
-                : 'border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]'
-            )}
-          >
-            <Hash className="h-3 w-3" />
-            {summary.tag.name}
-            <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[9px] leading-none">
-              {summary.count}
-            </span>
-          </button>
-        ))}
-      </div>
+      <WorkspaceTagFilterBar
+        tagSummaries={tagSummaries}
+        selectedTagIds={selectedTagIds}
+        onToggleTag={onToggleTag}
+        onClearFilters={onClearFilters}
+      />
 
-      {filteredNotes.length === 0 ? (
+      {selectedTagIds.length === 0 ? (
         <WorkspaceEmptyState
           icon={<Tags className="h-5 w-5" />}
-          title="No notes match this tag"
-          description="Choose another tag or clear the filter."
+          title="Select tags to see matching notes"
+          description="Pick one or more tags above to filter the notes list."
+        />
+      ) : filteredNotes.length === 0 ? (
+        <WorkspaceEmptyState
+          icon={<Tags className="h-5 w-5" />}
+          title="No notes match these tags"
+          description="Choose another tag combination or clear the filters."
+          action={
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+            >
+              Clear filters
+            </button>
+          }
         />
       ) : (
         <div className="space-y-2.5">

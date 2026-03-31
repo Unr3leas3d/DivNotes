@@ -1,68 +1,53 @@
-import React, { useState, useMemo } from 'react';
-import { Hash, Tags } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useMemo, useState } from 'react';
+import { Tags } from 'lucide-react';
+
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
-import { buildTagSummaries, createTagResolver } from '@/lib/extension-selectors';
+import { WorkspaceTagFilterBar } from '@/components/workspace/WorkspaceTagFilterBar';
+import { Button } from '@/components/ui/button';
+import { createTagResolver, type TagSummary } from '@/lib/extension-selectors';
+import type { StoredFolder, StoredNote } from '@/lib/types';
 import { NoteCard } from './NoteCard';
-import { TagPill } from './TagPill';
 import { TagManager } from './TagManager';
 import { getAncestorPath } from '@/lib/tree-utils';
-import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';
 
 interface TagsViewProps {
+  tagSummaries: TagSummary[];
+  selectedTagIds: string[];
   notes: StoredNote[];
   folders: StoredFolder[];
-  tags: StoredTag[];
+  loading: boolean;
+  error: string | null;
   searchQuery: string;
+  onToggleTag: (tagId: string) => void;
+  onClearFilters: () => void;
   onDeleteNote: (noteId: string) => void;
   onNavigateNote: (note: StoredNote) => void;
   onEditNote: (note: StoredNote) => void;
 }
 
 export function TagsView({
+  tagSummaries,
+  selectedTagIds,
   notes,
   folders,
-  tags,
+  loading,
+  error,
   searchQuery,
+  onToggleTag,
+  onClearFilters,
   onDeleteNote,
   onNavigateNote,
   onEditNote,
 }: TagsViewProps) {
-  const [activeTagIds, setActiveTagIds] = useState<Set<string>>(new Set());
   const [showManager, setShowManager] = useState(false);
+  const tags = useMemo(() => tagSummaries.map((summary) => summary.tag), [tagSummaries]);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
-
-  const tagNoteCounts = useMemo(() => {
-    return new Map(buildTagSummaries(tags, notes).map((summary) => [summary.tag.id, summary.count]));
-  }, [notes, tags]);
-
-  // Toggle a tag in the active filter
-  const toggleTag = (tagId: string) => {
-    setActiveTagIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(tagId)) {
-        next.delete(tagId);
-      } else {
-        next.add(tagId);
-      }
-      return next;
-    });
-  };
-
-  const removeTag = (tagId: string) => {
-    setActiveTagIds((prev) => {
-      const next = new Set(prev);
-      next.delete(tagId);
-      return next;
-    });
-  };
-
   const filteredNotes = useMemo(() => {
-    let result = notes;
-
-    if (activeTagIds.size > 0) {
-      result = result.filter((note) => tagResolver.noteHasAllTagValues(note, activeTagIds));
+    if (selectedTagIds.length === 0) {
+      return [];
     }
+
+    let result = notes.filter((note) => tagResolver.noteHasAllTagValues(note, selectedTagIds));
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -74,7 +59,11 @@ export function TagsView({
     }
 
     return result;
-  }, [notes, activeTagIds, searchQuery, tagResolver]);
+  }, [notes, searchQuery, selectedTagIds, tagResolver]);
+  const activeTags = useMemo(
+    () => tagSummaries.filter((summary) => selectedTagIds.includes(summary.tag.id)),
+    [selectedTagIds, tagSummaries]
+  );
 
   const getFolderPath = (note: StoredNote): string | undefined => {
     if (!note.folderId) return undefined;
@@ -83,13 +72,28 @@ export function TagsView({
     return ancestors.map((f) => f.name).join(' / ');
   };
 
-  const activeTags = useMemo(
-    () => tags.filter((t) => activeTagIds.has(t.id)),
-    [tags, activeTagIds]
-  );
+  if (loading) {
+    return (
+      <WorkspaceEmptyState
+        loading
+        icon={<Tags className="h-5 w-5" />}
+        title="Loading tags"
+        description="Preparing the latest tag filters."
+      />
+    );
+  }
 
-  // Empty state: no tags at all
-  if (tags.length === 0) {
+  if (error) {
+    return (
+      <WorkspaceEmptyState
+        icon={<Tags className="h-5 w-5" />}
+        title="Tags are unavailable"
+        description={error}
+      />
+    );
+  }
+
+  if (tagSummaries.length === 0) {
     return (
       <WorkspaceEmptyState
         icon={<Tags className="h-5 w-5" />}
@@ -101,24 +105,15 @@ export function TagsView({
 
   return (
     <div className="relative space-y-4">
-      {/* Tag Manager overlay */}
-      {showManager && (
-        <TagManager tags={tags} onClose={() => setShowManager(false)} />
-      )}
+      {showManager ? <TagManager tags={tags} onClose={() => setShowManager(false)} /> : null}
 
-      {/* Header */}
       <div className="rounded-[20px] border border-[#ece7de] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6d7b70]">
-              <Tags className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Tags</p>
-              <p className="text-[13px] font-semibold text-[#173628]">
-                {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
-              </p>
-            </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Tags</p>
+            <p className="text-[13px] font-semibold text-[#173628]">
+              {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
+            </p>
           </div>
           <Button
             variant="ghost"
@@ -130,56 +125,53 @@ export function TagsView({
           </Button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#f8f6f1] pr-2"
-            >
-              <TagPill
-                tag={tag}
-                size="md"
-                active={activeTagIds.has(tag.id)}
-                onClick={() => toggleTag(tag.id)}
-              />
-              <span className="text-[10px] font-medium text-[#8b968e]">
-                {tagNoteCounts.get(tag.id) || 0}
-              </span>
-            </span>
-          ))}
-        </div>
-
         {activeTags.length > 0 ? (
           <div className="mt-4 rounded-[16px] bg-[#f8f6f1] px-3 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9aa294]">
               Filtering by
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {activeTags.map((tag) => (
-                <TagPill
-                  key={tag.id}
-                  tag={tag}
-                  size="sm"
-                  active
-                  onRemove={() => removeTag(tag.id)}
-                />
+              {activeTags.map((summary) => (
+                <span
+                  key={summary.tag.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#173628] bg-[#173628] px-3 py-1.5 text-[11px] font-medium text-[#f5efe9]"
+                >
+                  {summary.tag.name}
+                </span>
               ))}
             </div>
           </div>
         ) : null}
       </div>
 
-      {filteredNotes.length === 0 && activeTagIds.size > 0 ? (
+      <WorkspaceTagFilterBar
+        tagSummaries={tagSummaries}
+        selectedTagIds={selectedTagIds}
+        onToggleTag={onToggleTag}
+        onClearFilters={onClearFilters}
+        density="compact"
+      />
+
+      {selectedTagIds.length === 0 ? (
         <WorkspaceEmptyState
-          icon={<Hash className="h-5 w-5" />}
-          title="No notes match the selected tags"
-          description="Choose another tag or clear the filter."
+          icon={<Tags className="h-5 w-5" />}
+          title="Select tags to see matching notes"
+          description="Pick one or more tags above to filter the notes list."
         />
-      ) : filteredNotes.length === 0 && searchQuery.trim() ? (
+      ) : filteredNotes.length === 0 ? (
         <WorkspaceEmptyState
-          icon={<Hash className="h-5 w-5" />}
-          title="No notes match your search"
-          description={`Nothing matched "${searchQuery}".`}
+          icon={<Tags className="h-5 w-5" />}
+          title="No notes match these tags"
+          description="Choose another tag combination or clear the filters."
+          action={
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+            >
+              Clear filters
+            </button>
+          }
         />
       ) : (
         <div className="space-y-3">
