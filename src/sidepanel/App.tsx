@@ -5,6 +5,8 @@ import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
+import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
+import { workspaceNoteEditEventName } from '@/components/workspace/WorkspaceNoteCard';
 import { getNotesService } from '@/lib/notes-service';
 import { useExtensionWorkspace } from '@/lib/use-extension-workspace';
 import type { StoredNote } from '@/lib/types';
@@ -38,11 +40,17 @@ export default function App() {
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [clearAllDialogError, setClearAllDialogError] = useState<string | null>(null);
   const [clearAllDialogSubmitting, setClearAllDialogSubmitting] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   const foldersById = useMemo(
     () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
     [workspace.data.folders]
   );
+  const notesById = useMemo(
+    () => new Map(workspace.data.notes.map((note) => [note.id, note])),
+    [workspace.data.notes]
+  );
+  const editingNote = editingNoteId ? notesById.get(editingNoteId) ?? null : null;
 
   const activeMainView =
     workspace.view.active === 'settings'
@@ -64,6 +72,20 @@ export default function App() {
 
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
+
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const customEvent = event as CustomEvent<StoredNote>;
+      if (!customEvent.detail?.id) {
+        return;
+      }
+
+      setEditingNoteId(customEvent.detail.id);
+    };
+
+    window.addEventListener(workspaceNoteEditEventName, listener);
+    return () => window.removeEventListener(workspaceNoteEditEventName, listener);
   }, []);
 
   const handleOpenNote = (note: StoredNote) => {
@@ -293,6 +315,20 @@ export default function App() {
           }
         }}
       />
+      {editingNote ? (
+        <WorkspaceNoteEditorDialog
+          note={editingNote}
+          folders={workspace.data.folders}
+          tags={workspace.data.tags}
+          open={Boolean(editingNote)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingNoteId(null);
+            }
+          }}
+          onSaved={() => {}}
+        />
+      ) : null}
     </>
   );
 }

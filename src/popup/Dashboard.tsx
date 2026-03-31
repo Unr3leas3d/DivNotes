@@ -1,7 +1,9 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PanelsTopLeft, Settings2 } from 'lucide-react';
 
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
+import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
+import { workspaceNoteEditEventName } from '@/components/workspace/WorkspaceNoteCard';
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
 import { getFoldersService } from '@/lib/folders-service';
@@ -68,12 +70,14 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const previousViewRef = useRef<MainPopupView>('this-page');
     const [dialogState, setDialogState] = useState<PopupDialogState>(null);
     const [dialogSubmitting, setDialogSubmitting] = useState(false);
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
     const foldersById = useMemo(
         () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
         [workspace.data.folders]
     );
     const tagsById = useMemo(() => new Map(workspace.data.tags.map((tag) => [tag.id, tag])), [workspace.data.tags]);
+    const editingNote = editingNoteId ? notesById.get(editingNoteId) ?? null : null;
 
     const loadingContent = workspace.loading.currentPage || workspace.loading.data;
     const activeMainView = workspace.view.active === 'settings'
@@ -130,6 +134,20 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
         });
         window.close();
     };
+
+    useEffect(() => {
+        const listener = (event: Event) => {
+            const customEvent = event as CustomEvent<StoredNote>;
+            if (!customEvent.detail?.id) {
+                return;
+            }
+
+            setEditingNoteId(customEvent.detail.id);
+        };
+
+        window.addEventListener(workspaceNoteEditEventName, listener);
+        return () => window.removeEventListener(workspaceNoteEditEventName, listener);
+    }, []);
 
     const handleCreateFolder = () => {
         setDialogState({ type: 'new-folder', value: '', error: null });
@@ -376,6 +394,20 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 onConfirm={() => void handleClearAllNotes()}
                 isSubmitting={dialogSubmitting}
             />
+            {editingNote ? (
+                <WorkspaceNoteEditorDialog
+                    note={editingNote}
+                    folders={workspace.data.folders}
+                    tags={workspace.data.tags}
+                    open={Boolean(editingNote)}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setEditingNoteId(null);
+                        }
+                    }}
+                    onSaved={() => {}}
+                />
+            ) : null}
         </PopupShell>
     );
 }
