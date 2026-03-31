@@ -76,7 +76,7 @@ export function PinnedSection({
               tags={tags}
               onDelete={onDeleteNote || (() => {})}
               onNavigate={onNoteClick || (() => {})}
-              onEdit={onEditNote || (() => {})}
+              onEdit={onEditNote}
               onTogglePin={onTogglePin}
             />
           ))}

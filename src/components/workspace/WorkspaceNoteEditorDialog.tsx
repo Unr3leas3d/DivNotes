@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { getNotesService } from '@/lib/notes-service';
 import type { StoredFolder, StoredNote } from '@/lib/types';
+import {
+  buildWorkspaceNoteFolderOptions,
+  shouldReinitializeWorkspaceNoteEditor,
+} from './workspace-note-editor-state';
 
 interface WorkspaceNoteEditorDialogProps {
   note: StoredNote;
@@ -32,17 +36,32 @@ export function WorkspaceNoteEditorDialog({
   const [selectedFolderId, setSelectedFolderId] = useState<string>(note.folderId ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previousStateRef = useRef({
+    open: false,
+    noteId: note.id,
+  });
 
   useEffect(() => {
-    setDraft(note.content);
-    setSelectedFolderId(note.folderId ?? '');
-    setError(null);
-  }, [note, open]);
+    if (
+      shouldReinitializeWorkspaceNoteEditor({
+        previousOpen: previousStateRef.current.open,
+        nextOpen: open,
+        previousNoteId: previousStateRef.current.noteId,
+        nextNoteId: note.id,
+      })
+    ) {
+      setDraft(note.content);
+      setSelectedFolderId(note.folderId ?? '');
+      setError(null);
+    }
 
-  const sortedFolders = useMemo(
-    () => [...folders].sort((left, right) => left.name.localeCompare(right.name)),
-    [folders]
-  );
+    previousStateRef.current = {
+      open,
+      noteId: note.id,
+    };
+  }, [note.content, note.folderId, note.id, open]);
+
+  const folderOptions = useMemo(() => buildWorkspaceNoteFolderOptions(folders), [folders]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -131,9 +150,9 @@ export function WorkspaceNoteEditorDialog({
                 className="flex h-10 w-full rounded-[11px] border border-[#e7e2d8] bg-white px-3 text-[13px] text-[#173628] outline-none transition-colors focus:border-[#173628]/30"
               >
                 <option value="">No folder</option>
-                {sortedFolders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
+                {folderOptions.map((folder) => (
+                  <option key={folder.value} value={folder.value}>
+                    {folder.label}
                   </option>
                 ))}
               </select>
