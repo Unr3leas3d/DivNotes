@@ -125,7 +125,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
   });
   const [activeView, setActiveView] = useState<WorkspaceView>(defaultView);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const authModeRef = useRef<AuthMode>('loading');
   const dataRef = useRef<WorkspaceData>(emptyWorkspaceData());
 
@@ -403,7 +403,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
         setActionError,
         setAuth,
         setSelectedFolderId,
-        setSelectedTagId,
+        setSelectedTagIds,
       }),
     [clearActionError, setActionError]
   );
@@ -419,7 +419,8 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     view: {
       active: activeView,
       folderId: selectedFolderId,
-      tagId: selectedTagId,
+      tagId: selectedTagIds[0] ?? null,
+      tagIds: selectedTagIds,
     } satisfies ViewState,
     setView,
     actions,

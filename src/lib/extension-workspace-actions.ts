@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 import { resetFoldersService } from './folders-service';
 import { type SyncQueueItem } from './types';
@@ -277,7 +277,7 @@ interface CreateExtensionWorkspaceActionsInput {
   setActionError: (message: string) => void;
   setAuth: (auth: WorkspaceAuth) => void;
   setSelectedFolderId: (folderId: string | null) => void;
-  setSelectedTagId: (tagId: string | null) => void;
+  setSelectedTagIds: Dispatch<SetStateAction<string[]>>;
 }
 
 export function createExtensionWorkspaceActions(
@@ -450,10 +450,19 @@ export function createExtensionWorkspaceActions(
       }
     },
     setFolderDetail: setSelectedFolderId,
-    setTagFilter: setSelectedTagId,
+    setTagFilter: (tagId: string | null) => {
+      setSelectedTagIds(tagId ? [tagId] : []);
+    },
+    toggleTagFilter: (tagId: string) => {
+      setSelectedTagIds((current) =>
+        current.includes(tagId)
+          ? current.filter((value) => value !== tagId)
+          : [...current, tagId]
+      );
+    },
     clearFilters: () => {
       setSelectedFolderId(null);
-      setSelectedTagId(null);
+      setSelectedTagIds([]);
     },
   };
 }
