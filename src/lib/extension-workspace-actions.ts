@@ -290,7 +290,7 @@ export function createExtensionWorkspaceActions(
     setActionError,
     setAuth,
     setSelectedFolderId,
-    setSelectedTagId,
+    setSelectedTagIds,
   } = input;
 
   return {
