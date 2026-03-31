@@ -14,7 +14,6 @@ interface ThisPageViewProps {
   error: string | null;
   onAddNote: () => void;
   onOpenNote: (note: StoredNote) => void;
-  onEditNote: (note: StoredNote) => void;
   onDeleteNote: (noteId: string) => void;
 }
 
@@ -26,7 +25,6 @@ export function ThisPageView({
   error,
   onAddNote,
   onOpenNote,
-  onEditNote,
   onDeleteNote,
 }: ThisPageViewProps) {
   if (loading) {
@@ -99,7 +97,6 @@ export function ThisPageView({
               tags={tags}
               onDelete={onDeleteNote}
               onNavigate={onOpenNote}
-              onEdit={onEditNote}
             />
           ))}
         </div>
