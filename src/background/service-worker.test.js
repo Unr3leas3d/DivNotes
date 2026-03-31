@@ -49,8 +49,10 @@ function createChromeStub() {
             },
             tabs: {
                 onActivated: createEvent(),
+                onUpdated: createEvent(),
                 query: async () => [],
                 sendMessage() {},
+                update() {},
             },
             windows: {
                 getCurrent: async () => ({}),
@@ -66,6 +68,39 @@ function createChromeStub() {
         },
     };
 }
+
+test('OPEN_NOTE_TARGET navigates and replays the note target after tab load', async () => {
+    const { chrome } = createChromeStub();
+
+    // Extend stub for this test
+    chrome.tabs.updateCalls = [];
+    const originalUpdate = chrome.tabs.update;
+    chrome.tabs.update = (tabId, props) => {
+        chrome.tabs.updateCalls.push({ tabId, url: props.url });
+    };
+    chrome.tabs.onUpdated = createEvent();
+    chrome.tabs.query = (_query, callback) => {
+        if (callback) callback([{ id: 12, url: 'https://other.com', windowId: 1 }]);
+        return Promise.resolve([{ id: 12, url: 'https://other.com', windowId: 1 }]);
+    };
+
+    globalThis.chrome = chrome;
+    await import(new URL(`./service-worker.js?test=${Date.now()}`, import.meta.url));
+
+    const [messageHandler] = chrome.runtime.onMessage.listeners;
+    const tabId = 12;
+
+    await new Promise((resolve) => {
+        messageHandler(
+            { type: 'OPEN_NOTE_TARGET', note: { url: 'https://ign.com/article', elementSelector: '#headline' } },
+            { tab: { id: tabId, windowId: 1 } },
+            resolve
+        );
+    });
+
+    assert.equal(chrome.tabs.updateCalls[0].url, 'https://ign.com/article');
+    assert.equal(chrome.tabs.onUpdated.listeners.length > 0, true);
+});
 
 test('re-registering the install menu does not recreate a duplicate context-menu id', async () => {
     const { chrome, menuIds } = createChromeStub();

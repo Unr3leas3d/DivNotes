@@ -8,6 +8,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const read = (relativePath) => readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
+test('workspace surfaces delegate note navigation through the background worker', () => {
+  const popupDashboard = read('src/popup/Dashboard.tsx');
+  const sidepanelApp = read('src/sidepanel/App.tsx');
+  const serviceWorker = read('src/background/service-worker.js');
+
+  assert.ok(popupDashboard.includes("type: 'OPEN_NOTE_TARGET'"));
+  assert.ok(sidepanelApp.includes("type: 'OPEN_NOTE_TARGET'"));
+  assert.ok(serviceWorker.includes("if (message.type === 'OPEN_NOTE_TARGET')"));
+  assert.ok(serviceWorker.includes('chrome.tabs.onUpdated.addListener'));
+});
+
 test('popup Google auth surfaces actionable inline failures', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
   const googleAuth = read('src/lib/google-auth.ts');

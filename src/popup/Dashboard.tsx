@@ -117,18 +117,18 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     };
 
     const handleOpenNote = (note: StoredNote) => {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const currentTab = tabs[0];
-            if (currentTab?.url === note.url && currentTab?.id) {
-                chrome.tabs.sendMessage(currentTab.id, {
-                    type: 'SCROLL_TO_NOTE',
-                    selector: note.elementSelector,
-                });
-            } else if (currentTab?.id) {
-                chrome.tabs.update(currentTab.id, { url: note.url });
-            }
-            window.close();
+        chrome.runtime.sendMessage({
+            type: 'OPEN_NOTE_TARGET',
+            note: {
+                url: note.url,
+                elementSelector: note.elementSelector,
+                elementXPath: note.elementXPath,
+                elementTextHash: note.elementTextHash,
+                elementPosition: note.elementPosition,
+                elementTag: note.elementTag,
+            },
         });
+        window.close();
     };
 
     const handleCreateFolder = () => {

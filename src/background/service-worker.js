@@ -62,8 +62,63 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
 });
 
+// Pending note targets keyed by tab id (for cross-page navigation)
+const pendingNoteTargets = new Map();
+
+function normalizeUrl(url) {
+    try {
+        const u = new URL(url);
+        u.hash = '';
+        return u.href;
+    } catch {
+        return url;
+    }
+}
+
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'OPEN_NOTE_TARGET') {
+        const note = message.note;
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const tab = tabs[0];
+            if (!tab?.id) {
+                sendResponse({ success: false });
+                return;
+            }
+
+            if (normalizeUrl(tab.url || '') === normalizeUrl(note.url)) {
+                // Already on the right page — send directly
+                chrome.tabs.sendMessage(tab.id, {
+                    type: 'SCROLL_TO_NOTE',
+                    selector: note.elementSelector,
+                });
+                sendResponse({ success: true });
+                return;
+            }
+
+            // Navigate and replay after load
+            pendingNoteTargets.set(tab.id, note);
+            chrome.tabs.update(tab.id, { url: note.url });
+
+            const onUpdated = (tabId, changeInfo) => {
+                if (tabId === tab.id && changeInfo.status === 'complete') {
+                    chrome.tabs.onUpdated.removeListener(onUpdated);
+                    const pending = pendingNoteTargets.get(tabId);
+                    if (pending) {
+                        pendingNoteTargets.delete(tabId);
+                        chrome.tabs.sendMessage(tabId, {
+                            type: 'SCROLL_TO_NOTE',
+                            selector: pending.elementSelector,
+                        });
+                    }
+                }
+            };
+            chrome.tabs.onUpdated.addListener(onUpdated);
+            sendResponse({ success: true });
+        });
+        return true;
+    }
+
     if (message.type === 'ACTIVATE_INSPECTOR') {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0]?.id) {

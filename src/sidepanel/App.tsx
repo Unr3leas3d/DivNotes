@@ -67,19 +67,16 @@ export default function App() {
   }, []);
 
   const handleOpenNote = (note: StoredNote) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const currentTab = tabs[0];
-      if (currentTab?.url === note.url && currentTab.id) {
-        chrome.tabs.sendMessage(currentTab.id, {
-          type: 'SCROLL_TO_NOTE',
-          selector: note.elementSelector,
-        });
-        return;
-      }
-
-      if (currentTab?.id) {
-        chrome.tabs.update(currentTab.id, { url: note.url });
-      }
+    chrome.runtime.sendMessage({
+      type: 'OPEN_NOTE_TARGET',
+      note: {
+        url: note.url,
+        elementSelector: note.elementSelector,
+        elementXPath: note.elementXPath,
+        elementTextHash: note.elementTextHash,
+        elementPosition: note.elementPosition,
+        elementTag: note.elementTag,
+      },
     });
   };
 
