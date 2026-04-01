@@ -100,58 +100,67 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true;
         }
 
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const tab = tabs[0];
-            if (!tab?.id) {
-                sendResponse({ success: false });
-                return;
-            }
+        const normalizedNoteUrl = normalizeUrl(note.url);
+        const scrollPayload = {
+            type: 'SCROLL_TO_NOTE',
+            selector: note.elementSelector,
+            note: {
+                elementSelector: note.elementSelector,
+                elementXPath: note.elementXPath,
+                elementTextHash: note.elementTextHash,
+                elementPosition: note.elementPosition,
+                elementTag: note.elementTag,
+                url: note.url,
+            },
+        };
 
-            if (normalizeUrl(tab.url || '') === normalizeUrl(note.url)) {
-                // Already on the right page — send directly
-                chrome.tabs.sendMessage(tab.id, {
-                    type: 'SCROLL_TO_NOTE',
-                    selector: note.elementSelector,
-                    note: {
-                        elementSelector: note.elementSelector,
-                        elementXPath: note.elementXPath,
-                        elementTextHash: note.elementTextHash,
-                        elementPosition: note.elementPosition,
-                        elementTag: note.elementTag,
-                        url: note.url,
-                    },
-                });
-                sendResponse({ success: true });
-                return;
-            }
+        // Search all tabs for one already on this URL
+        chrome.tabs.query({}, (allTabs) => {
+            const matchingTab = allTabs.find(
+                (t) => t.url && normalizeUrl(t.url) === normalizedNoteUrl
+            );
 
-            // Navigate and replay after load
-            pendingNoteTargets.set(tab.id, note);
-            chrome.tabs.update(tab.id, { url: note.url });
-
-            const onUpdated = (tabId, changeInfo) => {
-                if (tabId === tab.id && changeInfo.status === 'complete') {
-                    chrome.tabs.onUpdated.removeListener(onUpdated);
-                    const pending = pendingNoteTargets.get(tabId);
-                    if (pending) {
-                        pendingNoteTargets.delete(tabId);
-                        chrome.tabs.sendMessage(tabId, {
-                            type: 'SCROLL_TO_NOTE',
-                            selector: pending.elementSelector,
-                            note: {
-                                elementSelector: pending.elementSelector,
-                                elementXPath: pending.elementXPath,
-                                elementTextHash: pending.elementTextHash,
-                                elementPosition: pending.elementPosition,
-                                elementTag: pending.elementTag,
-                                url: pending.url,
-                            },
-                        });
-                    }
+            if (matchingTab && matchingTab.id) {
+                // Tab exists — activate it and scroll to note
+                chrome.tabs.update(matchingTab.id, { active: true });
+                if (matchingTab.windowId) {
+                    chrome.windows.update(matchingTab.windowId, { focused: true });
                 }
-            };
-            chrome.tabs.onUpdated.addListener(onUpdated);
-            sendResponse({ success: true });
+                chrome.tabs.sendMessage(matchingTab.id, scrollPayload);
+                sendResponse({ success: true });
+            } else {
+                // No matching tab — create a new one (never navigate the current tab away)
+                chrome.tabs.create({ url: note.url }, (newTab) => {
+                    if (!newTab.id) {
+                        sendResponse({ success: false, error: 'Failed to create tab' });
+                        return;
+                    }
+                    pendingNoteTargets.set(newTab.id, note);
+                    const onUpdated = (tabId, changeInfo) => {
+                        if (tabId === newTab.id && changeInfo.status === 'complete') {
+                            chrome.tabs.onUpdated.removeListener(onUpdated);
+                            const pending = pendingNoteTargets.get(tabId);
+                            if (pending) {
+                                pendingNoteTargets.delete(tabId);
+                                chrome.tabs.sendMessage(tabId, {
+                                    type: 'SCROLL_TO_NOTE',
+                                    selector: pending.elementSelector,
+                                    note: {
+                                        elementSelector: pending.elementSelector,
+                                        elementXPath: pending.elementXPath,
+                                        elementTextHash: pending.elementTextHash,
+                                        elementPosition: pending.elementPosition,
+                                        elementTag: pending.elementTag,
+                                        url: pending.url,
+                                    },
+                                });
+                            }
+                        }
+                    };
+                    chrome.tabs.onUpdated.addListener(onUpdated);
+                    sendResponse({ success: true });
+                });
+            }
         });
         return true;
     }
