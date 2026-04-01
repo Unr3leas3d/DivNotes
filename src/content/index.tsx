@@ -3,6 +3,7 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import type { StoredFolder, StoredTag } from '../lib/types.ts';
+import { computeAnchoredOverlayPosition, watchAnchorPosition } from './anchored-overlay.ts';
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
   buildEditorTagNames,
@@ -165,6 +166,8 @@ let selectorPill: HTMLElement | null = null;
 let pageNoteCountPill: HTMLElement | null = null;
 let noteEditorContainer: HTMLElement | null = null;
 let noteEditorKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
+let stopEditorAnchorWatch: (() => void) | null = null;
+let stopCardAnchorWatch: (() => void) | null = null;
 const savedNotes: SavedNote[] = [];
 let notesVisible = true;
 let screenShareMode = false;
@@ -436,6 +439,7 @@ function showNoteCard(note: SavedNote) {
   if (note.expandedEl) return;
 
   // Close any other expanded cards
+  if (stopCardAnchorWatch) { stopCardAnchorWatch(); stopCardAnchorWatch = null; }
   savedNotes.forEach(n => {
     if (n.expandedEl) { n.expandedEl.remove(); n.expandedEl = null; }
   });
@@ -444,12 +448,12 @@ function showNoteCard(note: SavedNote) {
   const cardWidth = 300;
   const cardHeight = 260;
 
-  let top = rect.top + 20;
-  let left = rect.right - cardWidth + 10;
-  if (top + cardHeight > window.innerHeight) top = rect.top - cardHeight - 10;
-  if (left < 8) left = 8;
-  if (left + cardWidth > window.innerWidth) left = window.innerWidth - cardWidth - 8;
-  if (top < 8) top = 8;
+  const pos = computeAnchoredOverlayPosition({
+    anchorRect: rect,
+    overlaySize: { width: cardWidth, height: cardHeight },
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    offset: 12,
+  });
 
   const displayDate = note.createdAt.includes('T')
     ? new Date(note.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -461,8 +465,21 @@ function showNoteCard(note: SavedNote) {
     previewText: note.content,
     tags: note.tags.length > 0 ? note.tags : extractHashtagsFromContent(note.content),
   });
-  card.style.top = `${top}px`;
-  card.style.left = `${left}px`;
+  card.style.top = `${pos.top}px`;
+  card.style.left = `${pos.left}px`;
+
+  // Watch anchor position so the card follows the element on scroll/resize
+  if (stopCardAnchorWatch) stopCardAnchorWatch();
+  stopCardAnchorWatch = watchAnchorPosition(window, note.element, (newRect) => {
+    const updated = computeAnchoredOverlayPosition({
+      anchorRect: newRect,
+      overlaySize: { width: cardWidth, height: cardHeight },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      offset: 12,
+    });
+    card.style.top = `${updated.top}px`;
+    card.style.left = `${updated.left}px`;
+  });
 
   const previewBody = card.querySelector('[data-canopy-preview-body]') as HTMLElement | null;
   if (previewBody) {
@@ -519,6 +536,7 @@ function showNoteCard(note: SavedNote) {
   card.addEventListener('mouseleave', () => {
     setTimeout(() => {
       if (note.expandedEl && !card.matches(':hover') && (!note.badgeEl || !note.badgeEl.matches(':hover'))) {
+        if (stopCardAnchorWatch) { stopCardAnchorWatch(); stopCardAnchorWatch = null; }
         card.remove();
         note.expandedEl = null;
       }
@@ -756,12 +774,12 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   const editorWidth = 380;
   const editorHeight = 430;
 
-  let top = rect.bottom + 8;
-  let left = rect.left;
-  if (top + editorHeight > window.innerHeight) top = rect.top - editorHeight - 8;
-  if (left + editorWidth > window.innerWidth) left = window.innerWidth - editorWidth - 16;
-  if (left < 8) left = 8;
-  if (top < 8) top = 8;
+  const editorPos = computeAnchoredOverlayPosition({
+    anchorRect: rect,
+    overlaySize: { width: editorWidth, height: editorHeight },
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    offset: 8,
+  });
 
   const draft = existingNote ? parseEditorDraft(existingNote.content) : { title: '', body: '' };
   let selectedFolderId: string | null = existingNote?.folderId ?? null;
@@ -789,14 +807,29 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
   Object.assign(noteEditorContainer.style, {
     position: 'fixed',
-    top: `${top}px`,
-    left: `${left}px`,
+    top: `${editorPos.top}px`,
+    left: `${editorPos.left}px`,
     width: `${editorWidth}px`,
     zIndex: '2147483647',
     fontFamily: 'system-ui, sans-serif',
   });
 
   document.body.appendChild(noteEditorContainer);
+
+  // Watch anchor position so the editor follows the element on scroll/resize
+  if (stopEditorAnchorWatch) stopEditorAnchorWatch();
+  stopEditorAnchorWatch = watchAnchorPosition(window, element, (newRect) => {
+    const updated = computeAnchoredOverlayPosition({
+      anchorRect: newRect,
+      overlaySize: { width: editorWidth, height: editorHeight },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      offset: 8,
+    });
+    if (noteEditorContainer) {
+      noteEditorContainer.style.top = `${updated.top}px`;
+      noteEditorContainer.style.left = `${updated.left}px`;
+    }
+  });
 
   const currentEditor = noteEditorContainer;
   const titleInput = currentEditor.querySelector(
@@ -1174,6 +1207,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 }
 
 function closeNoteEditor() {
+  if (stopEditorAnchorWatch) { stopEditorAnchorWatch(); stopEditorAnchorWatch = null; }
   if (noteEditorKeydownHandler) {
     document.removeEventListener('keydown', noteEditorKeydownHandler, true);
     noteEditorKeydownHandler = null;
