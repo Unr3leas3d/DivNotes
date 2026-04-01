@@ -9,6 +9,7 @@ import type { StoredFolder, StoredNote } from '@/lib/types';
 import { NoteCard } from './NoteCard';
 import { TagManager } from './TagManager';
 import { getAncestorPath } from '@/lib/tree-utils';
+import { resolveSidepanelTagsEmptyState } from './tags-view-state';
 
 interface TagsViewProps {
   tagSummaries: TagSummary[];
@@ -42,24 +43,34 @@ export function TagsView({
   const [showManager, setShowManager] = useState(false);
   const tags = useMemo(() => tagSummaries.map((summary) => summary.tag), [tagSummaries]);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
-  const filteredNotes = useMemo(() => {
+  const notesMatchingTags = useMemo(() => {
     if (selectedTagIds.length === 0) {
       return [];
     }
 
-    let result = notes.filter((note) => tagResolver.noteHasAllTagValues(note, selectedTagIds));
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (note) =>
-          note.content.toLowerCase().includes(q) ||
-          note.elementInfo.toLowerCase().includes(q)
-      );
+    return notes.filter((note) => tagResolver.noteHasAllTagValues(note, selectedTagIds));
+  }, [notes, selectedTagIds, tagResolver]);
+  const searchFilteredNotes = useMemo(() => {
+    if (selectedTagIds.length === 0) {
+      return [];
     }
 
-    return result;
-  }, [notes, searchQuery, selectedTagIds, tagResolver]);
+    if (!searchQuery.trim()) {
+      return notesMatchingTags;
+    }
+
+    const q = searchQuery.toLowerCase();
+    return notesMatchingTags.filter(
+      (note) =>
+        note.content.toLowerCase().includes(q) || note.elementInfo.toLowerCase().includes(q)
+    );
+  }, [notesMatchingTags, searchQuery, selectedTagIds.length]);
+  const emptyStateMode = resolveSidepanelTagsEmptyState({
+    selectedTagIds,
+    searchQuery,
+    notesMatchingTagsCount: notesMatchingTags.length,
+    searchFilteredNotesCount: searchFilteredNotes.length,
+  });
   const activeTags = useMemo(
     () => tagSummaries.filter((summary) => selectedTagIds.includes(summary.tag.id)),
     [selectedTagIds, tagSummaries]
@@ -152,13 +163,13 @@ export function TagsView({
         density="compact"
       />
 
-      {selectedTagIds.length === 0 ? (
+      {emptyStateMode === 'select-tags' ? (
         <WorkspaceEmptyState
           icon={<Tags className="h-5 w-5" />}
           title="Select tags to see matching notes"
           description="Pick one or more tags above to filter the notes list."
         />
-      ) : filteredNotes.length === 0 && searchQuery.trim() ? (
+      ) : emptyStateMode === 'search-empty' ? (
         <WorkspaceEmptyState
           icon={<Tags className="h-5 w-5" />}
           title="No notes match your search"
@@ -173,7 +184,7 @@ export function TagsView({
             </button>
           }
         />
-      ) : filteredNotes.length === 0 ? (
+      ) : emptyStateMode === 'tag-empty' ? (
         <WorkspaceEmptyState
           icon={<Tags className="h-5 w-5" />}
           title="No notes match these tags"
@@ -190,7 +201,7 @@ export function TagsView({
         />
       ) : (
         <div className="space-y-3">
-          {filteredNotes.map((note) => (
+          {searchFilteredNotes.map((note) => (
             <NoteCard
               key={note.id}
               note={note}
