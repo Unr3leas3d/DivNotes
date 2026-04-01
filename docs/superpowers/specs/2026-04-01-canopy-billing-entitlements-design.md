@@ -232,6 +232,8 @@ v1 must add note-level `updatedAt` across:
 - content-script note creation/edit flows
 - any import/export payloads that serialize notes
 
+Legacy note rows and local note records should be backfilled so `updatedAt` is present. Where no separate historical update timestamp exists, initialize `updatedAt` from `createdAt`.
+
 Without note-level `updatedAt`, "latest update wins" cannot be applied consistently to notes.
 
 ## Security And RLS
@@ -322,6 +324,8 @@ Responsibilities:
 
 The webhook is the only path that grants, revokes, or restores paid entitlement.
 
+Prefer `customer.state_changed` as the canonical Polar webhook for entitlement sync because it carries the current customer state in one event. More specific subscription events can still be recorded for diagnostics, but the app should avoid splitting entitlement truth across several partially overlapping handlers unless implementation constraints force it.
+
 ## Entitlement Lifecycle
 
 Canonical entitlement rule:
@@ -358,6 +362,12 @@ Canonical entitlement rule:
 - extension loses cloud access immediately
 - cloud data remains stored
 - local editing continues
+
+Important tradeoff:
+
+- In Polar, `subscription.canceled` can mean a subscription was canceled for the end of the current billing period, not necessarily revoked immediately.
+- The approved Canopy product decision is still to cut off cloud access immediately when cancellation/lapse is observed.
+- If that feels too punitive in implementation review, the safer standard SaaS alternative is to keep access until the provider state moves to a revoked / inactive end state instead.
 
 ### Reactivation
 
