@@ -3,15 +3,20 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import type { StoredFolder, StoredTag } from '../lib/types.ts';
+import {
+  createEditorState,
+  editorReducer,
+  buildSavePayload,
+  type EditorState,
+  type TargetInfo,
+} from '../lib/editor-controller.ts';
 import { computeAnchoredOverlayPosition, watchAnchorPosition } from './anchored-overlay.ts';
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
   buildEditorTagNames,
   buildFolderSelectionTree,
-  createFolderDraft,
   getFolderChipLabel,
   getInitialManualTags,
-  getInitialSelectedFolderId,
   getSuggestedFolderIdForDomain,
   getTagChipLabels,
   hasMeaningfulEditorContent,
@@ -781,21 +786,30 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     offset: 8,
   });
 
-  const bodyContent = existingNote?.content ?? '';
-  let selectedFolderId: string | null = existingNote?.folderId ?? null;
+  const targetInfo: TargetInfo = {
+    url: getPageUrl(),
+    hostname: window.location.hostname,
+    pageTitle: document.title,
+    elementSelector: getCssSelector(element),
+    elementTag: element.tagName.toLowerCase(),
+    elementInfo: getElementInfo(element),
+    elementXPath: existingNote?.elementXPath ?? getXPath(element),
+    elementTextHash: existingNote?.elementTextHash ?? getTextHash(element),
+    elementPosition: existingNote?.elementPosition ?? getPosition(element),
+    selectedText,
+  };
+  let editorState = createEditorState(targetInfo, existingNote ?? null);
   let availableFolders: StoredFolder[] = [];
-  let folderSelectionTouched = false;
-  const draft = { title: '', body: bodyContent };
-  let manualTags = getInitialManualTags(existingNote?.tags ?? [], bodyContent);
+  let manualTags = getInitialManualTags(existingNote?.tags ?? [], editorState.body);
 
   noteEditorContainer = createEditorSurface(document as unknown as Parameters<typeof createEditorSurface>[0], {
     isNew: !existingNote,
-    body: bodyContent,
+    body: editorState.body,
     folderLabel: 'Inbox',
-    tagLabels: getTagChipLabels(buildEditorTagNames(manualTags, draft)),
-    pinned: existingNote?.pinned ?? false,
+    tagLabels: getTagChipLabels(buildEditorTagNames(manualTags, { title: '', body: editorState.body })),
+    pinned: editorState.pinned,
     errorMessage: '',
-    saveDisabled: !hasMeaningfulEditorContent(draft),
+    saveDisabled: editorState.saveDisabled,
   }) as unknown as HTMLElement;
 
   Object.assign(noteEditorContainer.style, {
@@ -855,17 +869,11 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   const defaultSaveLabel = existingNote ? 'Update Note' : 'Save Note';
 
   const updateFolderLabel = () => {
-    folderLabel.textContent = getFolderChipLabel(availableFolders, selectedFolderId);
+    folderLabel.textContent = getFolderChipLabel(availableFolders, editorState.folderId);
   };
 
   const updateSaveState = () => {
-    applySaveButtonState(
-      saveBtn,
-      hasMeaningfulEditorContent({
-        title: '',
-        body: bodyTextarea.value,
-      })
-    );
+    applySaveButtonState(saveBtn, !editorState.saveDisabled);
   };
 
   const closeFolderDropdown = () => {
@@ -876,8 +884,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   };
 
   const selectFolder = (folderId: string | null) => {
-    folderSelectionTouched = true;
-    selectedFolderId = folderId;
+    editorState = editorReducer(editorState, { type: 'SET_FOLDER', folderId });
     updateFolderLabel();
     closeFolderDropdown();
   };
@@ -889,7 +896,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       width: '100%',
       padding: '6px 10px',
       border: 'none',
-      background: selectedFolderId === folderId ? 'rgba(171,255,192,0.15)' : 'transparent',
+      background: editorState.folderId === folderId ? 'rgba(171,255,192,0.15)' : 'transparent',
       color: '#052415',
       fontSize: '11px',
       cursor: 'pointer',
@@ -942,13 +949,25 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     const doCreate = () => {
       const name = input.value.trim();
       if (!name) return;
-      const newFolder = createFolderDraft({ name, parentId, siblings: availableFolders });
-      availableFolders = [...availableFolders, newFolder];
-
-      // Persist the new folder to storage
-      chrome.storage.local.set({ divnotes_folders: availableFolders });
-
-      selectFolder(newFolder.id);
+      editorState = editorReducer(editorState, {
+        type: 'SET_FOLDER_DRAFT',
+        name,
+        parentId,
+      });
+      chrome.runtime.sendMessage(
+        { type: 'CREATE_FOLDER', name, parentId },
+        (response) => {
+          if (response?.success && response.folder) {
+            availableFolders = [...availableFolders, response.folder];
+            editorState = editorReducer(editorState, {
+              type: 'FOLDER_CREATED',
+              folderId: response.folder.id,
+            });
+            updateFolderLabel();
+            closeFolderDropdown();
+          }
+        }
+      );
     };
 
     confirmBtn.addEventListener('click', (event) => {
@@ -1109,11 +1128,10 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       window.location.hostname
     );
 
-    if (!folderSelectionTouched) {
-      selectedFolderId = getInitialSelectedFolderId({
-        isNew: !existingNote,
-        existingFolderId: existingNote?.folderId,
-        suggestedFolderId,
+    if (!editorState.folderId && suggestedFolderId) {
+      editorState = editorReducer(editorState, {
+        type: 'SET_FOLDER',
+        folderId: suggestedFolderId,
       });
     }
 
@@ -1121,6 +1139,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   });
 
   bodyTextarea.addEventListener('input', () => {
+    editorState = editorReducer(editorState, { type: 'SET_BODY', body: bodyTextarea.value });
     errorEl.textContent = '';
     updateSaveState();
     renderTagRow();
@@ -1149,21 +1168,19 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   saveBtn.addEventListener('click', async (event) => {
     event.stopPropagation();
 
-    const nextDraft = {
-      title: '',
-      body: bodyTextarea.value,
-    };
+    editorState = editorReducer(editorState, { type: 'SET_BODY', body: bodyTextarea.value });
 
-    if (!hasMeaningfulEditorContent(nextDraft)) {
+    if (editorState.saveDisabled) {
       updateSaveState();
       return;
     }
 
-    const formattedContent = bodyTextarea.value;
-    const nextTags = buildEditorTagNames(manualTags, nextDraft);
+    const payload = buildSavePayload(editorState);
+    const nextTags = buildEditorTagNames(manualTags, { title: '', body: payload.content });
     const nextPinned = pinnedInput.checked;
     const previousTags = existingNote ? [...existingNote.tags] : [];
 
+    editorState = editorReducer(editorState, { type: 'SAVE_START' });
     errorEl.textContent = '';
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
@@ -1173,14 +1190,14 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         const note: SavedNote = {
           id: crypto.randomUUID(),
           element,
-          elementSelector: getCssSelector(element),
-          elementXPath: getXPath(element),
-          elementTextHash: getTextHash(element),
-          elementPosition: getPosition(element),
-          elementInfo: getElementInfo(element),
-          content: formattedContent,
-          selectedText,
-          folderId: selectedFolderId,
+          elementSelector: payload.elementSelector,
+          elementXPath: payload.elementXPath,
+          elementTextHash: payload.elementTextHash,
+          elementPosition: payload.elementPosition,
+          elementInfo: payload.elementInfo,
+          content: payload.content,
+          selectedText: payload.selectedText,
+          folderId: payload.folderId,
           tags: nextTags,
           pinned: nextPinned,
           createdAt: new Date().toISOString(),
@@ -1208,8 +1225,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           note.id === existingNote.id
             ? {
                 ...note,
-                content: formattedContent,
-                folderId: selectedFolderId,
+                content: payload.content,
+                folderId: payload.folderId,
                 tags: nextTags,
                 pinned: nextPinned,
               }
@@ -1217,8 +1234,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         );
 
         await persistSavedNotes(nextSavedNotes);
-        existingNote.content = formattedContent;
-        existingNote.folderId = selectedFolderId;
+        existingNote.content = payload.content;
+        existingNote.folderId = payload.folderId;
         existingNote.tags = nextTags;
         existingNote.pinned = nextPinned;
         if (existingNote.expandedEl) {
@@ -1239,7 +1256,11 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       closeNoteEditor();
     } catch (error) {
       console.error('[Canopy] Failed to save note', error);
-      errorEl.textContent = 'Could not save note. Try again.';
+      editorState = editorReducer(editorState, {
+        type: 'SAVE_ERROR',
+        message: 'Could not save note. Try again.',
+      });
+      errorEl.textContent = editorState.errorMessage;
       saveBtn.textContent = defaultSaveLabel;
       updateSaveState();
     }
