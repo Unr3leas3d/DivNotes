@@ -165,7 +165,7 @@ test('side panel segmented control uses themed active and inactive states', () =
   assert.ok(noteCard.includes('const [expanded, setExpanded] = useState(false);'));
   assert.ok(noteCard.includes('DOMPurify.sanitize'));
   assert.ok(noteCard.includes('marked.parse'));
-  assert.ok(noteCard.includes('Scroll to element'));
+  assert.ok(noteCard.includes('Go to note'));
   assert.ok(noteCard.includes('dangerouslySetInnerHTML'));
   assert.ok(allNotesView.includes('<PinnedSection'));
   assert.ok(popupSettingsView.includes('showSidePanelAction = true'));
