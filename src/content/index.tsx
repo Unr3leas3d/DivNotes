@@ -1191,7 +1191,7 @@ function simpleMarkdown(text: string): string {
     const rawHtml = marked.parse(text, { async: false }) as string;
     return DOMPurify.sanitize(rawHtml, {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'code', 'pre', 'br', 'span', 'div', 'blockquote'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
     });
   } catch (e) {
     console.error('[Canopy] Markdown parsing error', e);

@@ -75,10 +75,31 @@ function normalizeUrl(url) {
     }
 }
 
+/**
+ * Validate a URL is safe for tab navigation.
+ * Only allows http: and https: schemes.
+ */
+function isSafeUrl(url) {
+    if (typeof url !== 'string') return false;
+    try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'OPEN_NOTE_TARGET') {
         const note = message.note;
+
+        // Validate note payload shape
+        if (!note || typeof note !== 'object' || !isSafeUrl(note.url)) {
+            sendResponse({ success: false, error: 'Invalid note target' });
+            return true;
+        }
+
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tab = tabs[0];
             if (!tab?.id) {

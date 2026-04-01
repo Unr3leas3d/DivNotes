@@ -1,6 +1,11 @@
 import { Chrome } from "lucide-react";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function App() {
+  if (window.location.hash === '#/privacy') {
+    return <PrivacyPolicy />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border">
