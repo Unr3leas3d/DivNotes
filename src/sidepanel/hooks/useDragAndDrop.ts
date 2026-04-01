@@ -7,13 +7,17 @@ interface DragItem {
   id: string;
 }
 
+type FolderDropPosition = 'before' | 'into' | 'after';
+
 export function useDragAndDrop(options: {
   onMoveNote: (noteId: string, folderId: string | null) => void;
   onMoveFolder: (folderId: string, newParentId: string | null) => void;
+  onReorderFolder: (folderId: string, targetFolderId: string, position: 'before' | 'after') => void;
   folders: StoredFolder[];
 }) {
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<FolderDropPosition>('into');
 
   const handleDragStart = useCallback((e: DragEvent, type: 'note' | 'folder', id: string) => {
     setDragItem({ type, id });
@@ -28,6 +32,7 @@ export function useDragAndDrop(options: {
   const handleDragEnd = useCallback((e: DragEvent) => {
     setDragItem(null);
     setDropTargetId(null);
+    setDropPosition('into');
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '1';
     }
@@ -37,15 +42,30 @@ export function useDragAndDrop(options: {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDropTargetId(targetFolderId);
-  }, []);
+    if (dragItem?.type === 'folder' && targetFolderId && e.currentTarget instanceof HTMLElement) {
+      const bounds = e.currentTarget.getBoundingClientRect();
+      const offsetY = e.clientY - bounds.top;
+      if (offsetY < bounds.height * 0.28) {
+        setDropPosition('before');
+      } else if (offsetY > bounds.height * 0.72) {
+        setDropPosition('after');
+      } else {
+        setDropPosition('into');
+      }
+      return;
+    }
+    setDropPosition('into');
+  }, [dragItem]);
 
   const handleDragLeave = useCallback(() => {
     setDropTargetId(null);
+    setDropPosition('into');
   }, []);
 
   const handleDrop = useCallback((e: DragEvent, targetFolderId: string | null) => {
     e.preventDefault();
     setDropTargetId(null);
+    setDropPosition('into');
 
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain')) as DragItem;
@@ -55,15 +75,20 @@ export function useDragAndDrop(options: {
         // Prevent dropping folder onto itself or its descendants (would create cycle)
         const descendantIds = getDescendantFolderIds(data.id, options.folders);
         if (data.id !== targetFolderId && (!targetFolderId || !descendantIds.includes(targetFolderId))) {
+          if (targetFolderId && dropPosition !== 'into') {
+            options.onReorderFolder(data.id, targetFolderId, dropPosition);
+            return;
+          }
           options.onMoveFolder(data.id, targetFolderId);
         }
       }
     } catch {}
-  }, [options]);
+  }, [dropPosition, options]);
 
   return {
     dragItem,
     dropTargetId,
+    dropPosition,
     handleDragStart,
     handleDragEnd,
     handleDragOver,

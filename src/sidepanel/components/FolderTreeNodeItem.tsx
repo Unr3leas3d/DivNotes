@@ -1,5 +1,5 @@
 import React, { DragEvent } from 'react';
-import { ChevronDown, ChevronRight, Folder, MoreVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderPlus, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
 import { FolderContextMenu } from './ContextMenu';
@@ -26,6 +26,7 @@ interface FolderTreeNodeItemProps {
   onNoteSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
   // Drag and drop
   dropTargetId?: string | null;
+  dropPosition?: 'before' | 'into' | 'after';
   dragItem?: { type: 'note' | 'folder'; id: string } | null;
   onDragStart?: (e: DragEvent, type: 'note' | 'folder', id: string) => void;
   onDragEnd?: (e: DragEvent) => void;
@@ -53,6 +54,7 @@ export function FolderTreeNodeItem({
   selectedNoteIds,
   onNoteSelectClick,
   dropTargetId,
+  dropPosition,
   dragItem,
   onDragStart,
   onDragEnd,
@@ -66,16 +68,21 @@ export function FolderTreeNodeItem({
   const indent = Math.min(depth, 6) * 16 + 8;
   const isFocused = focusedId === node.folder.id;
   const isDropTarget = dropTargetId === node.folder.id;
+  const isBeforeDropTarget = isDropTarget && dragItem?.type === 'folder' && dropPosition === 'before';
+  const isIntoDropTarget = isDropTarget && dropPosition === 'into';
+  const isAfterDropTarget = isDropTarget && dragItem?.type === 'folder' && dropPosition === 'after';
 
   return (
     <div>
       {/* Folder row */}
       <div
         className={cn(
-          "flex items-center group",
-          isDropTarget && "border-l-2 border-l-primary bg-primary/5"
+          "group rounded-[14px] overflow-hidden transition-colors",
+          isIntoDropTarget && "bg-primary/5 ring-1 ring-primary/25",
+          isBeforeDropTarget && "shadow-[inset_0_2px_0_0_hsl(var(--primary))]",
+          isAfterDropTarget && "shadow-[inset_0_-2px_0_0_hsl(var(--primary))]"
         )}
-        style={{ paddingLeft: `${indent}px`, paddingRight: '8px' }}
+        style={{ paddingLeft: `${indent}px` }}
         draggable
         onDragStart={(e) => onDragStart?.(e, 'folder', node.folder.id)}
         onDragEnd={(e) => onDragEnd?.(e)}
@@ -83,59 +90,74 @@ export function FolderTreeNodeItem({
         onDragLeave={() => onDragLeave?.()}
         onDrop={(e) => onDrop?.(e, node.folder.id)}
       >
-        <button
-          onClick={() => onToggleExpand(node.folder.id)}
-          className={cn(
-            "flex-1 flex items-center gap-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-left min-w-0",
-            isFocused && "ring-2 ring-primary/50 bg-muted/30"
-          )}
-        >
-          {/* Chevron */}
-          {hasContent ? (
-            isExpanded ? (
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            )
-          ) : (
-            <span className="w-3.5 h-3.5 shrink-0" />
-          )}
-
-          {/* Folder icon */}
-          <Folder
-            className="w-3.5 h-3.5 shrink-0"
-            style={{ color: node.folder.color || undefined }}
-          />
-
-          {/* Folder name */}
-          <span className="text-sm font-medium flex-1 truncate">
-            {node.folder.name}
-          </span>
-
-          {/* Note count badge */}
-          {noteCount > 0 && (
-            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {noteCount}
-            </span>
-          )}
-        </button>
-
-        {/* More button with context menu */}
-        <FolderContextMenu
-          folder={node.folder}
-          onNewSubfolder={() => onNewSubfolder?.(node.folder.id)}
-          onRename={() => onRenameFolder?.(node.folder.id)}
-          onChangeColor={() => onChangeColor?.(node.folder.id)}
-          onTogglePin={() => onToggleFolderPin?.(node.folder.id)}
-          onDelete={() => onDeleteFolder?.(node.folder.id)}
-        >
+        <div className="flex w-full items-center gap-1 pr-1">
           <button
-            className="ml-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all shrink-0"
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => onToggleExpand(node.folder.id)}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2 rounded-[14px] px-2 py-1.5 text-left transition-colors hover:bg-muted/50",
+              isFocused && "bg-muted/30 ring-2 ring-primary/50"
+            )}
           >
-            <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
+            {/* Chevron */}
+            {hasContent ? (
+              isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              )
+            ) : (
+              <span className="h-3.5 w-3.5 shrink-0" />
+            )}
+
+            {/* Folder icon */}
+            <Folder
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: node.folder.color || undefined }}
+            />
+
+            {/* Folder name */}
+            <span className="flex-1 truncate text-sm font-medium">
+              {node.folder.name}
+            </span>
+
+            {/* Note count badge */}
+            {noteCount > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                {noteCount}
+              </span>
+            )}
           </button>
-        </FolderContextMenu>
+
+          <button
+            type="button"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#526357] transition-colors hover:bg-muted"
+            onClick={(event) => {
+              event.stopPropagation();
+              onNewSubfolder?.(node.folder.id);
+            }}
+            aria-label="Add subfolder"
+            title="Add subfolder"
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+          </button>
+
+          {/* More button with context menu */}
+          <FolderContextMenu
+            folder={node.folder}
+            onNewSubfolder={() => onNewSubfolder?.(node.folder.id)}
+            onRename={() => onRenameFolder?.(node.folder.id)}
+            onChangeColor={() => onChangeColor?.(node.folder.id)}
+            onTogglePin={() => onToggleFolderPin?.(node.folder.id)}
+            onDelete={() => onDeleteFolder?.(node.folder.id)}
+          >
+            <button
+              className="shrink-0 rounded-[10px] p-1 transition-colors hover:bg-muted"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </FolderContextMenu>
+        </div>
       </div>
 
       {/* Expanded content */}
@@ -163,6 +185,7 @@ export function FolderTreeNodeItem({
               selectedNoteIds={selectedNoteIds}
               onNoteSelectClick={onNoteSelectClick}
               dropTargetId={dropTargetId}
+              dropPosition={dropPosition}
               dragItem={dragItem}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}

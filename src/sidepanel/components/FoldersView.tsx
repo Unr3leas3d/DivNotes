@@ -16,7 +16,7 @@ import { useTreeKeyboard } from '../hooks/useTreeKeyboard';
 import { useMultiSelect } from '../hooks/useMultiSelect';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import type { StoredNote, StoredFolder, StoredTag, FolderTreeNode } from '@/lib/types';
-import { TAG_COLORS } from '@/lib/types';
+import { FOLDER_COLORS } from '@/lib/types';
 
 interface FoldersViewProps {
   notes: StoredNote[];
@@ -33,7 +33,7 @@ type FolderDialogState =
   | { type: 'new-folder'; value: string; error: string | null }
   | { type: 'new-subfolder'; parentId: string; value: string; error: string | null }
   | { type: 'rename-folder'; folderId: string; value: string; error: string | null }
-  | { type: 'change-color'; folderId: string; value: string; error: string | null }
+  | { type: 'change-color'; folderId: string; selectedColor: string | null; error: string | null }
   | { type: 'delete-folder'; folderId: string; error: string | null }
   | { type: 'bulk-move'; value: string; error: string | null }
   | { type: 'bulk-tag'; value: string; error: string | null }
@@ -98,14 +98,25 @@ export function FoldersView({
   }, [onRefresh]);
 
   const handleMoveFolder = useCallback(async (folderId: string, newParentId: string | null) => {
+    const siblings = folders.filter((folder) => folder.parentId === newParentId && folder.id !== folderId);
     const service = await getFoldersService();
-    await service.update(folderId, { parentId: newParentId });
+    await service.update(folderId, {
+      parentId: newParentId,
+      order: getNextOrder(siblings),
+    });
+    onRefresh?.();
+  }, [folders, onRefresh]);
+
+  const handleReorderFolder = useCallback(async (folderId: string, targetFolderId: string, position: 'before' | 'after') => {
+    const service = await getFoldersService();
+    await service.reorder(folderId, targetFolderId, position);
     onRefresh?.();
   }, [onRefresh]);
 
   const {
     dragItem,
     dropTargetId,
+    dropPosition,
     handleDragStart,
     handleDragEnd,
     handleDragOver,
@@ -114,6 +125,7 @@ export function FoldersView({
   } = useDragAndDrop({
     onMoveNote: handleMoveNote,
     onMoveFolder: handleMoveFolder,
+    onReorderFolder: handleReorderFolder,
     folders,
   });
 
@@ -221,14 +233,10 @@ export function FoldersView({
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
 
-    const currentColorIndex = folder.color
-      ? TAG_COLORS.indexOf(folder.color as (typeof TAG_COLORS)[number])
-      : -1;
-
     setDialogState({
       type: 'change-color',
       folderId,
-      value: currentColorIndex >= 0 ? String(currentColorIndex + 1) : '0',
+      selectedColor: folder.color,
       error: null,
     });
   }, [folders]);
@@ -443,21 +451,8 @@ export function FoldersView({
           return;
         }
         case 'change-color': {
-          const value = dialogState.value.trim();
-          if (!/^\d+$/.test(value)) {
-            setCurrentDialogError(`Enter a number between 0 and ${TAG_COLORS.length}.`);
-            return;
-          }
-
-          const index = Number.parseInt(value, 10);
-          if (index < 0 || index > TAG_COLORS.length) {
-            setCurrentDialogError(`Enter a number between 0 and ${TAG_COLORS.length}.`);
-            return;
-          }
-
-          const color = index === 0 ? null : TAG_COLORS[index - 1];
           const service = await getFoldersService();
-          await service.update(dialogState.folderId, { color });
+          await service.update(dialogState.folderId, { color: dialogState.selectedColor });
           setDialogState(null);
           onRefresh?.();
           return;
@@ -564,6 +559,19 @@ export function FoldersView({
     dialogState && 'value' in dialogState ? dialogState.error : null;
   const dialogInlineError =
     dialogState && !('value' in dialogState) ? dialogState.error : null;
+  const handleDialogSelectedColorChange = useCallback((selectedColor: string | null) => {
+    setDialogState((current) => {
+      if (!current || current.type !== 'change-color') {
+        return current;
+      }
+
+      return {
+        ...current,
+        selectedColor,
+        error: null,
+      };
+    });
+  }, []);
   const dialogConfig = useMemo<FolderDialogConfig | null>(() => {
     if (!dialogState) {
       return null;
@@ -601,11 +609,9 @@ export function FoldersView({
         };
       case 'change-color':
         return {
-          title: 'Change Folder Color',
-          description: `Enter 0 to remove the color, or choose a number from 1 to ${TAG_COLORS.length}.`,
+          title: 'Choose Folder Color',
+          description: 'Pick a folder color in-app so the change is easy to preview.',
           confirmLabel: 'Apply Color',
-          promptLabel: `Color Number (0-${TAG_COLORS.length})`,
-          promptPlaceholder: `0-${TAG_COLORS.length}`,
           destructive: false,
         };
       case 'delete-folder':
@@ -761,6 +767,7 @@ export function FoldersView({
           selectedNoteIds={selectedIds}
           onNoteSelectClick={toggleSelect}
           dropTargetId={dropTargetId}
+          dropPosition={dropPosition}
           dragItem={dragItem}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
@@ -839,7 +846,46 @@ export function FoldersView({
           onPromptChange={handleDialogPromptChange}
           onConfirm={() => void handleDialogConfirm()}
           isSubmitting={dialogSubmitting}
-        />
+        >
+          {dialogState?.type === 'change-color' ? (
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]">
+                Folder color
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  className={cn(
+                    'col-span-2 rounded-[12px] border px-3 py-2 text-left text-[12px] font-medium transition-colors',
+                    dialogState.selectedColor === null
+                      ? 'border-[#173628] bg-[#f1eee7] text-[#173628]'
+                      : 'border-[#e7e2d8] bg-white text-[#526357] hover:bg-[#f8f6f1]'
+                  )}
+                  onClick={() => handleDialogSelectedColorChange(null)}
+                >
+                  No color
+                </button>
+                {FOLDER_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-label={`Select folder color ${color}`}
+                    className={cn(
+                      'flex h-10 items-center justify-center rounded-[12px] border transition-transform hover:scale-[1.02]',
+                      dialogState.selectedColor === color
+                        ? 'border-[#173628] ring-2 ring-[#173628]/20'
+                        : 'border-[#e7e2d8]'
+                    )}
+                    style={{ backgroundColor: color }}
+                    onClick={() => handleDialogSelectedColorChange(color)}
+                  >
+                    <span className="sr-only">{color}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </WorkspaceActionDialog>
       ) : null}
     </div>
   );

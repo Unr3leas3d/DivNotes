@@ -87,3 +87,30 @@ test('popup and sidepanel wire a shared workspace note editor dialog', () => {
   assert.ok(sidepanelTagsView.includes('onEditNote'));
   assert.ok(sidepanelNoteCard.includes('onEdit?: (note: StoredNote) => void;'));
 });
+
+test('folder views expose visible creation, color, and reorder affordances without browser dialogs', () => {
+  const popupFolders = read('src/popup/components/FoldersView.tsx');
+  const sidepanelFolders = read('src/sidepanel/components/FoldersView.tsx');
+  const folderTreeNode = read('src/sidepanel/components/FolderTreeNodeItem.tsx');
+  const dragHook = read('src/sidepanel/hooks/useDragAndDrop.ts');
+  const foldersService = read('src/lib/folders-service.ts');
+  const sharedTypes = read('src/lib/types.ts');
+  const workspaceDialog = read('src/components/workspace/WorkspaceActionDialog.tsx');
+
+  assert.ok(popupFolders.includes('Folder color'));
+  assert.ok(popupFolders.includes('summary.folder.color'));
+  assert.ok(sidepanelFolders.includes("selectedColor: string | null"));
+  assert.ok(sidepanelFolders.includes('Choose Folder Color'));
+  assert.ok(!sidepanelFolders.includes('Color Number'));
+  assert.ok(!sidepanelFolders.includes('Enter a number between'));
+  assert.ok(folderTreeNode.includes('FolderPlus'));
+  assert.ok(folderTreeNode.includes('aria-label="Add subfolder"'));
+  assert.ok(dragHook.includes('onReorderFolder'));
+  assert.ok(dragHook.includes("type FolderDropPosition = 'before' | 'into' | 'after'"));
+  assert.ok(foldersService.includes('folder.color ??= getNextFolderColor'));
+  assert.ok(sharedTypes.includes('export const FOLDER_COLORS'));
+  assert.ok(workspaceDialog.includes('children'));
+  assert.ok(!sidepanelFolders.includes('window.prompt'));
+  assert.ok(!sidepanelFolders.includes('window.confirm'));
+  assert.ok(!sidepanelFolders.includes('window.alert'));
+});

@@ -144,7 +144,13 @@ export function FoldersView({
             onClick={() => onSelectFolder(summary.folder.id)}
             className="flex w-full items-center gap-3 rounded-[18px] border border-[#ece7de] bg-white px-4 py-4 text-left shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6]"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6e7c72]">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6e7c72]"
+              style={{
+                backgroundColor: summary.folder.color ? `${summary.folder.color}22` : undefined,
+                color: summary.folder.color || undefined,
+              }}
+            >
               <Folder className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
@@ -153,6 +159,15 @@ export function FoldersView({
                 {parentFolder ? `${parentFolder.name} / ` : ''}
                 {summary.count} {summary.count === 1 ? 'note' : 'notes'}
               </p>
+              <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-[#6d7b70]">
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-[#d9d4ca]"
+                  style={{ backgroundColor: summary.folder.color || '#f3f1eb' }}
+                />
+                <span>
+                  Folder color {summary.folder.color ? 'set' : 'not set'}
+                </span>
+              </div>
             </div>
             <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
               Open

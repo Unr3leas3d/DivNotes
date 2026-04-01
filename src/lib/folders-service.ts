@@ -1,16 +1,65 @@
 import { supabase } from './supabase.ts';
 import type { StoredFolder, SyncQueueItem } from './types.ts';
+import { FOLDER_COLORS } from './types.ts';
 import { getDescendantFolderIds } from './tree-utils.ts';
 import { getNextOrder } from './tag-utils.ts';
 
 export interface FoldersService {
   create(folder: StoredFolder): Promise<void>;
   update(id: string, updates: Partial<StoredFolder>): Promise<void>;
+  reorder(folderId: string, targetFolderId: string, position: 'before' | 'after'): Promise<void>;
   delete(id: string): Promise<void>;
   getAll(): Promise<StoredFolder[]>;
 }
 
 const STORAGE_KEY = 'divnotes_folders';
+
+function getNextFolderColor(folders: StoredFolder[]): string {
+  return FOLDER_COLORS[folders.length % FOLDER_COLORS.length];
+}
+
+function buildReorderedFolders(
+  folders: StoredFolder[],
+  folderId: string,
+  targetFolderId: string,
+  position: 'before' | 'after'
+): StoredFolder[] {
+  const folder = folders.find((item) => item.id === folderId);
+  const targetFolder = folders.find((item) => item.id === targetFolderId);
+
+  if (!folder || !targetFolder || folder.id === targetFolder.id) {
+    return folders;
+  }
+
+  const nextParentId = targetFolder.parentId;
+  const siblingOrder = folders
+    .filter((item) => item.parentId === nextParentId && item.id !== folderId)
+    .sort((left, right) => left.order - right.order);
+  const targetIndex = siblingOrder.findIndex((item) => item.id === targetFolderId);
+
+  if (targetIndex < 0) {
+    return folders;
+  }
+
+  const insertIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+  const timestamp = new Date().toISOString();
+  const reorderedSiblings = [
+    ...siblingOrder.slice(0, insertIndex),
+    { ...folder, parentId: nextParentId },
+    ...siblingOrder.slice(insertIndex),
+  ].map((item, index) => ({
+    ...item,
+    order: index,
+    updatedAt: timestamp,
+  }));
+
+  const nextById = new Map(folders.map((item) => [item.id, item]));
+  for (const item of reorderedSiblings) {
+    nextById.set(item.id, item);
+  }
+
+  return folders.map((item) => nextById.get(item.id) ?? item);
+}
 
 // ==================== LOCAL SERVICE ====================
 export class LocalFoldersService implements FoldersService {
@@ -25,6 +74,7 @@ export class LocalFoldersService implements FoldersService {
 
   async create(folder: StoredFolder): Promise<void> {
     const all = await this.getAllFolders();
+    folder.color ??= getNextFolderColor(all);
     all.push(folder);
     await this.setAllFolders(all);
   }
@@ -62,6 +112,12 @@ export class LocalFoldersService implements FoldersService {
 
   async getAll(): Promise<StoredFolder[]> {
     return this.getAllFolders();
+  }
+
+  async reorder(folderId: string, targetFolderId: string, position: 'before' | 'after'): Promise<void> {
+    const all = await this.getAllFolders();
+    const reordered = buildReorderedFolders(all, folderId, targetFolderId, position);
+    await this.setAllFolders(reordered);
   }
 }
 
@@ -164,6 +220,41 @@ export class CloudFoldersService implements FoldersService {
       console.warn('[Canopy] Offline — using local folder cache');
     }
     return this.local.getAll();
+  }
+
+  async reorder(folderId: string, targetFolderId: string, position: 'before' | 'after'): Promise<void> {
+    const before = await this.local.getAll();
+    await this.local.reorder(folderId, targetFolderId, position);
+    const after = await this.local.getAll();
+    const changedFolders = after.filter((folder) => {
+      const previous = before.find((item) => item.id === folder.id);
+      return (
+        previous &&
+        (previous.parentId !== folder.parentId || previous.order !== folder.order)
+      );
+    });
+
+    try {
+      await Promise.all(changedFolders.map((folder) =>
+        supabase
+          .from('folders')
+          .update({
+            parent_id: folder.parentId,
+            order: folder.order,
+            updated_at: folder.updatedAt,
+          })
+          .eq('id', folder.id)
+          .eq('user_id', this.userId)
+      ));
+    } catch {
+      for (const folder of changedFolders) {
+        await this.queueOperation('update', folder.id, {
+          parent_id: folder.parentId,
+          order: folder.order,
+          updated_at: folder.updatedAt,
+        });
+      }
+    }
   }
 }
 
