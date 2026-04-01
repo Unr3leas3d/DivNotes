@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Folder, FolderOpen } from 'lucide-react';
+import { ExternalLink, Folder, FolderOpen } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
@@ -18,6 +18,7 @@ interface FoldersViewProps {
   onCreateFolder: () => void;
   onOpenNote: (note: StoredNote) => void;
   onEditNote: (note: StoredNote) => void;
+  onOpenAsTabGroup?: (folderId: string) => void;
 }
 
 export function FoldersView({
@@ -32,6 +33,7 @@ export function FoldersView({
   onCreateFolder,
   onOpenNote,
   onEditNote,
+  onOpenAsTabGroup,
 }: FoldersViewProps) {
   const selectedSummary = useMemo(
     () => folderSummaries.find((summary) => summary.folder.id === selectedFolderId) || null,
@@ -72,6 +74,22 @@ export function FoldersView({
           <p className="mt-1 text-[11px] text-[#8c978f]">
             {selectedSummary.count} {selectedSummary.count === 1 ? 'note' : 'notes'} saved here.
           </p>
+          {selectedSummary.count > 0 && onOpenAsTabGroup && (
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedSummary.count > 15) {
+                  const confirmed = window.confirm(`Open ${selectedSummary.count} tabs in a group?`);
+                  if (!confirmed) return;
+                }
+                onOpenAsTabGroup(selectedSummary.folder.id);
+              }}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#10271d]"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open All
+            </button>
+          )}
         </div>
 
         {selectedSummary.count === 0 ? (
@@ -138,41 +156,52 @@ export function FoldersView({
         const parentFolder = summary.folder.parentId ? foldersById.get(summary.folder.parentId) : null;
 
         return (
-          <button
-            key={summary.folder.id}
-            type="button"
-            onClick={() => onSelectFolder(summary.folder.id)}
-            className="flex w-full items-center gap-3 rounded-[18px] border border-[#ece7de] bg-white px-4 py-4 text-left shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6]"
-          >
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6e7c72]"
-              style={{
-                backgroundColor: summary.folder.color ? `${summary.folder.color}22` : undefined,
-                color: summary.folder.color || undefined,
-              }}
+          <div key={summary.folder.id} className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onSelectFolder(summary.folder.id)}
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-[18px] border border-[#ece7de] bg-white px-4 py-4 text-left shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6]"
             >
-              <Folder className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-[#173628]">{summary.folder.name}</p>
-              <p className="truncate text-[11px] text-[#8c978f]">
-                {parentFolder ? `${parentFolder.name} / ` : ''}
-                {summary.count} {summary.count === 1 ? 'note' : 'notes'}
-              </p>
-              <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-[#6d7b70]">
-                <span
-                  className="h-2.5 w-2.5 rounded-full border border-[#d9d4ca]"
-                  style={{ backgroundColor: summary.folder.color || '#f3f1eb' }}
-                />
-                <span>
-                  Folder color {summary.folder.color ? 'set' : 'not set'}
-                </span>
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6e7c72]"
+                style={{
+                  backgroundColor: summary.folder.color ? `${summary.folder.color}22` : undefined,
+                  color: summary.folder.color || undefined,
+                }}
+              >
+                <Folder className="h-4 w-4" />
               </div>
-            </div>
-            <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
-              Open
-            </span>
-          </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-[#173628]">{summary.folder.name}</p>
+                <p className="truncate text-[11px] text-[#8c978f]">
+                  {parentFolder ? `${parentFolder.name} / ` : ''}
+                  {summary.count} {summary.count === 1 ? 'note' : 'notes'}
+                </p>
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-[#6d7b70]">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-[#d9d4ca]"
+                    style={{ backgroundColor: summary.folder.color || '#f3f1eb' }}
+                  />
+                  <span>
+                    Folder color {summary.folder.color ? 'set' : 'not set'}
+                  </span>
+                </div>
+              </div>
+              <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
+                Open
+              </span>
+            </button>
+            {onOpenAsTabGroup && summary.count > 0 && (
+              <button
+                type="button"
+                onClick={() => onOpenAsTabGroup(summary.folder.id)}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[14px] border border-[#ece7de] bg-white text-[#6e7c72] shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6] hover:text-[#173628]"
+                title="Open all as tab group"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         );
       })}
     </div>

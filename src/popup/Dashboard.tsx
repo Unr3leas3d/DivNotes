@@ -296,6 +296,9 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onCreateFolder={() => void handleCreateFolder()}
                         onOpenNote={handleOpenNote}
                         onEditNote={handleEditNote}
+                        onOpenAsTabGroup={(folderId) => {
+                            chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId });
+                        }}
                     />
                 );
             case 'tags':
