@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   buildEditorTagNames,
+  buildFolderSelectionTree,
+  createFolderDraft,
   createFolderPickerHeader,
   formatEditorContent,
   getFolderChipLabel,
@@ -338,4 +340,35 @@ test('savePageNotesToStorage preserves notes from other pages when the current p
     storageState.divnotes_notes.map((note: { id: string }) => note.id),
     ['other-page-note']
   );
+});
+
+const sampleFolders = [
+  { id: 'folder-1', name: 'Inbox', parentId: null, order: 0, color: null, pinned: false, createdAt: '', updatedAt: '' },
+  { id: 'folder-2', name: 'Product', parentId: null, order: 1, color: '#1a5c2e', pinned: false, createdAt: '', updatedAt: '' },
+  { id: 'folder-3', name: 'Specs', parentId: 'folder-2', order: 0, color: '#2a8c4e', pinned: false, createdAt: '', updatedAt: '' },
+];
+
+test('buildFolderSelectionTree returns nested folder choices for the inline editor', () => {
+  const options = buildFolderSelectionTree(sampleFolders);
+  assert.deepEqual(options.map((option) => option.label), ['Inbox', 'Product', 'Product / Specs']);
+});
+
+test('buildFolderSelectionTree returns empty array for empty input', () => {
+  assert.deepEqual(buildFolderSelectionTree([]), []);
+});
+
+test('createFolderDraft returns a new child folder with sibling order and a color', () => {
+  const folder = createFolderDraft({ name: 'Launch', parentId: 'folder-2', siblings: sampleFolders });
+  assert.equal(folder.name, 'Launch');
+  assert.equal(folder.parentId, 'folder-2');
+  assert.equal(typeof folder.color, 'string');
+  assert.equal(typeof folder.id, 'string');
+  assert.ok(folder.id.length > 0);
+  assert.equal(typeof folder.order, 'number');
+});
+
+test('createFolderDraft assigns order after last sibling', () => {
+  const folder = createFolderDraft({ name: 'New', parentId: null, siblings: sampleFolders });
+  // Inbox (order 0) and Product (order 1) are root siblings, so new should be order 2
+  assert.equal(folder.order, 2);
 });

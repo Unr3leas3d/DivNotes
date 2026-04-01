@@ -7,6 +7,8 @@ import { computeAnchoredOverlayPosition, watchAnchorPosition } from './anchored-
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
   buildEditorTagNames,
+  buildFolderSelectionTree,
+  createFolderDraft,
   getFolderChipLabel,
   getInitialManualTags,
   getInitialSelectedFolderId,
@@ -880,13 +882,12 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     closeFolderDropdown();
   };
 
-  const createFolderOption = (label: string, folderId: string | null, depth = 0) => {
+  const createFolderOption = (label: string, folderId: string | null) => {
     const option = document.createElement('button');
     Object.assign(option.style, {
       display: 'block',
       width: '100%',
       padding: '6px 10px',
-      paddingLeft: `${10 + depth * 16}px`,
       border: 'none',
       background: selectedFolderId === folderId ? 'rgba(171,255,192,0.15)' : 'transparent',
       color: '#052415',
@@ -903,6 +904,68 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     return option;
   };
 
+  const createNewFolderRow = (parentId: string | null, parentLabel: string) => {
+    const row = document.createElement('div');
+    Object.assign(row.style, {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '4px 10px',
+    });
+
+    const input = document.createElement('input');
+    input.setAttribute('type', 'text');
+    input.setAttribute('placeholder', parentLabel ? `Subfolder in ${parentLabel}` : 'New folder name');
+    Object.assign(input.style, {
+      flex: '1',
+      padding: '4px 8px',
+      border: '1px solid rgba(5,36,21,0.1)',
+      borderRadius: '4px',
+      fontSize: '11px',
+      color: '#052415',
+      fontFamily: 'system-ui,sans-serif',
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Create';
+    Object.assign(confirmBtn.style, {
+      padding: '4px 8px',
+      border: 'none',
+      borderRadius: '4px',
+      background: '#052415',
+      color: '#F5EFE9',
+      fontSize: '10px',
+      cursor: 'pointer',
+      fontFamily: 'system-ui,sans-serif',
+    });
+
+    const doCreate = () => {
+      const name = input.value.trim();
+      if (!name) return;
+      const newFolder = createFolderDraft({ name, parentId, siblings: availableFolders });
+      availableFolders = [...availableFolders, newFolder];
+
+      // Persist the new folder to storage
+      chrome.storage.local.set({ divnotes_folders: availableFolders });
+
+      selectFolder(newFolder.id);
+    };
+
+    confirmBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      doCreate();
+    });
+    input.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.key === 'Enter') doCreate();
+      if (event.key === 'Escape') closeFolderDropdown();
+    });
+
+    row.appendChild(input);
+    row.appendChild(confirmBtn);
+    return { row, input };
+  };
+
   const openFolderDropdown = () => {
     if (folderDropdown) {
       closeFolderDropdown();
@@ -912,7 +975,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     folderDropdown = document.createElement('div');
     folderDropdown.id = 'canopy-folder-dropdown';
     Object.assign(folderDropdown.style, {
-      maxHeight: '200px',
+      maxHeight: '240px',
       overflow: 'auto',
       background: '#FFFFFF',
       border: '1px solid rgba(5,36,21,0.1)',
@@ -922,21 +985,32 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       width: '100%',
     });
 
+    // Inbox option (null folder)
     folderDropdown.appendChild(createFolderOption('Inbox', null));
 
-    const appendFolders = (parentId: string | null, depth: number) => {
-      const children = availableFolders
-        .filter((folder) => folder.parentId === parentId)
-        .sort((a, b) => a.order - b.order);
+    // Build flat selection tree with nested labels
+    const tree = buildFolderSelectionTree(availableFolders);
+    for (const option of tree) {
+      folderDropdown.appendChild(createFolderOption(option.label, option.id));
+    }
 
-      children.forEach((folder) => {
-        folderDropdown?.appendChild(createFolderOption(folder.name, folder.id, depth));
-        appendFolders(folder.id, depth + 1);
-      });
-    };
+    // Separator
+    const sep = document.createElement('div');
+    Object.assign(sep.style, {
+      height: '1px',
+      background: 'rgba(5,36,21,0.06)',
+      margin: '4px 0',
+    });
+    folderDropdown.appendChild(sep);
 
-    appendFolders(null, 0);
+    // Create folder row
+    const { row: createRow, input: createInput } = createNewFolderRow(null, '');
+    folderDropdown.appendChild(createRow);
+
     folderControl.appendChild(folderDropdown);
+
+    // Auto-focus the create input
+    setTimeout(() => createInput.focus(), 0);
   };
 
   const bindTagRow = () => {

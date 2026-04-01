@@ -383,3 +383,63 @@ export function savePageNotesToStorage({
     });
   });
 }
+
+// ==================== FOLDER SELECTOR HELPERS ====================
+
+type FolderLike = Pick<StoredFolder, 'id' | 'name' | 'parentId' | 'order'>;
+
+export type FolderSelectionOption = {
+  id: string;
+  label: string;
+  depth: number;
+};
+
+export function buildFolderSelectionTree(
+  folders: readonly FolderLike[]
+): FolderSelectionOption[] {
+  const result: FolderSelectionOption[] = [];
+
+  const appendChildren = (parentId: string | null, depth: number, prefix: string) => {
+    const children = folders
+      .filter((f) => f.parentId === parentId)
+      .sort((a, b) => a.order - b.order);
+
+    for (const folder of children) {
+      const label = prefix ? `${prefix} / ${folder.name}` : folder.name;
+      result.push({ id: folder.id, label, depth });
+      appendChildren(folder.id, depth + 1, label);
+    }
+  };
+
+  appendChildren(null, 0, '');
+  return result;
+}
+
+const FOLDER_COLORS = [
+  '#1a5c2e', '#2a8c4e', '#0d7377', '#4a6741',
+  '#2d6a4f', '#40916c', '#52b788', '#74c69d',
+];
+
+export function createFolderDraft({
+  name,
+  parentId,
+  siblings,
+}: {
+  name: string;
+  parentId: string | null;
+  siblings: readonly FolderLike[];
+}): StoredFolder {
+  const sameLevelSiblings = siblings.filter((f) => f.parentId === parentId);
+  const maxOrder = sameLevelSiblings.reduce((max, f) => Math.max(max, f.order), -1);
+
+  return {
+    id: crypto.randomUUID(),
+    name,
+    parentId,
+    order: maxOrder + 1,
+    color: FOLDER_COLORS[sameLevelSiblings.length % FOLDER_COLORS.length],
+    pinned: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
