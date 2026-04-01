@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { createEditorState, editorReducer, buildSavePayload } from '@/lib/editor-controller';
 import { getNotesService } from '@/lib/notes-service';
 import type { StoredFolder, StoredNote } from '@/lib/types';
 import {
@@ -32,10 +33,23 @@ export function WorkspaceNoteEditorDialog({
   onOpenChange,
   onSaved,
 }: WorkspaceNoteEditorDialogProps) {
-  const [draft, setDraft] = useState(note.content);
-  const [selectedFolderId, setSelectedFolderId] = useState<string>(note.folderId ?? '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(
+    editorReducer,
+    null,
+    () => createEditorState({
+      url: note.url,
+      hostname: note.hostname,
+      pageTitle: note.pageTitle,
+      elementSelector: note.elementSelector,
+      elementTag: note.elementTag,
+      elementInfo: note.elementInfo,
+      elementXPath: note.elementXPath,
+      elementTextHash: note.elementTextHash,
+      elementPosition: note.elementPosition,
+      selectedText: note.selectedText,
+    }, note)
+  );
+
   const previousStateRef = useRef({
     open: false,
     noteId: note.id,
@@ -50,9 +64,8 @@ export function WorkspaceNoteEditorDialog({
         nextNoteId: note.id,
       })
     ) {
-      setDraft(note.content);
-      setSelectedFolderId(note.folderId ?? '');
-      setError(null);
+      dispatch({ type: 'SET_BODY', body: note.content });
+      dispatch({ type: 'SET_FOLDER', folderId: note.folderId ?? null });
     }
 
     previousStateRef.current = {
@@ -64,21 +77,23 @@ export function WorkspaceNoteEditorDialog({
   const folderOptions = useMemo(() => buildWorkspaceNoteFolderOptions(folders), [folders]);
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setError(null);
+    dispatch({ type: 'SAVE_START' });
 
     try {
       const notesService = await getNotesService();
+      const payload = buildSavePayload(state);
       await notesService.update(note.id, {
-        content: draft,
-        folderId: selectedFolderId || null,
+        content: payload.content,
+        folderId: payload.folderId,
       });
+      dispatch({ type: 'SAVE_SUCCESS' });
       onSaved();
       onOpenChange(false);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Failed to save note');
-    } finally {
-      setIsSaving(false);
+      dispatch({
+        type: 'SAVE_ERROR',
+        message: caughtError instanceof Error ? caughtError.message : 'Failed to save note',
+      });
     }
   };
 
@@ -86,7 +101,7 @@ export function WorkspaceNoteEditorDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (isSaving && !nextOpen) {
+        if (state.saving && !nextOpen) {
           return;
         }
 
@@ -96,14 +111,14 @@ export function WorkspaceNoteEditorDialog({
       <DialogContent
         className="max-w-[420px]"
         showCloseButton
-        closeButtonDisabled={isSaving}
+        closeButtonDisabled={state.saving}
         onEscapeKeyDown={(event) => {
-          if (isSaving) {
+          if (state.saving) {
             event.preventDefault();
           }
         }}
         onPointerDownOutside={(event) => {
-          if (isSaving) {
+          if (state.saving) {
             event.preventDefault();
           }
         }}
@@ -129,8 +144,8 @@ export function WorkspaceNoteEditorDialog({
               </label>
               <Textarea
                 id="workspace-note-editor-content"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                value={state.body}
+                onChange={(event) => dispatch({ type: 'SET_BODY', body: event.target.value })}
                 className="min-h-[160px] rounded-[14px] border-[#e7e2d8] bg-white text-[13px] leading-[1.6] text-[#173628] focus-visible:ring-[#173628]/30"
                 autoFocus
               />
@@ -145,8 +160,8 @@ export function WorkspaceNoteEditorDialog({
               </label>
               <select
                 id="workspace-note-editor-folder"
-                value={selectedFolderId}
-                onChange={(event) => setSelectedFolderId(event.target.value)}
+                value={state.folderId ?? ''}
+                onChange={(event) => dispatch({ type: 'SET_FOLDER', folderId: event.target.value || null })}
                 className="flex h-10 w-full rounded-[11px] border border-[#e7e2d8] bg-white px-3 text-[13px] text-[#173628] outline-none transition-colors focus:border-[#173628]/30"
               >
                 <option value="">No folder</option>
@@ -158,9 +173,9 @@ export function WorkspaceNoteEditorDialog({
               </select>
             </div>
 
-            {error ? (
+            {state.errorMessage ? (
               <p className="rounded-[10px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.75)] px-2.5 py-2 text-[11px] text-[#b91c1c]">
-                {error}
+                {state.errorMessage}
               </p>
             ) : null}
           </div>
@@ -171,16 +186,16 @@ export function WorkspaceNoteEditorDialog({
               variant="outline"
               className="h-9 rounded-[11px] border-[#e7e2d8] bg-white text-[#445348] hover:bg-[#f8f6f1]"
               onClick={() => onOpenChange(false)}
-              disabled={isSaving}
+              disabled={state.saving}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isSaving}
+              disabled={state.saving}
               className="h-9 rounded-[11px] bg-[#173628] text-[#f5efe9] hover:bg-[#10271d]"
             >
-              {isSaving ? 'Saving...' : 'Save changes'}
+              {state.saving ? 'Saving...' : 'Save changes'}
             </Button>
           </DialogFooter>
         </form>
