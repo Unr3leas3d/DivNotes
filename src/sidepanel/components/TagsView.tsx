@@ -158,6 +158,21 @@ export function TagsView({
           title="Select tags to see matching notes"
           description="Pick one or more tags above to filter the notes list."
         />
+      ) : filteredNotes.length === 0 && searchQuery.trim() ? (
+        <WorkspaceEmptyState
+          icon={<Tags className="h-5 w-5" />}
+          title="No notes match your search"
+          description={`Nothing matched "${searchQuery}".`}
+          action={
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+            >
+              Clear filters
+            </button>
+          }
+        />
       ) : filteredNotes.length === 0 ? (
         <WorkspaceEmptyState
           icon={<Tags className="h-5 w-5" />}

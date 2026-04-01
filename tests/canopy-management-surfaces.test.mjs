@@ -25,8 +25,8 @@ test('all-notes views collapse every site group after the first visible hostname
 
   assert.ok(popupAllNotesView.includes('aria-expanded'));
   assert.ok(sidepanelAllNotesView.includes('aria-expanded'));
-  assert.ok(popupAllNotesView.includes('visibleGroups[0]'));
-  assert.ok(sidepanelAllNotesView.includes('visibleGroups[0]'));
+  assert.ok(popupAllNotesView.includes('reconcileWorkspaceGroupExpansion'));
+  assert.ok(sidepanelAllNotesView.includes('reconcileWorkspaceGroupExpansion'));
   assert.ok(!popupAllNotesView.includes('group.pageTitle'));
   assert.ok(!sidepanelAllNotesView.includes('group.pageTitle'));
 });
@@ -48,6 +48,7 @@ test('tag views use shared multi-tag filters and hide notes until filters exist'
   assert.ok(sidepanelTagsView.includes('WorkspaceTagFilterBar'));
   assert.ok(popupTagsView.includes('selectedTagIds.length === 0'));
   assert.ok(sidepanelTagsView.includes('selectedTagIds.length === 0'));
+  assert.ok(sidepanelTagsView.includes('No notes match your search'));
   assert.ok(sidepanelTagsView.includes('WorkspaceEmptyState'));
   assert.ok(!sidepanelTagsView.includes('useState<Set<string>>'));
   assert.ok(workspaceTagFilterBar.includes('Clear filters'));

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { StickyNote } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
+import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
 import type { DomainGroup } from '@/lib/extension-selectors';
 import { filterNotesBySearch } from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
@@ -53,26 +54,17 @@ export function AllNotesView({
       }))
       .filter((group) => group.count > 0);
   }, [filteredNotes, groupedNotes, query]);
-  const firstVisibleHostname = visibleGroups[0]?.hostname ?? null;
+  const visibleHostnames = useMemo(
+    () => visibleGroups.map((group) => group.hostname),
+    [visibleGroups]
+  );
   const [expandedHostnames, setExpandedHostnames] = useState<Set<string>>(
-    () => new Set(firstVisibleHostname ? [firstVisibleHostname] : [])
+    () => reconcileWorkspaceGroupExpansion(visibleHostnames, new Set())
   );
 
   useEffect(() => {
-    if (!firstVisibleHostname) {
-      return;
-    }
-
-    setExpandedHostnames((current) => {
-      if (current.has(firstVisibleHostname)) {
-        return current;
-      }
-
-      const next = new Set(current);
-      next.add(firstVisibleHostname);
-      return next;
-    });
-  }, [firstVisibleHostname]);
+    setExpandedHostnames((current) => reconcileWorkspaceGroupExpansion(visibleHostnames, current));
+  }, [visibleHostnames]);
 
   if (loading) {
     return (
