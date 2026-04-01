@@ -1,5 +1,5 @@
 import React, { DragEvent } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderPlus, MoreVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Folder, FolderPlus, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
 import { FolderContextMenu } from './ContextMenu';
@@ -22,6 +22,7 @@ interface FolderTreeNodeItemProps {
   onChangeColor?: (folderId: string) => void;
   onToggleFolderPin?: (folderId: string) => void;
   onDeleteFolder?: (folderId: string) => void;
+  onOpenAsTabGroup?: (folderId: string) => void;
   selectedNoteIds?: Set<string>;
   onNoteSelectClick?: (noteId: string, meta: { shift?: boolean; cmd?: boolean }) => void;
   // Drag and drop
@@ -51,6 +52,7 @@ export function FolderTreeNodeItem({
   onChangeColor,
   onToggleFolderPin,
   onDeleteFolder,
+  onOpenAsTabGroup,
   selectedNoteIds,
   onNoteSelectClick,
   dropTargetId,
@@ -128,6 +130,21 @@ export function FolderTreeNodeItem({
             )}
           </button>
 
+          {onOpenAsTabGroup && noteCount > 0 && (
+            <button
+              type="button"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#526357] opacity-0 transition-all hover:bg-muted group-hover:opacity-100"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenAsTabGroup(node.folder.id);
+              }}
+              aria-label="Open all as tab group"
+              title="Open all as tab group"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           <button
             type="button"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#526357] transition-colors hover:bg-muted"
@@ -182,6 +199,7 @@ export function FolderTreeNodeItem({
               onChangeColor={onChangeColor}
               onToggleFolderPin={onToggleFolderPin}
               onDeleteFolder={onDeleteFolder}
+              onOpenAsTabGroup={onOpenAsTabGroup}
               selectedNoteIds={selectedNoteIds}
               onNoteSelectClick={onNoteSelectClick}
               dropTargetId={dropTargetId}

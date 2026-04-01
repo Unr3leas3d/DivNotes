@@ -257,6 +257,34 @@ export function FoldersView({
     setDialogState({ type: 'delete-folder', folderId, error: null });
   }, [folders]);
 
+  const handleOpenAsTabGroup = useCallback((folderId: string) => {
+    // Count unique URLs for confirmation safeguard
+    const folderIds = [folderId];
+    const hasChildren = folders.some(f => f.parentId === folderId);
+    if (hasChildren) {
+      const stack = [folderId];
+      while (stack.length) {
+        const current = stack.pop()!;
+        const children = folders.filter(f => f.parentId === current);
+        for (const child of children) {
+          folderIds.push(child.id);
+          stack.push(child.id);
+        }
+      }
+    }
+    const folderNotes = notes.filter(n => n.folderId && folderIds.includes(n.folderId));
+    const uniqueUrls = new Set(folderNotes.map(n => n.url).filter(Boolean));
+
+    if (uniqueUrls.size === 0) return;
+
+    if (uniqueUrls.size > 15) {
+      const confirmed = window.confirm(`Open ${uniqueUrls.size} tabs in a group?`);
+      if (!confirmed) return;
+    }
+
+    chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId });
+  }, [folders, notes]);
+
   const handleToggleNotePin = useCallback(async (noteId: string) => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
@@ -764,6 +792,7 @@ export function FoldersView({
           onChangeColor={handleChangeFolderColor}
           onToggleFolderPin={handleToggleFolderPin}
           onDeleteFolder={handleDeleteFolder}
+          onOpenAsTabGroup={handleOpenAsTabGroup}
           selectedNoteIds={selectedIds}
           onNoteSelectClick={toggleSelect}
           dropTargetId={dropTargetId}
