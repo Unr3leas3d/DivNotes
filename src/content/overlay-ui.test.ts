@@ -177,4 +177,20 @@ test('createNotePreviewCardShell renders metadata, tags, preview, and actions', 
   assert.equal(card.querySelector('[data-canopy-move]')?.textContent, 'Move');
   assert.equal(card.querySelector('[data-canopy-edit]')?.textContent, 'Edit');
   assert.equal(card.querySelector('[data-canopy-delete]')?.textContent, 'Delete');
+  assert.equal(card.querySelector('[data-canopy-preview-panel]')?.dataset.canopyPreviewPanel, '');
+});
+
+test('createNotePreviewCardShell keeps edit and move actions in the footer', () => {
+  const fakeDocument = createFakeDocument();
+
+  const card = createNotePreviewCardShell(fakeDocument, {
+    elementInfo: '<div.hero>',
+    displayDate: 'Mar 30, 2:00 PM',
+    title: 'Hero section',
+    previewText: 'Check spacing',
+    tags: [],
+  });
+
+  assert.equal(card.querySelector('[data-canopy-edit]')?.textContent, 'Edit');
+  assert.equal(card.querySelector('[data-canopy-move]')?.textContent, 'Move');
 });

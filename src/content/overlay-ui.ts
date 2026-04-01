@@ -248,6 +248,7 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
   });
 
   const panel = documentRef.createElement('div');
+  setDataAttribute(panel, 'canopyPreviewPanel', '');
   applyStyles(panel, {
     background: '#FAFAF7',
     border: '1px solid rgba(5,36,21,0.06)',
