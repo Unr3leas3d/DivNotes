@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Globe, Search, StickyNote } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search, StickyNote } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
+import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
 import {
   createTagResolver,
   filterNotesBySearch,
@@ -19,6 +20,7 @@ interface AllNotesViewProps {
   loading: boolean;
   error: string | null;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
 }
 
 export function AllNotesView({
@@ -29,6 +31,7 @@ export function AllNotesView({
   loading,
   error,
   onOpenNote,
+  onEditNote,
 }: AllNotesViewProps) {
   const [query, setQuery] = useState('');
   const tags = useMemo(() => [...tagsById.values()], [tagsById]);
@@ -39,7 +42,18 @@ export function AllNotesView({
     () => (query.trim() ? groupNotesByHostname(filteredNotes) : groupedNotes),
     [filteredNotes, groupedNotes, query]
   );
+  const visibleHostnames = useMemo(
+    () => visibleGroups.map((group) => group.hostname),
+    [visibleGroups]
+  );
+  const [expandedHostnames, setExpandedHostnames] = useState<Set<string>>(
+    () => reconcileWorkspaceGroupExpansion(visibleHostnames, new Set())
+  );
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
+
+  useEffect(() => {
+    setExpandedHostnames((current) => reconcileWorkspaceGroupExpansion(visibleHostnames, current));
+  }, [visibleHostnames]);
 
   if (loading) {
     return (
@@ -86,45 +100,63 @@ export function AllNotesView({
         />
       ) : (
         <div className="space-y-4">
-          {visibleGroups.map((group) => (
-            <section
-              key={group.hostname}
-              className="rounded-[18px] border border-[#ece7de] bg-[#f8f6f1] p-3"
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#6d7b70]">
-                  <Globe className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[13px] font-semibold text-[#173628]">{group.hostname}</h3>
-                  <p className="truncate text-[11px] text-[#8c978f]">{group.pageTitle}</p>
-                </div>
-                <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
-                  {group.count}
-                </span>
-              </div>
+          {visibleGroups.map((group) => {
+            const isExpanded = expandedHostnames.has(group.hostname);
 
-              <div className="space-y-2">
-                {group.noteIds.map((noteId) => {
-                  const note = notesById.get(noteId);
-                  if (!note) {
-                    return null;
-                  }
+            return (
+              <section
+                key={group.hostname}
+                className="rounded-[18px] border border-[#ece7de] bg-[#f8f6f1] p-3"
+              >
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  onClick={() => {
+                    setExpandedHostnames((current) => {
+                      const next = new Set(current);
+                      if (next.has(group.hostname)) {
+                        next.delete(group.hostname);
+                      } else {
+                        next.add(group.hostname);
+                      }
+                      return next;
+                    });
+                  }}
+                  className="flex w-full items-center justify-between gap-3 rounded-[14px] bg-white px-3 py-2 text-left"
+                >
+                  <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#173628]">
+                    {group.hostname}
+                  </h3>
+                  <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
+                    {group.count}
+                  </span>
+                </button>
 
-                  return (
-                    <WorkspaceNoteCard
-                      key={note.id}
-                      density="compact"
-                      note={note}
-                      folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
-                      tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
-                      onOpen={onOpenNote}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                {isExpanded ? (
+                  <div className="mt-3 space-y-2">
+                    {group.noteIds.map((noteId) => {
+                      const note = notesById.get(noteId);
+                      if (!note) {
+                        return null;
+                      }
+
+                      return (
+                        <WorkspaceNoteCard
+                          key={note.id}
+                          density="compact"
+                          note={note}
+                          folderName={note.folderId ? foldersById.get(note.folderId)?.name || null : null}
+                          tagNames={tagResolver.resolveStoredTagLabels(note.tags)}
+                          onOpen={onOpenNote}
+                          onEdit={onEditNote}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

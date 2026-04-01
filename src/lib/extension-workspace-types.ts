@@ -53,4 +53,5 @@ export interface ViewState {
   active: WorkspaceView;
   folderId: string | null;
   tagId: string | null;
+  tagIds: string[];
 }

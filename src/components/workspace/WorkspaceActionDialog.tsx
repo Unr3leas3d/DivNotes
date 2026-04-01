@@ -15,6 +15,7 @@ interface WorkspaceActionDialogProps {
   title: string;
   description: string;
   confirmLabel: string;
+  children?: React.ReactNode;
   cancelLabel?: string;
   destructive?: boolean;
   promptLabel?: string;
@@ -34,6 +35,7 @@ export function WorkspaceActionDialog({
   title,
   description,
   confirmLabel,
+  children,
   cancelLabel = 'Cancel',
   destructive = false,
   promptLabel,
@@ -121,6 +123,8 @@ export function WorkspaceActionDialog({
               />
             </div>
           ) : null}
+
+          {children ? <div className="mt-4">{children}</div> : null}
 
           {errorMessage ? (
             <p className="mt-3 rounded-[10px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.75)] px-2.5 py-2 text-[11px] text-[#b91c1c]">

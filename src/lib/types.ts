@@ -64,3 +64,13 @@ export const TAG_COLORS = [
   '#052415', '#1a5c2e', '#3d8b5e', '#6ead71',
   '#ABFFC0', '#0d9488', '#65784c', '#84cc16',
 ] as const;
+
+export const FOLDER_COLORS = [
+  TAG_COLORS[0],
+  TAG_COLORS[1],
+  TAG_COLORS[2],
+  TAG_COLORS[3],
+  TAG_COLORS[4],
+  TAG_COLORS[6],
+  TAG_COLORS[7],
+] as const;

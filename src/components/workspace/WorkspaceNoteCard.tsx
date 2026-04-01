@@ -14,6 +14,7 @@ interface WorkspaceNoteCardProps {
   folderName?: string | null;
   tagNames?: string[];
   onOpen: (note: StoredNote) => void;
+  onEdit?: (note: StoredNote) => void;
   interactionMode?: 'open' | 'toggle';
   expanded?: boolean;
   details?: React.ReactNode;
@@ -42,6 +43,7 @@ export function WorkspaceNoteCard({
   folderName,
   tagNames = [],
   onOpen,
+  onEdit,
   interactionMode = 'open',
   expanded = false,
   details,
@@ -61,12 +63,38 @@ export function WorkspaceNoteCard({
   const resolvedPreview = preview ?? derivedPreview;
   const visibleTags = tagNames.slice(0, density === 'compact' ? 1 : 2);
   const overflowTagCount = tagNames.length - visibleTags.length;
+  const resolvedAction = action ?? (
+    interactionMode === 'open' && onEdit ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit(note);
+          }}
+          className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+        >
+          Edit note
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(note);
+          }}
+          className="inline-flex items-center justify-center rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+        >
+          Go to note
+        </button>
+      </div>
+    ) : undefined
+  );
 
   return (
     <div
       className={cn(
         'w-full rounded-[16px] border border-[#e7e2d8] bg-white text-left shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6]',
-        action ? 'overflow-hidden' : undefined
+        resolvedAction ? 'overflow-hidden' : undefined
       )}
     >
       <button
@@ -145,7 +173,7 @@ export function WorkspaceNoteCard({
         </div>
       </button>
       {details ? <div className="border-t border-[#f0ece4] px-3.5 py-3">{details}</div> : null}
-      {action ? <div className="border-t border-[#f0ece4] px-3.5 py-2.5">{action}</div> : null}
+      {resolvedAction ? <div className="border-t border-[#f0ece4] px-3.5 py-2.5">{resolvedAction}</div> : null}
     </div>
   );
 }

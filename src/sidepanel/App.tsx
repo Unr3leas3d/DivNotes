@@ -5,6 +5,7 @@ import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
+import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
 import { getNotesService } from '@/lib/notes-service';
 import { useExtensionWorkspace } from '@/lib/use-extension-workspace';
 import type { StoredNote } from '@/lib/types';
@@ -38,11 +39,17 @@ export default function App() {
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [clearAllDialogError, setClearAllDialogError] = useState<string | null>(null);
   const [clearAllDialogSubmitting, setClearAllDialogSubmitting] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   const foldersById = useMemo(
     () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
     [workspace.data.folders]
   );
+  const notesById = useMemo(
+    () => new Map(workspace.data.notes.map((note) => [note.id, note])),
+    [workspace.data.notes]
+  );
+  const editingNote = editingNoteId ? notesById.get(editingNoteId) ?? null : null;
 
   const activeMainView =
     workspace.view.active === 'settings'
@@ -83,6 +90,10 @@ export default function App() {
   const handleDeleteNote = async (noteId: string) => {
     const service = await getNotesService();
     await service.delete(noteId);
+  };
+
+  const handleEditNote = (note: StoredNote) => {
+    setEditingNoteId(note.id);
   };
 
   const handleAddNote = async () => {
@@ -212,6 +223,7 @@ export default function App() {
             error={workspace.error.data}
             query={searchQuery}
             onOpenNote={handleOpenNote}
+            onEditNote={handleEditNote}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
           />
         ) : null}
@@ -224,17 +236,24 @@ export default function App() {
             searchQuery={searchQuery}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
             onNavigateNote={handleOpenNote}
+            onEditNote={handleEditNote}
           />
         ) : null}
 
         {workspace.view.active === 'tags' ? (
           <TagsView
+            tagSummaries={workspace.derived.tagSummaries}
+            selectedTagIds={workspace.view.tagIds}
             notes={workspace.data.notes}
             folders={workspace.data.folders}
-            tags={workspace.data.tags}
+            loading={workspace.loading.data}
+            error={workspace.error.data}
             searchQuery={searchQuery}
+            onToggleTag={workspace.actions.toggleTagFilter}
+            onClearFilters={workspace.actions.clearFilters}
             onDeleteNote={(noteId) => void handleDeleteNote(noteId)}
             onNavigateNote={handleOpenNote}
+            onEditNote={handleEditNote}
           />
         ) : null}
 
@@ -293,6 +312,19 @@ export default function App() {
           }
         }}
       />
+      {editingNote ? (
+        <WorkspaceNoteEditorDialog
+          note={editingNote}
+          folders={workspace.data.folders}
+          open={Boolean(editingNote)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingNoteId(null);
+            }
+          }}
+          onSaved={() => {}}
+        />
+      ) : null}
     </>
   );
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { PanelsTopLeft, Settings2 } from 'lucide-react';
 
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
+import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
 import { TopNavPills } from '@/components/workspace/TopNavPills';
 import { Button } from '@/components/ui/button';
 import { getFoldersService } from '@/lib/folders-service';
@@ -68,12 +69,14 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const previousViewRef = useRef<MainPopupView>('this-page');
     const [dialogState, setDialogState] = useState<PopupDialogState>(null);
     const [dialogSubmitting, setDialogSubmitting] = useState(false);
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const notesById = useMemo(() => new Map(workspace.data.notes.map((note) => [note.id, note])), [workspace.data.notes]);
     const foldersById = useMemo(
         () => new Map(workspace.data.folders.map((folder) => [folder.id, folder])),
         [workspace.data.folders]
     );
     const tagsById = useMemo(() => new Map(workspace.data.tags.map((tag) => [tag.id, tag])), [workspace.data.tags]);
+    const editingNote = editingNoteId ? notesById.get(editingNoteId) ?? null : null;
 
     const loadingContent = workspace.loading.currentPage || workspace.loading.data;
     const activeMainView = workspace.view.active === 'settings'
@@ -129,6 +132,9 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
             },
         });
         window.close();
+    };
+    const handleEditNote = (note: StoredNote) => {
+        setEditingNoteId(note.id);
     };
 
     const handleCreateFolder = () => {
@@ -260,6 +266,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         tagsById={tagsById}
                         onAddNote={() => void handleAddNote()}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'all-notes':
@@ -272,6 +279,7 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         loading={loadingContent}
                         error={workspace.error.data}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'folders':
@@ -287,20 +295,22 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onSelectFolder={workspace.actions.setFolderDetail}
                         onCreateFolder={() => void handleCreateFolder()}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'tags':
                 return (
                     <TagsView
                         tagSummaries={workspace.derived.tagSummaries}
-                        selectedTagId={workspace.view.tagId}
+                        selectedTagIds={workspace.view.tagIds}
                         notes={workspace.data.notes}
                         foldersById={foldersById}
-                        tagsById={tagsById}
                         loading={workspace.loading.data}
                         error={workspace.error.data}
-                        onSelectTag={workspace.actions.setTagFilter}
+                        onToggleTag={workspace.actions.toggleTagFilter}
+                        onClearFilters={workspace.actions.clearFilters}
                         onOpenNote={handleOpenNote}
+                        onEditNote={handleEditNote}
                     />
                 );
             case 'settings':
@@ -376,6 +386,19 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 onConfirm={() => void handleClearAllNotes()}
                 isSubmitting={dialogSubmitting}
             />
+            {editingNote ? (
+                <WorkspaceNoteEditorDialog
+                    note={editingNote}
+                    folders={workspace.data.folders}
+                    open={Boolean(editingNote)}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setEditingNoteId(null);
+                        }
+                    }}
+                    onSaved={() => {}}
+                />
+            ) : null}
         </PopupShell>
     );
 }

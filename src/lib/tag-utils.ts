@@ -1,4 +1,4 @@
-import { TAG_COLORS } from './types';
+import { TAG_COLORS } from './types.ts';
 
 /** Extract hashtag names from note content. Returns lowercase unique names.
  *  Pattern: # followed by 1-50 word chars, preceded by whitespace or start of line.

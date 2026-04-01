@@ -7,11 +7,12 @@ import {
   buildViewCounts,
   filterNotesBySearch,
   groupNotesByHostname,
+  createTagResolver,
   noteHasTagValue,
   resolveStoredTagLabels,
   selectThisPageNotes,
-} from './extension-selectors';
-import type { StoredFolder, StoredNote, StoredTag } from './types';
+} from './extension-selectors.ts';
+import type { StoredFolder, StoredNote, StoredTag } from './types.ts';
 
 const sampleNotes: StoredNote[] = [
   {
@@ -125,6 +126,8 @@ const sampleTags: StoredTag[] = [
   },
 ];
 
+const sampleTagResolver = createTagResolver(sampleTags);
+
 test('selectThisPageNotes filters by normalized current page url and newest-first order', () => {
   const result = selectThisPageNotes(sampleNotes, 'https://app.example.com/docs');
   assert.deepEqual(result.map((note) => note.id), ['note-2', 'note-1']);
@@ -204,6 +207,11 @@ test('noteHasTagValue matches canonical tag ids against tag names stored on note
 
   assert.equal(noteHasTagValue(noteWithTagNames, 'tag-2', sampleTags), true);
   assert.equal(noteHasTagValue(noteWithTagNames, 'tag-1', sampleTags), false);
+});
+
+test('noteHasAllTagValues matches every active tag value for multi-tag filters', () => {
+  assert.equal(sampleTagResolver.noteHasAllTagValues(sampleNotes[0], ['tag-1', 'tag-2']), true);
+  assert.equal(sampleTagResolver.noteHasAllTagValues(sampleNotes[1], ['tag-1', 'tag-2']), false);
 });
 
 test('resolveStoredTagLabels resolves note tags stored as names for workspace rendering', () => {

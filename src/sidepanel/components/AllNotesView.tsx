@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { Globe, StickyNote } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StickyNote } from 'lucide-react';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
+import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
 import type { DomainGroup } from '@/lib/extension-selectors';
 import { filterNotesBySearch } from '@/lib/extension-selectors';
 import type { StoredFolder, StoredNote, StoredTag } from '@/lib/types';
@@ -17,6 +18,7 @@ interface AllNotesViewProps {
   error: string | null;
   query: string;
   onOpenNote: (note: StoredNote) => void;
+  onEditNote: (note: StoredNote) => void;
   onDeleteNote: (noteId: string) => void;
 }
 
@@ -29,6 +31,7 @@ export function AllNotesView({
   error,
   query,
   onOpenNote,
+  onEditNote,
   onDeleteNote,
 }: AllNotesViewProps) {
   const filteredNotes = useMemo(() => filterNotesBySearch(notes, query, tags), [notes, query, tags]);
@@ -51,6 +54,17 @@ export function AllNotesView({
       }))
       .filter((group) => group.count > 0);
   }, [filteredNotes, groupedNotes, query]);
+  const visibleHostnames = useMemo(
+    () => visibleGroups.map((group) => group.hostname),
+    [visibleGroups]
+  );
+  const [expandedHostnames, setExpandedHostnames] = useState<Set<string>>(
+    () => reconcileWorkspaceGroupExpansion(visibleHostnames, new Set())
+  );
+
+  useEffect(() => {
+    setExpandedHostnames((current) => reconcileWorkspaceGroupExpansion(visibleHostnames, current));
+  }, [visibleHostnames]);
 
   if (loading) {
     return (
@@ -93,46 +107,65 @@ export function AllNotesView({
         pinnedNotes={pinnedNotes}
         tags={tags}
         onNoteClick={onOpenNote}
+        onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
       />
 
-      {visibleGroups.map((group) => (
-        <section key={group.hostname} className="rounded-[20px] border border-[#ece7de] bg-[#f8f6f1] p-4">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#6d7b70]">
-              <Globe className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-[14px] font-semibold text-[#173628]">{group.hostname}</h3>
-              <p className="truncate text-[11px] text-[#8c978f]">{group.pageTitle}</p>
-            </div>
-            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-[#6d7b70]">
-              {group.count}
-            </span>
-          </div>
+      {visibleGroups.map((group) => {
+        const isExpanded = expandedHostnames.has(group.hostname);
 
-          <div className="space-y-3">
-            {group.noteIds.map((noteId) => {
-              const note = notesById.get(noteId);
-              if (!note) {
-                return null;
-              }
+        return (
+          <section key={group.hostname} className="rounded-[20px] border border-[#ece7de] bg-[#f8f6f1] p-4">
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              onClick={() => {
+                setExpandedHostnames((current) => {
+                  const next = new Set(current);
+                  if (next.has(group.hostname)) {
+                    next.delete(group.hostname);
+                  } else {
+                    next.add(group.hostname);
+                  }
+                  return next;
+                });
+              }}
+              className="flex w-full items-center justify-between gap-3 rounded-[16px] bg-white px-3 py-2 text-left"
+            >
+              <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#173628]">
+                {group.hostname}
+              </h3>
+              <span className="rounded-full bg-[#f3f1eb] px-2.5 py-1 text-[10px] font-semibold text-[#6d7b70]">
+                {group.count}
+              </span>
+            </button>
 
-              return (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  tags={tags}
-                  onDelete={onDeleteNote}
-                  onNavigate={onOpenNote}
-                  showFolderPath
-                  folderPath={note.folderId ? foldersById.get(note.folderId)?.name : undefined}
-                />
-              );
-            })}
-          </div>
-        </section>
-      ))}
+            {isExpanded ? (
+              <div className="mt-3 space-y-3">
+                {group.noteIds.map((noteId) => {
+                  const note = notesById.get(noteId);
+                  if (!note) {
+                    return null;
+                  }
+
+                  return (
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      tags={tags}
+                      onDelete={onDeleteNote}
+                      onNavigate={onOpenNote}
+                      onEdit={onEditNote}
+                      showFolderPath
+                      folderPath={note.folderId ? foldersById.get(note.folderId)?.name : undefined}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
     </div>
   );
 }

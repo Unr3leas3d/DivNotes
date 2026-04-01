@@ -3,6 +3,66 @@ import test from 'node:test';
 
 import type { SyncQueueItem, StoredFolder, StoredNote, StoredTag } from './types.ts';
 
+function createChromeStub() {
+  return {
+    storage: {
+      local: {
+        get: async () => ({}),
+        set: async () => undefined,
+        remove: async () => undefined,
+      },
+    },
+    runtime: {
+      sendMessage: async () => ({ success: true }),
+    },
+  } as typeof chrome;
+}
+
+async function createWorkspaceActionHarness() {
+  const originalChrome = globalThis.chrome;
+  globalThis.chrome = createChromeStub();
+
+  try {
+    const { createExtensionWorkspaceActions } = await import('./extension-workspace-actions.ts');
+
+    let selectedFolderId: string | null = 'folder-1';
+    let selectedTagIds: string[] = [];
+
+    const actions = createExtensionWorkspaceActions({
+      authModeRef: { current: 'local' },
+      dataRef: {
+        current: {
+          notes: [],
+          folders: [],
+          tags: [],
+        },
+      },
+      clearActionError: () => undefined,
+      setActionError: () => undefined,
+      setAuth: () => undefined,
+      setSelectedFolderId: (folderId) => {
+        selectedFolderId = folderId;
+      },
+      setSelectedTagIds: (nextValue) => {
+        selectedTagIds =
+          typeof nextValue === 'function' ? nextValue(selectedTagIds) : nextValue;
+      },
+    });
+
+    return {
+      actions,
+      getSelectedFolderId: () => selectedFolderId,
+      getSelectedTagIds: () => selectedTagIds,
+      restoreChrome: () => {
+        globalThis.chrome = originalChrome;
+      },
+    };
+  } catch (caughtError) {
+    globalThis.chrome = originalChrome;
+    throw caughtError;
+  }
+}
+
 test('pruneImportedWorkspaceQueueEntries removes stale queue entries for imported entities', async () => {
   const originalChrome = globalThis.chrome;
   const originalSetTimeout = globalThis.setTimeout;
@@ -136,5 +196,48 @@ test('pruneImportedWorkspaceQueueEntries removes stale queue entries for importe
     globalThis.setInterval = originalSetInterval;
     globalThis.clearTimeout = originalClearTimeout;
     globalThis.clearInterval = originalClearInterval;
+  }
+});
+
+test('setTagFilter stores a single selected tag', async () => {
+  const harness = await createWorkspaceActionHarness();
+
+  try {
+    harness.actions.setTagFilter('tag-1');
+
+    assert.deepEqual(harness.getSelectedTagIds(), ['tag-1']);
+  } finally {
+    harness.restoreChrome();
+  }
+});
+
+test('toggleTagFilter adds and removes tags', async () => {
+  const harness = await createWorkspaceActionHarness();
+
+  try {
+    harness.actions.toggleTagFilter('tag-1');
+    harness.actions.toggleTagFilter('tag-2');
+    assert.deepEqual(harness.getSelectedTagIds(), ['tag-1', 'tag-2']);
+
+    harness.actions.toggleTagFilter('tag-1');
+    assert.deepEqual(harness.getSelectedTagIds(), ['tag-2']);
+  } finally {
+    harness.restoreChrome();
+  }
+});
+
+test('clearFilters clears folder detail and selected tags', async () => {
+  const harness = await createWorkspaceActionHarness();
+
+  try {
+    harness.actions.setTagFilter('tag-1');
+    harness.actions.setTagFilter('tag-2');
+    harness.actions.setFolderDetail('folder-2');
+    harness.actions.clearFilters();
+
+    assert.equal(harness.getSelectedFolderId(), null);
+    assert.deepEqual(harness.getSelectedTagIds(), []);
+  } finally {
+    harness.restoreChrome();
   }
 });
