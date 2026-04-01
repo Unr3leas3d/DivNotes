@@ -89,6 +89,39 @@ function isSafeUrl(url) {
     }
 }
 
+// Chrome tab group color mapping
+const CHROME_COLORS = [
+    { name: 'grey',   rgb: [128, 128, 128] },
+    { name: 'blue',   rgb: [66, 133, 244] },
+    { name: 'red',    rgb: [234, 67, 53] },
+    { name: 'yellow', rgb: [251, 188, 4] },
+    { name: 'green',  rgb: [52, 168, 83] },
+    { name: 'pink',   rgb: [255, 105, 180] },
+    { name: 'purple', rgb: [103, 58, 183] },
+    { name: 'cyan',   rgb: [0, 188, 212] },
+];
+
+function hexToChromeColor(hex) {
+    if (!hex) return 'grey';
+    const match = hex.replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!match) return 'grey';
+    const rgb = [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)];
+    let closest = 'grey';
+    let minDist = Infinity;
+    for (const entry of CHROME_COLORS) {
+        const dist = Math.sqrt(
+            (rgb[0] - entry.rgb[0]) ** 2 +
+            (rgb[1] - entry.rgb[1]) ** 2 +
+            (rgb[2] - entry.rgb[2]) ** 2
+        );
+        if (dist < minDist) {
+            minDist = dist;
+            closest = entry.name;
+        }
+    }
+    return closest;
+}
+
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'OPEN_NOTE_TARGET') {
@@ -387,6 +420,82 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     });
                 });
             });
+        });
+        return true;
+    }
+
+    if (message.type === 'OPEN_FOLDER_AS_GROUP') {
+        const { folderId } = message;
+        chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], async (result) => {
+            const folders = result.divnotes_folders || [];
+            const notes = result.divnotes_notes || [];
+            const folder = folders.find(f => f.id === folderId);
+            if (!folder) {
+                sendResponse({ success: false, error: 'Folder not found' });
+                return;
+            }
+
+            // Determine if parent (has children) or leaf
+            const hasChildren = folders.some(f => f.parentId === folderId);
+
+            // Collect target folder IDs
+            const targetFolderIds = [folderId];
+            if (hasChildren) {
+                const stack = [folderId];
+                while (stack.length) {
+                    const current = stack.pop();
+                    const children = folders.filter(f => f.parentId === current);
+                    for (const child of children) {
+                        targetFolderIds.push(child.id);
+                        stack.push(child.id);
+                    }
+                }
+            }
+
+            // Collect notes from target folders, deduplicate URLs
+            const seen = new Set();
+            const uniqueUrls = [];
+            for (const note of notes) {
+                if (!note.folderId || !targetFolderIds.includes(note.folderId)) continue;
+                if (!note.url || !isSafeUrl(note.url)) continue;
+                const normalized = normalizeUrl(note.url);
+                if (!seen.has(normalized)) {
+                    seen.add(normalized);
+                    uniqueUrls.push(note.url);
+                }
+            }
+
+            if (uniqueUrls.length === 0) {
+                sendResponse({ success: false, error: 'No notes with valid URLs in this folder' });
+                return;
+            }
+
+            try {
+                // Create tabs
+                const tabIds = [];
+                for (const url of uniqueUrls) {
+                    const tab = await chrome.tabs.create({ url });
+                    if (tab.id) tabIds.push(tab.id);
+                }
+
+                if (tabIds.length === 0) {
+                    sendResponse({ success: false, error: 'Failed to create tabs' });
+                    return;
+                }
+
+                // Group tabs
+                const groupId = await chrome.tabs.group({ tabIds });
+
+                // Style the group
+                await chrome.tabGroups.update(groupId, {
+                    title: folder.name,
+                    color: hexToChromeColor(folder.color),
+                });
+
+                sendResponse({ success: true, tabCount: tabIds.length });
+            } catch (err) {
+                sendResponse({ success: false, error: err.message || 'Failed to create tab group' });
+            }
         });
         return true;
     }
