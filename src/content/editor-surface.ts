@@ -18,9 +18,7 @@ type EditorSurfaceDocument = {
 
 export type EditorSurfaceState = {
   isNew: boolean;
-  title: string;
   body: string;
-  elementInfo: string;
   folderLabel: string;
   tagLabels: readonly string[];
   pinned: boolean;
@@ -78,16 +76,10 @@ export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurf
   textBlock.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;';
 
   const heading = applyDataAttr(doc.createElement('span'), 'canopy-editor-heading');
-  heading.textContent = state.isNew ? 'New Note' : 'Edit Note';
+  heading.textContent = state.isNew ? 'New note' : 'Edit note';
   heading.style.cssText = 'font-size:12px;font-weight:600;color:#052415;';
 
-  const info = applyDataAttr(doc.createElement('span'), 'canopy-editor-element-info');
-  info.textContent = state.elementInfo;
-  info.style.cssText =
-    "font-size:10px;font-family:'SF Mono',monospace;color:#7a8a7d;background:rgba(5,36,21,0.04);padding:2px 8px;border-radius:4px;";
-
   textBlock.appendChild(heading);
-  textBlock.appendChild(info);
   appendChildren(infoBlock, [accent, textBlock]);
 
   const actions = doc.createElement('div');
@@ -115,29 +107,6 @@ export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurf
 
   appendChildren(header, [infoBlock, actions]);
   return header;
-}
-
-export function createTitleInput(doc: EditorSurfaceDocument, value: string) {
-  const wrapper = doc.createElement('div');
-  wrapper.style.cssText = 'padding:12px 12px 0;';
-
-  const input = applyDataAttr(doc.createElement('input'), 'canopy-editor-title');
-  input.setAttribute('type', 'text');
-  input.setAttribute('placeholder', 'Title');
-  input.value = value;
-  input.style.cssText = [
-    'width:100%',
-    'box-sizing:border-box',
-    'padding:10px 12px',
-    'border:1px solid rgba(5,36,21,0.1)',
-    'border-radius:8px',
-    'background:#FFFFFF',
-    'font-size:13px',
-    'color:#052415',
-  ].join(';');
-
-  wrapper.appendChild(input);
-  return wrapper;
 }
 
 export function createBodyTextarea(doc: EditorSurfaceDocument, value: string) {
@@ -287,7 +256,6 @@ export function createEditorSurface(doc: EditorSurfaceDocument, state: EditorSur
   const shell = createEditorShell(doc);
   appendChildren(shell, [
     createEditorHeader(doc, state),
-    createTitleInput(doc, state.title),
     createBodyTextarea(doc, state.body),
     createFolderControl(doc, state.folderLabel),
     createTagRow(doc, state.tagLabels),

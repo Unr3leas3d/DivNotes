@@ -103,9 +103,7 @@ function createFakeDocument() {
 
 const sampleState = {
   isNew: false,
-  title: 'Launch CTA copy',
   body: 'Tighten the supporting sentence before release.',
-  elementInfo: '<button.primary>',
   folderLabel: 'Inbox',
   tagLabels: ['#launch', '#copy'],
   pinned: true,
@@ -121,11 +119,7 @@ test('createEditorSurface renders header actions for an existing note and keeps 
   assert.equal(surface.querySelector?.('[data-canopy-editor-shell]')?.tagName, 'DIV');
   assert.equal(
     surface.querySelector?.('[data-canopy-editor-heading]')?.textContent,
-    'Edit Note'
-  );
-  assert.equal(
-    surface.querySelector?.('[data-canopy-editor-element-info]')?.textContent,
-    sampleState.elementInfo
+    'Edit note'
   );
   assert.equal(
     surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-delete]')
@@ -136,11 +130,6 @@ test('createEditorSurface renders header actions for an existing note and keeps 
     surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-close]')
       ?.textContent,
     'Close'
-  );
-  assert.equal(surface.querySelector?.('[data-canopy-editor-title]')?.value, sampleState.title);
-  assert.equal(
-    surface.querySelector?.('[data-canopy-editor-title]')?.placeholder,
-    'Title'
   );
   assert.equal(surface.querySelector?.('[data-canopy-editor-body]')?.value, sampleState.body);
   assert.equal(
@@ -182,6 +171,16 @@ test('createEditorSurface renders header actions for an existing note and keeps 
   assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-cancel]'), null);
 });
 
+test('createEditorSurface hides raw element info and removes the title input', () => {
+  const fakeDocument = createFakeDocument();
+
+  const surface = createEditorSurface(fakeDocument, sampleState);
+
+  assert.equal(surface.querySelector('[data-canopy-editor-title]'), null);
+  assert.equal(surface.querySelector('[data-canopy-editor-element-info]'), null);
+  assert.equal(surface.querySelector('[data-canopy-folder-control]')?.querySelector('[data-canopy-folder-change]')?.textContent, 'Change');
+});
+
 test('createEditorSurface renders inline tag entry controls instead of relying on browser prompts', () => {
   const fakeDocument = createFakeDocument();
 
@@ -202,7 +201,7 @@ test('createEditorSurface disables save, omits delete for new notes, and still p
 
   assert.equal(
     surface.querySelector?.('[data-canopy-editor-heading]')?.textContent,
-    'New Note'
+    'New note'
   );
   assert.equal(surface.querySelector?.('[data-canopy-save]')?.textContent, 'Save Note');
   assert.equal(surface.querySelector?.('[data-canopy-save]')?.disabled, true);

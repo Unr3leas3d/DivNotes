@@ -7,14 +7,12 @@ import { computeAnchoredOverlayPosition, watchAnchorPosition } from './anchored-
 import { createEditorSurface, createTagRow } from './editor-surface.ts';
 import {
   buildEditorTagNames,
-  formatEditorContent,
   getFolderChipLabel,
   getInitialManualTags,
   getInitialSelectedFolderId,
   getSuggestedFolderIdForDomain,
   getTagChipLabels,
   hasMeaningfulEditorContent,
-  parseEditorDraft,
   resolveStoredTagLabels,
   savePageNotesToStorage,
 } from './note-editor-helpers.ts';
@@ -781,23 +779,16 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     offset: 8,
   });
 
-  const draft = existingNote ? parseEditorDraft(existingNote.content) : { title: '', body: '' };
+  const bodyContent = existingNote?.content ?? '';
   let selectedFolderId: string | null = existingNote?.folderId ?? null;
   let availableFolders: StoredFolder[] = [];
   let folderSelectionTouched = false;
-  let manualTags = getInitialManualTags(existingNote?.tags ?? [], existingNote?.content ?? '');
-
-  const elInfo = `${getElementInfo(element)}${
-    selectedText
-      ? ` - selection: "${selectedText.length > 20 ? `${selectedText.substring(0, 20)}...` : selectedText}"`
-      : ''
-  }`;
+  const draft = { title: '', body: bodyContent };
+  let manualTags = getInitialManualTags(existingNote?.tags ?? [], bodyContent);
 
   noteEditorContainer = createEditorSurface(document as unknown as Parameters<typeof createEditorSurface>[0], {
     isNew: !existingNote,
-    title: draft.title,
-    body: draft.body,
-    elementInfo: elInfo,
+    body: bodyContent,
     folderLabel: 'Inbox',
     tagLabels: getTagChipLabels(buildEditorTagNames(manualTags, draft)),
     pinned: existingNote?.pinned ?? false,
@@ -832,9 +823,6 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   });
 
   const currentEditor = noteEditorContainer;
-  const titleInput = currentEditor.querySelector(
-    '[data-canopy-editor-title]'
-  ) as HTMLInputElement | null;
   const bodyTextarea = currentEditor.querySelector(
     '[data-canopy-editor-body]'
   ) as HTMLTextAreaElement | null;
@@ -855,7 +843,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   const closeBtn = currentEditor.querySelector('[data-canopy-close]') as HTMLButtonElement | null;
   const deleteBtn = currentEditor.querySelector('[data-canopy-delete]') as HTMLButtonElement | null;
 
-  if (!titleInput || !bodyTextarea || !folderControl || !folderLabel || !folderChangeButton || !pinnedInput || !errorEl || !saveBtn || !closeBtn) {
+  if (!bodyTextarea || !folderControl || !folderLabel || !folderChangeButton || !pinnedInput || !errorEl || !saveBtn || !closeBtn) {
     closeNoteEditor();
     return;
   }
@@ -872,7 +860,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     applySaveButtonState(
       saveBtn,
       hasMeaningfulEditorContent({
-        title: titleInput.value,
+        title: '',
         body: bodyTextarea.value,
       })
     );
@@ -1015,7 +1003,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       document as unknown as Parameters<typeof createTagRow>[0],
       getTagChipLabels(
         buildEditorTagNames(manualTags, {
-          title: titleInput.value,
+          title: '',
           body: bodyTextarea.value,
         })
       )
@@ -1058,12 +1046,10 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     updateFolderLabel();
   });
 
-  [titleInput, bodyTextarea].forEach((field) => {
-    field.addEventListener('input', () => {
-      errorEl.textContent = '';
-      updateSaveState();
-      renderTagRow();
-    });
+  bodyTextarea.addEventListener('input', () => {
+    errorEl.textContent = '';
+    updateSaveState();
+    renderTagRow();
   });
 
   folderChangeButton.addEventListener('click', (event) => {
@@ -1090,7 +1076,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     event.stopPropagation();
 
     const nextDraft = {
-      title: titleInput.value,
+      title: '',
       body: bodyTextarea.value,
     };
 
@@ -1099,7 +1085,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       return;
     }
 
-    const formattedContent = formatEditorContent(nextDraft);
+    const formattedContent = bodyTextarea.value;
     const nextTags = buildEditorTagNames(manualTags, nextDraft);
     const nextPinned = pinnedInput.checked;
     const previousTags = existingNote ? [...existingNote.tags] : [];
@@ -1117,7 +1103,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           elementXPath: getXPath(element),
           elementTextHash: getTextHash(element),
           elementPosition: getPosition(element),
-          elementInfo: elInfo,
+          elementInfo: getElementInfo(element),
           content: formattedContent,
           selectedText,
           folderId: selectedFolderId,
@@ -1201,7 +1187,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
   setTimeout(() => {
     if (document.activeElement === document.body) {
-      (titleInput.value ? bodyTextarea : titleInput).focus();
+      bodyTextarea.focus();
     }
   }, 50);
 }
