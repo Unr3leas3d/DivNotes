@@ -4,6 +4,8 @@ import {
   type StoredAccountState,
 } from '../lib/account-state.ts';
 
+const DEFAULT_BOOTSTRAP_TIMEOUT_MS = 2000;
+
 export type PopupAuthMode = 'login' | 'local' | 'authenticated';
 
 interface StoredAuthRecord {
@@ -25,6 +27,9 @@ interface PopupBootstrapDependencies {
   readSupabaseSession: () => Promise<PopupSessionResult>;
   readProfile: (userId: string) => Promise<ProfileRecord | null>;
   persistAuthenticatedState: (account: StoredAccountState) => Promise<void> | void;
+  storageTimeoutMs?: number;
+  sessionTimeoutMs?: number;
+  profileTimeoutMs?: number;
 }
 
 export interface PopupBootstrapState {
@@ -66,6 +71,28 @@ function buildPopupState(
 interface ResolveAuthenticatedPopupStateDependencies {
   readProfile: (userId: string) => Promise<ProfileRecord | null>;
   persistAuthenticatedState: (account: StoredAccountState) => Promise<void> | void;
+  profileTimeoutMs?: number;
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
 export async function resolveAuthenticatedPopupState(
@@ -73,7 +100,13 @@ export async function resolveAuthenticatedPopupState(
   deps: ResolveAuthenticatedPopupStateDependencies
 ): Promise<PopupBootstrapState> {
   const email = sessionUser.email?.trim() ?? '';
-  const profile = sessionUser.id ? await deps.readProfile(sessionUser.id) : null;
+  const profile = sessionUser.id
+    ? await withTimeout(
+        deps.readProfile(sessionUser.id),
+        deps.profileTimeoutMs ?? DEFAULT_BOOTSTRAP_TIMEOUT_MS,
+        'Profile lookup timed out'
+      )
+    : null;
   const account = buildStoredAccountState({
     authMode: 'authenticated',
     email,
@@ -94,18 +127,26 @@ export async function resolvePopupBootstrapState(
   deps: PopupBootstrapDependencies
 ): Promise<PopupBootstrapState> {
   try {
-    const storedAuth = await deps.readStoredAuth();
+    const storedAuth = await withTimeout(
+      deps.readStoredAuth(),
+      deps.storageTimeoutMs ?? DEFAULT_BOOTSTRAP_TIMEOUT_MS,
+      'Stored auth lookup timed out'
+    );
     if (storedAuth?.mode === 'local') {
       return buildPopupState('local', '', null);
     }
 
-    const { session, error } = await deps.readSupabaseSession();
+    const { session, error } = await withTimeout(
+      deps.readSupabaseSession(),
+      deps.sessionTimeoutMs ?? DEFAULT_BOOTSTRAP_TIMEOUT_MS,
+      'Session lookup timed out'
+    );
     if (error) {
       throw error;
     }
 
     if (session?.user) {
-      return resolveAuthenticatedPopupState(session.user, deps);
+      return await resolveAuthenticatedPopupState(session.user, deps);
     }
 
     return buildPopupState('login', '', null);

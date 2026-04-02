@@ -6,6 +6,15 @@ import {
   resolvePopupAuthStateChange,
 } from './auth-bootstrap.ts';
 
+function resolveWithin(promise, timeoutMs = 50) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Test timed out after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
+}
+
 test('resolvePopupBootstrapState falls back to login with error when storage lookup fails', async () => {
   const state = await resolvePopupBootstrapState({
     readStoredAuth: async () => {
@@ -147,6 +156,69 @@ test('resolvePopupBootstrapState enables cloud sync for pro users with active en
   assert.equal(state.account.plan, 'pro');
   assert.equal(state.account.entitlementStatus, 'active');
   assert.equal(state.account.subscriptionInterval, 'yearly');
+});
+
+test('resolvePopupBootstrapState falls back to login when session lookup stalls', async () => {
+  const state = await resolveWithin(
+    resolvePopupBootstrapState({
+      readStoredAuth: async () => ({ mode: 'authenticated' }),
+      readSupabaseSession: async () => new Promise(() => {}),
+      readProfile: async () => {
+        throw new Error('should not run');
+      },
+      persistAuthenticatedState: async () => {
+        throw new Error('should not run');
+      },
+      sessionTimeoutMs: 10,
+    })
+  );
+
+  assert.deepEqual(state, {
+    mode: 'login',
+    email: '',
+    error: 'Session lookup timed out',
+    account: {
+      authMode: 'login',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
+  });
+});
+
+test('resolvePopupBootstrapState falls back to login when profile lookup stalls', async () => {
+  const state = await resolveWithin(
+    resolvePopupBootstrapState({
+      readStoredAuth: async () => ({ mode: 'authenticated' }),
+      readSupabaseSession: async () => ({
+        session: { user: { id: 'user-1', email: 'user@example.com' } },
+        error: null,
+      }),
+      readProfile: async () => new Promise(() => {}),
+      persistAuthenticatedState: async () => {
+        throw new Error('should not run');
+      },
+      profileTimeoutMs: 10,
+    })
+  );
+
+  assert.deepEqual(state, {
+    mode: 'login',
+    email: '',
+    error: 'Profile lookup timed out',
+    account: {
+      authMode: 'login',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
+  });
 });
 
 test('resolvePopupAuthStateChange ignores session promotion while current mode is local', () => {
