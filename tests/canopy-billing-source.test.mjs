@@ -30,6 +30,20 @@ test('billing migrations create profile, billing-event, and entitlement-RLS foun
   assert.match(rlsSql, /profiles\.entitlement_status = 'active'/);
 });
 
+test('deployment backfill migration exists for older projects missing billing schema', () => {
+  const migration005 = 'supabase/migrations/005_backfill_schema_for_existing_projects.sql';
+
+  assert.equal(existsSync(path.join(repoRoot, migration005)), true);
+
+  const sql = read(migration005).toLowerCase();
+
+  assert.match(sql, /create table if not exists profiles/);
+  assert.match(sql, /insert into profiles/);
+  assert.match(sql, /from auth\.users/);
+  assert.match(sql, /drop policy if exists \"users own notes\" on notes/);
+  assert.match(sql, /create policy notes_user_select/);
+});
+
 test('billing edge functions and extension billing actions exist', () => {
   const checkoutFnPath = 'supabase/functions/create-checkout-session/index.ts';
   const portalFnPath = 'supabase/functions/create-customer-portal-session/index.ts';
