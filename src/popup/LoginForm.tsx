@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { signInWithGoogleInExtension } from '@/lib/google-auth';
 import { supabase } from '@/lib/supabase';
 import { createAuthIntentGuard } from './auth-intent';
+import type { PopupSessionUser } from './auth-bootstrap';
 
 interface LoginFormProps {
-    onLogin: (email: string) => void | Promise<void>;
+    onLogin: (sessionUser: PopupSessionUser | null) => void | Promise<void>;
     onUseLocally: () => void | Promise<void>;
     onGoogleSessionPromotionChange: (allowed: boolean) => void;
 }
@@ -30,14 +31,15 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
         setIsLoading(true);
         setError('');
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        setIsLoading(false);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
             setError(error.message);
         } else {
-            onLogin(email);
+            await onLogin(data.session?.user ?? null);
         }
+
+        setIsLoading(false);
     };
 
     const handleSignUp = async (e: React.FormEvent) => {
@@ -45,15 +47,17 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
         setIsLoading(true);
         setError('');
 
-        const { error } = await supabase.auth.signUp({ email, password });
-        setIsLoading(false);
+        const { data, error } = await supabase.auth.signUp({ email, password });
 
         if (error) {
             setError(error.message);
+        } else if (!data.session?.user) {
+            setError('Check your email to confirm your account, then sign in.');
         } else {
-            // Auto-login after signup (Supabase auto-confirms by default)
-            onLogin(email);
+            await onLogin(data.session.user);
         }
+
+        setIsLoading(false);
     };
 
     const handleGoogleSignIn = async () => {
@@ -73,7 +77,7 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
             });
 
             if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {
-                onLogin(result.email);
+                await onLogin(result.user);
             }
         } catch (caughtError) {
             if (authIntentGuardRef.current.isCurrentIntent(currentIntent)) {

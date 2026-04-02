@@ -31,7 +31,7 @@ test('signInWithGoogleInExtension launches Chrome OAuth and exchanges the return
       exchangedCode = code;
       return {
         data: {
-          user: { email: 'user@example.com' },
+          user: { id: 'user-1', email: 'user@example.com' },
           session: { access_token: 'token', refresh_token: 'refresh' },
         },
         error: null,
@@ -40,7 +40,12 @@ test('signInWithGoogleInExtension launches Chrome OAuth and exchanges the return
   });
 
   assert.equal(exchangedCode, 'oauth-code');
-  assert.equal(result.email, 'user@example.com');
+  assert.deepEqual(result, {
+    user: {
+      id: 'user-1',
+      email: 'user@example.com',
+    },
+  });
 });
 
 test('signInWithGoogleInExtension surfaces cancellation as an inline-safe error', async () => {
@@ -127,7 +132,7 @@ test('signInWithGoogleInExtension signs out and rejects when flow is stale after
       exchangeCodeForSession: async () => {
         canContinue = false;
         return {
-          data: { user: { email: 'user@example.com' } },
+          data: { user: { id: 'user-1', email: 'user@example.com' } },
           error: null,
         };
       },

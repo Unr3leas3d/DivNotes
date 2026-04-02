@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  resolvePostLoginPopupState,
   resolvePopupBootstrapState,
   resolvePopupAuthStateChange,
 } from './auth-bootstrap.ts';
@@ -209,6 +210,32 @@ test('resolvePopupBootstrapState falls back to login when profile lookup stalls'
     mode: 'login',
     email: '',
     error: 'Profile lookup timed out',
+    account: {
+      authMode: 'login',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
+  });
+});
+
+test('resolvePostLoginPopupState stays on login when no persisted session exists yet', async () => {
+  const state = await resolvePostLoginPopupState(null, {
+    readProfile: async () => {
+      throw new Error('should not run');
+    },
+    persistAuthenticatedState: async () => {
+      throw new Error('should not run');
+    },
+  });
+
+  assert.deepEqual(state, {
+    mode: 'login',
+    email: '',
+    error: 'Sign-in did not create a persistent session. Please try again.',
     account: {
       authMode: 'login',
       email: '',

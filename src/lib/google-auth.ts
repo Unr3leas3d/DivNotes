@@ -9,7 +9,7 @@ interface GoogleAuthDependencies {
   launchWebAuthFlow: LaunchWebAuthFlow;
   exchangeCodeForSession: (
     code: string
-  ) => Promise<{ data: { user: { email?: string | null } | null }; error: Error | null }>;
+  ) => Promise<{ data: { user: { id?: string; email?: string | null } | null }; error: Error | null }>;
   canContinue?: () => boolean;
   signOut?: () => Promise<{ error?: Error | null } | void>;
 }
@@ -74,5 +74,10 @@ export async function signInWithGoogleInExtension(deps: GoogleAuthDependencies) 
     throw new Error('Google sign-in did not return a user email.');
   }
 
-  return { email };
+  return {
+    user: {
+      id: sessionData.user.id,
+      email,
+    },
+  };
 }

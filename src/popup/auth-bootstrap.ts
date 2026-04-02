@@ -12,13 +12,13 @@ interface StoredAuthRecord {
   mode?: string;
 }
 
-interface SessionUser {
+export interface PopupSessionUser {
   id?: string;
   email?: string | null;
 }
 
 interface PopupSessionResult {
-  session: { user: SessionUser } | null;
+  session: { user: PopupSessionUser } | null;
   error: Error | null;
 }
 
@@ -41,7 +41,7 @@ export interface PopupBootstrapState {
 
 interface PopupAuthStateChangeParams {
   currentMode: PopupAuthMode | 'loading';
-  sessionUser: SessionUser | null;
+  sessionUser: PopupSessionUser | null;
   canPromoteFromSession: boolean;
 }
 
@@ -96,7 +96,7 @@ function withTimeout<T>(
 }
 
 export async function resolveAuthenticatedPopupState(
-  sessionUser: SessionUser,
+  sessionUser: PopupSessionUser,
   deps: ResolveAuthenticatedPopupStateDependencies
 ): Promise<PopupBootstrapState> {
   const email = sessionUser.email?.trim() ?? '';
@@ -121,6 +121,29 @@ export async function resolveAuthenticatedPopupState(
     error: null,
     account,
   };
+}
+
+export async function resolvePostLoginPopupState(
+  sessionUser: PopupSessionUser | null,
+  deps: ResolveAuthenticatedPopupStateDependencies
+): Promise<PopupBootstrapState> {
+  if (!sessionUser) {
+    return buildPopupState(
+      'login',
+      '',
+      'Sign-in did not create a persistent session. Please try again.'
+    );
+  }
+
+  try {
+    return await resolveAuthenticatedPopupState(sessionUser, deps);
+  } catch (caughtError) {
+    return buildPopupState(
+      'login',
+      '',
+      caughtError instanceof Error ? caughtError.message : 'Failed to complete sign in'
+    );
+  }
 }
 
 export async function resolvePopupBootstrapState(

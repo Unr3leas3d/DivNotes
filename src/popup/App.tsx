@@ -13,7 +13,9 @@ import { resetNotesService } from '@/lib/notes-service';
 import { supabase } from '@/lib/supabase';
 import { resetTagsService } from '@/lib/tags-service';
 import {
+    type PopupSessionUser,
     resolveAuthenticatedPopupState,
+    resolvePostLoginPopupState,
     resolvePopupAuthStateChange,
     resolvePopupBootstrapState,
 } from './auth-bootstrap';
@@ -170,27 +172,13 @@ export default function App() {
         return () => subscription.unsubscribe();
     }, []);
 
-    const handleLogin = async (email: string) => {
+    const handleLogin = async (sessionUser: PopupSessionUser | null) => {
         allowSessionPromotionRef.current = false;
-        setAuthError(null);
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.user) {
-            const account = buildStoredAccountState({
-                authMode: 'authenticated',
-                email,
-                profile: null,
-            });
-            await persistAuthenticatedState(account);
-            setAccountState(account);
-            setAuthMode('authenticated');
-            return;
-        }
-
-        const nextState = await resolveAuthenticatedPopupState(session.user, {
+        const nextState = await resolvePostLoginPopupState(sessionUser, {
             readProfile,
             persistAuthenticatedState,
         });
+        setAuthError(nextState.error);
         setAccountState(nextState.account);
         setAuthMode(nextState.mode);
     };
