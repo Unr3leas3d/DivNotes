@@ -36,6 +36,7 @@ export interface StoredNote {
   elementPosition?: string;
   selectedText?: string;
   createdAt: string;
+  updatedAt: string;
   // New fields
   folderId: string | null;
   tags: string[];

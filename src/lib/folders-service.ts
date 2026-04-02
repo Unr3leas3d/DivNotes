@@ -1,3 +1,4 @@
+import { canUseCloudSync, readStoredAccountState } from './account-state.ts';
 import { supabase } from './supabase.ts';
 import type { StoredFolder, SyncQueueItem } from './types.ts';
 import { FOLDER_COLORS } from './types.ts';
@@ -263,9 +264,9 @@ let _service: FoldersService | null = null;
 
 export async function getFoldersService(): Promise<FoldersService> {
   if (_service) return _service;
-  const result = await chrome.storage.local.get(['divnotes_auth']);
-  const auth = result.divnotes_auth as { mode: string } | undefined;
-  if (auth?.mode === 'authenticated') {
+  const account = await readStoredAccountState();
+  const cloudSyncEnabled = canUseCloudSync(account);
+  if (cloudSyncEnabled) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       _service = new CloudFoldersService(session.user.id);

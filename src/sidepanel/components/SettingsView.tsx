@@ -5,6 +5,8 @@ import { SettingsView as WorkspaceSettingsView } from '@/popup/components/Settin
 interface SettingsViewProps {
   email: string;
   isLocalMode: boolean;
+  billingStatusLabel: 'Free' | 'Pro' | 'Inactive';
+  billingStatusText: string;
   version: string;
   noteCount: number;
   folderCount: number;
@@ -15,6 +17,9 @@ interface SettingsViewProps {
   onExport: () => void | Promise<void>;
   onImport: () => void | Promise<void>;
   onClearAll: () => void | Promise<void>;
+  onUpgradeMonthly: () => void | Promise<void>;
+  onUpgradeYearly: () => void | Promise<void>;
+  onManageBilling: () => void | Promise<void>;
 }
 
 const sectionTitles = {
@@ -41,6 +46,8 @@ export function SettingsView(props: SettingsViewProps) {
       labels={labels}
       email={props.email}
       isLocalMode={props.isLocalMode}
+      billingStatusLabel={props.billingStatusLabel}
+      billingStatusText={props.billingStatusText}
       version={props.version}
       noteCount={props.noteCount}
       folderCount={props.folderCount}
@@ -51,6 +58,9 @@ export function SettingsView(props: SettingsViewProps) {
       onExport={props.onExport}
       onImport={props.onImport}
       onClearAll={props.onClearAll}
+      onUpgradeMonthly={props.onUpgradeMonthly}
+      onUpgradeYearly={props.onUpgradeYearly}
+      onManageBilling={props.onManageBilling}
       showSidePanelAction={false}
     />
   );

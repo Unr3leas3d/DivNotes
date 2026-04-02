@@ -1,14 +1,25 @@
+import { canUseCloudSync, readStoredAccountState } from './account-state.ts';
 import { supabase } from './supabase.ts';
 import type { StoredNote, SyncQueueItem } from './types.ts';
 export type { StoredNote, SyncQueueItem };
 
 export function withNoteDefaults(note: Partial<StoredNote> & { id: string }): StoredNote {
+    const createdAt = note.createdAt ?? new Date().toISOString();
+    const updatedAt = note.updatedAt ?? createdAt;
     return {
         ...note,
+        createdAt,
+        updatedAt,
         folderId: note.folderId ?? null,
         tags: note.tags ?? [],
         pinned: note.pinned ?? false,
     } as StoredNote;
+}
+
+async function isCloudSyncEnabled() {
+    const account = await readStoredAccountState();
+    const cloudSyncEnabled = canUseCloudSync(account);
+    return cloudSyncEnabled;
 }
 
 // ==================== INTERFACE ====================
@@ -27,7 +38,7 @@ export class LocalNotesService implements NotesService {
 
     private async getAllNotes(): Promise<StoredNote[]> {
         const result = await chrome.storage.local.get([this.key]);
-        return result[this.key] || [];
+        return ((result[this.key] || []) as StoredNote[]).map((note) => withNoteDefaults(note));
     }
 
     private async setAllNotes(notes: StoredNote[]): Promise<void> {
@@ -36,7 +47,7 @@ export class LocalNotesService implements NotesService {
 
     async save(note: StoredNote): Promise<void> {
         const all = await this.getAllNotes();
-        all.push(note);
+        all.push(withNoteDefaults(note));
         await this.setAllNotes(all);
     }
 
@@ -44,7 +55,12 @@ export class LocalNotesService implements NotesService {
         const all = await this.getAllNotes();
         const idx = all.findIndex(n => n.id === id);
         if (idx > -1) {
-            all[idx] = { ...all[idx], ...updates };
+            all[idx] = withNoteDefaults({
+                ...all[idx],
+                ...updates,
+                id,
+                updatedAt: updates.updatedAt ?? new Date().toISOString(),
+            });
             await this.setAllNotes(all);
         }
     }
@@ -113,6 +129,12 @@ export class CloudNotesService implements NotesService {
 
         this.syncP = new Promise((resolve) => {
             chrome.storage.local.get(['divnotes_sync_queue'], async (res) => {
+                const cloudSyncEnabled = await isCloudSyncEnabled();
+                if (!cloudSyncEnabled) {
+                    this.syncP = null;
+                    return resolve();
+                }
+
                 const queue: SyncQueueItem[] = res.divnotes_sync_queue || [];
                 if (queue.length === 0) {
                     this.syncP = null;
@@ -228,66 +250,71 @@ export class CloudNotesService implements NotesService {
     }
 
     private storedToDb(note: StoredNote) {
+        const normalizedNote = withNoteDefaults(note);
         return {
-            id: note.id,
+            id: normalizedNote.id,
             user_id: this.userId,
-            page_url: note.url,
-            page_title: note.pageTitle,
-            page_domain: note.hostname,
-            element_selector: note.elementSelector,
-            element_tag: note.elementTag,
-            element_info: note.elementInfo,
-            content: note.content,
-            color: note.color || '#7c3aed',
-            tag_label: note.tagLabel || null,
-            element_xpath: note.elementXPath || null,
-            element_text_hash: note.elementTextHash || null,
-            element_position: note.elementPosition || null,
-            selected_text: note.selectedText || null,
-            created_at: note.createdAt,
-            folder_id: note.folderId || null,
-            pinned: note.pinned || false,
+            page_url: normalizedNote.url,
+            page_title: normalizedNote.pageTitle,
+            page_domain: normalizedNote.hostname,
+            element_selector: normalizedNote.elementSelector,
+            element_tag: normalizedNote.elementTag,
+            element_info: normalizedNote.elementInfo,
+            content: normalizedNote.content,
+            color: normalizedNote.color || '#7c3aed',
+            tag_label: normalizedNote.tagLabel || null,
+            element_xpath: normalizedNote.elementXPath || null,
+            element_text_hash: normalizedNote.elementTextHash || null,
+            element_position: normalizedNote.elementPosition || null,
+            selected_text: normalizedNote.selectedText || null,
+            created_at: normalizedNote.createdAt,
+            updated_at: normalizedNote.updatedAt,
+            folder_id: normalizedNote.folderId || null,
+            pinned: normalizedNote.pinned || false,
         };
     }
 
     async save(note: StoredNote): Promise<void> {
+        const normalizedNote = withNoteDefaults(note);
         // Save locally first (cache)
-        await this.local.save(note);
+        await this.local.save(normalizedNote);
 
         // Then sync to Supabase
         try {
             const { error } = await supabase.from('notes').insert({
-                id: note.id,
+                id: normalizedNote.id,
                 user_id: this.userId,
-                page_url: note.url,
-                page_title: note.pageTitle,
-                page_domain: note.hostname,
-                element_selector: note.elementSelector,
-                element_tag: note.elementTag,
-                element_info: note.elementInfo,
-                content: note.content,
-                color: note.color || '#7c3aed',
-                tag_label: note.tagLabel || null,
-                element_xpath: note.elementXPath || null,
-                element_text_hash: note.elementTextHash || null,
-                element_position: note.elementPosition || null,
-                selected_text: note.selectedText || null,
-                created_at: note.createdAt,
-                folder_id: note.folderId || null,
-                pinned: note.pinned || false,
+                page_url: normalizedNote.url,
+                page_title: normalizedNote.pageTitle,
+                page_domain: normalizedNote.hostname,
+                element_selector: normalizedNote.elementSelector,
+                element_tag: normalizedNote.elementTag,
+                element_info: normalizedNote.elementInfo,
+                content: normalizedNote.content,
+                color: normalizedNote.color || '#7c3aed',
+                tag_label: normalizedNote.tagLabel || null,
+                element_xpath: normalizedNote.elementXPath || null,
+                element_text_hash: normalizedNote.elementTextHash || null,
+                element_position: normalizedNote.elementPosition || null,
+                selected_text: normalizedNote.selectedText || null,
+                created_at: normalizedNote.createdAt,
+                updated_at: normalizedNote.updatedAt,
+                folder_id: normalizedNote.folderId || null,
+                pinned: normalizedNote.pinned || false,
             });
             if (error) throw error;
             // Optionally flush queue if we just succeeded online
             this.processSyncQueue();
         } catch (err) {
             console.warn('[Canopy] Offline — queuing save for later');
-            await this.queueOperation('save', note.id, note);
+            await this.queueOperation('save', normalizedNote.id, normalizedNote);
         }
     }
 
     async update(id: string, updates: Partial<StoredNote>): Promise<void> {
+        const nextUpdatedAt = updates.updatedAt ?? new Date().toISOString();
         // Update locally first
-        await this.local.update(id, updates);
+        await this.local.update(id, { ...updates, updatedAt: nextUpdatedAt });
 
         const dbUpdates: Record<string, unknown> = {};
         if (updates.content !== undefined) dbUpdates.content = updates.content;
@@ -301,7 +328,7 @@ export class CloudNotesService implements NotesService {
         if (updates.selectedText !== undefined) dbUpdates.selected_text = updates.selectedText;
         if (updates.folderId !== undefined) dbUpdates.folder_id = updates.folderId;
         if (updates.pinned !== undefined) dbUpdates.pinned = updates.pinned;
-        dbUpdates.updated_at = new Date().toISOString();
+        dbUpdates.updated_at = nextUpdatedAt;
 
         // Then sync to Supabase
         try {
@@ -400,6 +427,7 @@ export class CloudNotesService implements NotesService {
             elementPosition: (row.element_position as string) || undefined,
             selectedText: (row.selected_text as string) || undefined,
             createdAt: row.created_at as string,
+            updatedAt: (row.updated_at as string) || (row.created_at as string),
             folderId: (row.folder_id as string) || null,
             tags: noteTagRows.map(nt => nt.tag_id),
             pinned: (row.pinned as boolean) || false,
@@ -414,11 +442,9 @@ export async function getNotesService(): Promise<NotesService> {
     if (_service) return _service;
 
     // Check auth mode
-    const result = await chrome.storage.local.get(['divnotes_auth']);
+    const cloudSyncEnabled = await isCloudSyncEnabled();
 
-    const auth = result.divnotes_auth as { mode: string; email?: string } | undefined;
-
-    if (auth?.mode === 'authenticated') {
+    if (cloudSyncEnabled) {
         // Get Supabase user ID
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {

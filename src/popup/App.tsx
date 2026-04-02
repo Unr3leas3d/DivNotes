@@ -1,17 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { LoginForm } from './LoginForm';
 import { Dashboard } from './Dashboard';
+import {
+    buildStoredAccountState,
+    type ProfileRecord,
+    type StoredAccountState,
+    writeStoredAccountState,
+    clearStoredAccountState,
+} from '@/lib/account-state';
 import { resetFoldersService } from '@/lib/folders-service';
 import { resetNotesService } from '@/lib/notes-service';
 import { supabase } from '@/lib/supabase';
 import { resetTagsService } from '@/lib/tags-service';
-import { resolvePopupAuthStateChange, resolvePopupBootstrapState } from './auth-bootstrap';
+import {
+    resolveAuthenticatedPopupState,
+    resolvePopupAuthStateChange,
+    resolvePopupBootstrapState,
+} from './auth-bootstrap';
 
 type AuthMode = 'loading' | 'login' | 'local' | 'authenticated';
 
+const LOGIN_ACCOUNT_STATE = buildStoredAccountState({
+    authMode: 'login',
+    email: '',
+    profile: null,
+});
+
+async function readProfile(userId: string): Promise<ProfileRecord | null> {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('email, plan, entitlement_status, billing_provider, subscription_interval')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    return {
+        email: data.email ?? '',
+        plan: data.plan,
+        entitlement_status: data.entitlement_status,
+        billing_provider: data.billing_provider,
+        subscription_interval: data.subscription_interval,
+    } as ProfileRecord;
+}
+
+async function persistAuthenticatedState(account: StoredAccountState) {
+    await chrome.storage.local.set({
+        divnotes_auth: { mode: 'authenticated', email: account.email },
+    });
+    await writeStoredAccountState(account);
+}
+
+async function persistLocalState() {
+    const account = buildStoredAccountState({
+        authMode: 'local',
+        email: '',
+        profile: null,
+    });
+    await chrome.storage.local.set({ divnotes_auth: { mode: 'local' } });
+    await writeStoredAccountState(account);
+    return account;
+}
+
 export default function App() {
     const [authMode, setAuthMode] = useState<AuthMode>('loading');
-    const [userEmail, setUserEmail] = useState('');
+    const [accountState, setAccountState] = useState<StoredAccountState>(LOGIN_ACCOUNT_STATE);
     const [authError, setAuthError] = useState<string | null>(null);
     const authModeRef = React.useRef<AuthMode>('loading');
     const allowSessionPromotionRef = React.useRef(false);
@@ -22,6 +81,35 @@ export default function App() {
     }, [authMode]);
 
     useEffect(() => {
+        const syncAuthenticatedAccount = async (
+            sessionUser: { id?: string; email?: string | null },
+            fallbackEmail = ''
+        ) => {
+            try {
+                const nextState = await resolveAuthenticatedPopupState(sessionUser, {
+                    readProfile,
+                    persistAuthenticatedState,
+                });
+                setAuthError(null);
+                setAccountState(nextState.account);
+                setAuthMode(nextState.mode);
+            } catch (caughtError) {
+                const account = buildStoredAccountState({
+                    authMode: 'authenticated',
+                    email: sessionUser.email?.trim() ?? fallbackEmail,
+                    profile: null,
+                });
+                await persistAuthenticatedState(account);
+                setAccountState(account);
+                setAuthMode('authenticated');
+                setAuthError(
+                    caughtError instanceof Error
+                        ? caughtError.message
+                        : 'Failed to determine account state'
+                );
+            }
+        };
+
         async function bootstrapAuth() {
             setAuthMode('loading');
             const nextState = await resolvePopupBootstrapState({
@@ -38,15 +126,12 @@ export default function App() {
                     const { data: { session }, error } = await supabase.auth.getSession();
                     return { session, error };
                 },
-                persistAuthenticatedAuth: async (email) => {
-                    await chrome.storage.local.set({
-                        divnotes_auth: { mode: 'authenticated', email },
-                    });
-                },
+                readProfile,
+                persistAuthenticatedState,
             });
 
             setAuthError(nextState.error);
-            setUserEmail(nextState.email);
+            setAccountState(nextState.account);
             setAuthMode(nextState.mode);
         }
 
@@ -64,11 +149,18 @@ export default function App() {
                     return;
                 }
 
-                setAuthMode(nextState.mode);
-                setUserEmail(nextState.email);
-                if (nextState.mode === 'authenticated') {
+                if (nextState.mode === 'authenticated' && session?.user) {
                     allowSessionPromotionRef.current = false;
+                    void syncAuthenticatedAccount(session.user, nextState.email);
+                    return;
                 }
+
+                if (nextState.mode === 'login') {
+                    void clearStoredAccountState();
+                    setAccountState(LOGIN_ACCOUNT_STATE);
+                }
+
+                setAuthMode(nextState.mode);
                 if (nextState.clearAuthError) {
                     setAuthError(null);
                 }
@@ -78,18 +170,36 @@ export default function App() {
         return () => subscription.unsubscribe();
     }, []);
 
-    const handleLogin = (email: string) => {
+    const handleLogin = async (email: string) => {
         allowSessionPromotionRef.current = false;
         setAuthError(null);
-        chrome.storage.local.set({ divnotes_auth: { mode: 'authenticated', email } });
-        setUserEmail(email);
-        setAuthMode('authenticated');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+            const account = buildStoredAccountState({
+                authMode: 'authenticated',
+                email,
+                profile: null,
+            });
+            await persistAuthenticatedState(account);
+            setAccountState(account);
+            setAuthMode('authenticated');
+            return;
+        }
+
+        const nextState = await resolveAuthenticatedPopupState(session.user, {
+            readProfile,
+            persistAuthenticatedState,
+        });
+        setAccountState(nextState.account);
+        setAuthMode(nextState.mode);
     };
 
-    const handleUseLocally = () => {
+    const handleUseLocally = async () => {
         allowSessionPromotionRef.current = false;
         setAuthError(null);
-        chrome.storage.local.set({ divnotes_auth: { mode: 'local' } });
+        const account = await persistLocalState();
+        setAccountState(account);
         setAuthMode('local');
     };
 
@@ -98,11 +208,12 @@ export default function App() {
             await supabase.auth.signOut();
         }
         await chrome.storage.local.remove('divnotes_auth');
+        await clearStoredAccountState();
         resetNotesService();
         resetFoldersService();
         resetTagsService();
+        setAccountState(LOGIN_ACCOUNT_STATE);
         setAuthMode('login');
-        setUserEmail('');
     };
 
     if (authMode === 'loading') {
@@ -119,7 +230,7 @@ export default function App() {
     }
 
     const isLoggedIn = authMode === 'local' || authMode === 'authenticated';
-    const displayEmail = authMode === 'local' ? 'Local Mode' : userEmail;
+    const displayEmail = authMode === 'local' ? 'Local Mode' : accountState.email;
 
     return (
         <div className="relative h-[500px] w-[380px] overflow-hidden bg-[#fcfbf7] text-[#173628]">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, ExternalLink, HardDrive, LogOut, UserRound } from 'lucide-react';
+import { CreditCard, Database, ExternalLink, HardDrive, UserRound } from 'lucide-react';
 
 interface SettingsViewProps {
   sectionTitles: {
@@ -19,6 +19,8 @@ interface SettingsViewProps {
   };
   email: string;
   isLocalMode: boolean;
+  billingStatusLabel: 'Free' | 'Pro' | 'Inactive';
+  billingStatusText: string;
   version: string;
   noteCount: number;
   folderCount: number;
@@ -30,6 +32,9 @@ interface SettingsViewProps {
   onImport: () => void | Promise<void>;
   onClearAll: () => void | Promise<void>;
   onOpenSidePanel?: () => void | Promise<void>;
+  onUpgradeMonthly?: () => void | Promise<void>;
+  onUpgradeYearly?: () => void | Promise<void>;
+  onManageBilling?: () => void | Promise<void>;
   showSidePanelAction?: boolean;
 }
 
@@ -79,6 +84,8 @@ export function SettingsView({
   labels,
   email,
   isLocalMode,
+  billingStatusLabel,
+  billingStatusText,
   version,
   noteCount,
   folderCount,
@@ -90,8 +97,14 @@ export function SettingsView({
   onImport,
   onClearAll,
   onOpenSidePanel,
+  onUpgradeMonthly,
+  onUpgradeYearly,
+  onManageBilling,
   showSidePanelAction = true,
 }: SettingsViewProps) {
+  const showUpgradeActions = !isLocalMode && billingStatusLabel !== 'Pro';
+  const showManageBillingAction = !isLocalMode && billingStatusLabel === 'Pro';
+
   return (
     <div className="space-y-4">
       <Section title={sectionTitles.account}>
@@ -103,11 +116,37 @@ export function SettingsView({
             <p className="truncate text-[13px] font-semibold text-[#173628]">
               {isLocalMode ? labels.localMode : email}
             </p>
-            <p className="text-[11px] text-[#8c978f]">
-              {isLocalMode ? 'Saving only on this browser.' : 'Signed in and syncing when available.'}
-            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="rounded-full bg-[#f3f1eb] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#526458]">
+                {isLocalMode ? 'Local' : billingStatusLabel}
+              </span>
+              <p className="text-[11px] text-[#8c978f]">
+                {isLocalMode ? 'Saving only on this browser.' : billingStatusText}
+              </p>
+            </div>
           </div>
         </div>
+        {!isLocalMode ? (
+          <div className="rounded-[14px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 py-3 text-[12px] text-[#5b6a5f]">
+            <div className="flex items-center gap-2 text-[#314339]">
+              <CreditCard className="h-3.5 w-3.5" />
+              <span className="font-medium">
+                {billingStatusLabel === 'Pro'
+                  ? 'Cloud sync is unlocked on Pro.'
+                  : 'Cloud sync requires Pro billing.'}
+              </span>
+            </div>
+          </div>
+        ) : null}
+        {showUpgradeActions ? (
+          <>
+            <ActionButton label="Upgrade Monthly" onClick={onUpgradeMonthly || (() => {})} />
+            <ActionButton label="Upgrade Yearly" onClick={onUpgradeYearly || (() => {})} />
+          </>
+        ) : null}
+        {showManageBillingAction ? (
+          <ActionButton label="Manage Billing" onClick={onManageBilling || (() => {})} />
+        ) : null}
         <ActionButton label="Log Out" onClick={onLogout} destructive />
       </Section>
 

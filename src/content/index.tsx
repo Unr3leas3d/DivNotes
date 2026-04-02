@@ -50,6 +50,7 @@ interface SavedNote {
   tags: string[];
   pinned: boolean;
   createdAt: string;
+  updatedAt: string;
   folderId: string | null;
   tags: string[];
   pinned: boolean;
@@ -74,6 +75,7 @@ interface StoredNote {
   tags?: string[];
   pinned?: boolean;
   createdAt: string;
+  updatedAt: string;
   folderId: string | null;
   tags: string[];
   pinned: boolean;
@@ -1187,6 +1189,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
 
     try {
       if (!existingNote) {
+        const timestamp = new Date().toISOString();
         const note: SavedNote = {
           id: crypto.randomUUID(),
           element,
@@ -1200,7 +1203,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           folderId: payload.folderId,
           tags: nextTags,
           pinned: nextPinned,
-          createdAt: new Date().toISOString(),
+          createdAt: timestamp,
+          updatedAt: timestamp,
           badgeEl: null,
           expandedEl: null,
         };
@@ -1221,6 +1225,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
           previousTagNames: [],
         });
       } else {
+        const updatedAt = new Date().toISOString();
         const nextSavedNotes = savedNotes.map((note) =>
           note.id === existingNote.id
             ? {
@@ -1229,6 +1234,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
                 folderId: payload.folderId,
                 tags: nextTags,
                 pinned: nextPinned,
+                updatedAt,
               }
             : note
         );
@@ -1238,6 +1244,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         existingNote.folderId = payload.folderId;
         existingNote.tags = nextTags;
         existingNote.pinned = nextPinned;
+        existingNote.updatedAt = updatedAt;
         if (existingNote.expandedEl) {
           existingNote.expandedEl.remove();
           existingNote.expandedEl = null;
@@ -1462,6 +1469,7 @@ function loadNotesFromStorage() {
           tags: resolveStoredTagLabels(stored.tags ?? [], allTags),
           pinned: stored.pinned ?? false,
           createdAt: stored.createdAt,
+          updatedAt: stored.updatedAt ?? stored.createdAt,
           badgeEl: null,
           expandedEl: null,
         };

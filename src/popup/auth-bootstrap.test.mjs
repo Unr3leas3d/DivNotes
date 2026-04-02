@@ -14,7 +14,10 @@ test('resolvePopupBootstrapState falls back to login with error when storage loo
     readSupabaseSession: async () => {
       throw new Error('should not run');
     },
-    persistAuthenticatedAuth: async () => {
+    readProfile: async () => {
+      throw new Error('should not run');
+    },
+    persistAuthenticatedState: async () => {
       throw new Error('should not run');
     },
   });
@@ -23,6 +26,15 @@ test('resolvePopupBootstrapState falls back to login with error when storage loo
     mode: 'login',
     email: '',
     error: 'Storage unavailable',
+    account: {
+      authMode: 'login',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
   });
 });
 
@@ -33,7 +45,10 @@ test('resolvePopupBootstrapState falls back to login with error when session loo
       session: null,
       error: new Error('Session fetch failed'),
     }),
-    persistAuthenticatedAuth: async () => {
+    readProfile: async () => {
+      throw new Error('should not run');
+    },
+    persistAuthenticatedState: async () => {
       throw new Error('should not run');
     },
   });
@@ -42,7 +57,96 @@ test('resolvePopupBootstrapState falls back to login with error when session loo
     mode: 'login',
     email: '',
     error: 'Session fetch failed',
+    account: {
+      authMode: 'login',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
   });
+});
+
+test('resolvePopupBootstrapState returns local mode without fetching a profile', async () => {
+  const state = await resolvePopupBootstrapState({
+    readStoredAuth: async () => ({ mode: 'local' }),
+    readSupabaseSession: async () => {
+      throw new Error('should not run');
+    },
+    readProfile: async () => {
+      throw new Error('should not run');
+    },
+    persistAuthenticatedState: async () => {
+      throw new Error('should not run');
+    },
+  });
+
+  assert.deepEqual(state, {
+    mode: 'local',
+    email: '',
+    error: null,
+    account: {
+      authMode: 'local',
+      email: '',
+      plan: null,
+      entitlementStatus: null,
+      billingProvider: null,
+      subscriptionInterval: null,
+      cloudSyncEnabled: false,
+    },
+  });
+});
+
+test('resolvePopupBootstrapState normalizes a missing profile row to free and inactive', async () => {
+  let persistedState = null;
+
+  const state = await resolvePopupBootstrapState({
+    readStoredAuth: async () => ({ mode: 'authenticated' }),
+    readSupabaseSession: async () => ({
+      session: { user: { id: 'user-1', email: 'user@example.com' } },
+      error: null,
+    }),
+    readProfile: async () => null,
+    persistAuthenticatedState: async (account) => {
+      persistedState = account;
+    },
+  });
+
+  assert.deepEqual(state.account, {
+    authMode: 'authenticated',
+    email: 'user@example.com',
+    plan: 'free',
+    entitlementStatus: 'inactive',
+    billingProvider: null,
+    subscriptionInterval: null,
+    cloudSyncEnabled: false,
+  });
+  assert.deepEqual(persistedState, state.account);
+});
+
+test('resolvePopupBootstrapState enables cloud sync for pro users with active entitlement', async () => {
+  const state = await resolvePopupBootstrapState({
+    readStoredAuth: async () => ({ mode: 'authenticated' }),
+    readSupabaseSession: async () => ({
+      session: { user: { id: 'user-1', email: 'pro@example.com' } },
+      error: null,
+    }),
+    readProfile: async () => ({
+      email: 'pro@example.com',
+      plan: 'pro',
+      entitlement_status: 'active',
+      billing_provider: 'polar',
+      subscription_interval: 'yearly',
+    }),
+    persistAuthenticatedState: async () => {},
+  });
+
+  assert.equal(state.account.cloudSyncEnabled, true);
+  assert.equal(state.account.plan, 'pro');
+  assert.equal(state.account.entitlementStatus, 'active');
+  assert.equal(state.account.subscriptionInterval, 'yearly');
 });
 
 test('resolvePopupAuthStateChange ignores session promotion while current mode is local', () => {

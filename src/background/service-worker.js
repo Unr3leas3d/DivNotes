@@ -329,7 +329,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 divnotes_notes: notes,
             }, () => {
                 // Enqueue cloud sync only for new items
-                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                chrome.storage.local.get(['divnotes_account', 'divnotes_sync_queue'], (syncRes) => {
+                    const cloudSyncEnabled = Boolean(syncRes.divnotes_account?.cloudSyncEnabled);
+                    if (!cloudSyncEnabled) {
+                        sendResponse({ success: true, tagIds: resolvedTagIds });
+                        return;
+                    }
+
                     const queue = syncRes.divnotes_sync_queue || [];
 
                     // De-duplicate helper: skip if queue already has matching entry
@@ -405,7 +411,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             folders.push(folder);
             chrome.storage.local.set({ divnotes_folders: folders }, () => {
                 // Enqueue cloud sync for the new folder
-                chrome.storage.local.get(['divnotes_sync_queue'], (syncRes) => {
+                chrome.storage.local.get(['divnotes_account', 'divnotes_sync_queue'], (syncRes) => {
+                    const cloudSyncEnabled = Boolean(syncRes.divnotes_account?.cloudSyncEnabled);
+                    if (!cloudSyncEnabled) {
+                        sendResponse({ success: true, folder });
+                        return;
+                    }
+
                     const queue = syncRes.divnotes_sync_queue || [];
                     queue.push({
                         id: crypto.randomUUID(),
@@ -504,4 +516,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ unhandled: true });
     return false;
 });
-

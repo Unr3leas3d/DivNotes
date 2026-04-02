@@ -9,8 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { createAuthIntentGuard } from './auth-intent';
 
 interface LoginFormProps {
-    onLogin: (email: string) => void;
-    onUseLocally: () => void;
+    onLogin: (email: string) => void | Promise<void>;
+    onUseLocally: () => void | Promise<void>;
     onGoogleSessionPromotionChange: (allowed: boolean) => void;
 }
 

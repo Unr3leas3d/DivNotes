@@ -43,7 +43,7 @@ function App() {
 
           <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
             Select any element on any webpage and attach notes directly to it.
-            Organize with folders and tags, sync across devices.
+            Stay local for free, or upgrade to Pro when you want cloud sync across devices.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -52,7 +52,7 @@ function App() {
               Add to Chrome — Free
             </button>
             <button className="flex items-center gap-2 bg-card text-foreground px-8 py-4 rounded-[10px] font-semibold border border-border transition-all hover:bg-secondary">
-              See How It Works
+              Install Canopy to Upgrade
             </button>
           </div>
 
@@ -76,59 +76,63 @@ function App() {
 
         <div className="max-w-5xl mx-auto mt-16 relative">
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-hero animate-fade-in">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-secondary/50">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
-                <div className="w-3 h-3 rounded-full bg-green-400/80" />
-              </div>
-              <div className="mx-auto bg-background border border-border rounded-md px-3 py-1 text-xs text-muted-foreground flex items-center justify-center w-64">
-                github.com/myproject/pulls/42
-              </div>
-            </div>
-
-            <div id="features" className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="col-span-2 space-y-4">
-                <div className="h-8 bg-secondary rounded-md w-3/4" />
-                <div className="h-4 bg-secondary/60 rounded-md w-full" />
-                <div className="h-4 bg-secondary/60 rounded-md w-5/6" />
-                <div className="h-4 bg-secondary/60 rounded-md w-full" />
-                <div className="mt-8 space-y-3">
-                  <div className="h-6 bg-secondary rounded-md w-2/3" />
-                  <div className="h-4 bg-secondary/60 rounded-md w-full" />
-                  <div className="h-4 bg-secondary/60 rounded-md w-4/5" />
-                </div>
-              </div>
-
-              <div id="how-it-works" className="col-span-1 border-l border-border pl-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-[6px] bg-[#052415] flex items-center justify-center">
-                    <svg width="14" height="14" viewBox="0 0 68 68" fill="none">
-                      <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="5" strokeLinecap="round"/>
-                      <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
-                      <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
-                      <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
-                      <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
-                    </svg>
+            <div className="grid grid-cols-1 md:grid-cols-[1.2fr,0.8fr] gap-0">
+              <div id="features" className="p-8 border-b md:border-b-0 md:border-r border-border">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">How It Works</p>
+                <h2 className="text-3xl font-serif text-foreground tracking-tight mb-4">
+                  Keep everything local until you actually need sync.
+                </h2>
+                <p className="text-sm leading-7 text-muted-foreground max-w-xl">
+                  Canopy starts with a free local workspace for notes, folders, and tags. When you
+                  want synced access across browsers or machines, upgrade to Pro from inside the
+                  extension and finish checkout on Polar-hosted billing pages.
+                </p>
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-[16px] border border-border bg-secondary/50 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Free</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">Local-only workspace</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Attach notes anywhere on the web, organize with folders and tags, and keep
+                      everything saved in this browser.
+                    </p>
                   </div>
-                  <span className="font-semibold text-sm text-foreground">Canopy</span>
-                  <div className="ml-auto w-5 h-5 rounded-full bg-[#ABFFC0] text-[#052415] text-[10px] font-bold flex items-center justify-center">2</div>
+                  <div className="rounded-[16px] border border-border bg-white p-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Pro</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">Cloud sync unlocked</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Use the same notes across devices with Supabase-backed sync and hosted billing
+                      handled through Polar.
+                    </p>
+                  </div>
                 </div>
+              </div>
 
-                <div className="p-3 rounded-[10px] bg-card border border-border shadow-card">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-4 h-4 rounded-[4px]" style={{ background: 'linear-gradient(135deg, #052415, #1a5c2e)' }} />
-                    <span className="text-xs font-semibold text-foreground">PR review checklist</span>
+              <div id="pricing" className="p-8 bg-secondary/30">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">Pricing</p>
+                <div className="space-y-4">
+                  <div className="rounded-[16px] border border-border bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold text-foreground">Free</span>
+                      <span className="text-sm text-muted-foreground">$0</span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                      Local notes, folders, tags, and browser-only storage.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">Check merge conflicts...</p>
-                </div>
-                <div className="p-3 rounded-[10px] bg-card border border-border shadow-card">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-4 h-4 rounded-[4px]" style={{ background: 'linear-gradient(135deg, #1a5c2e, #6ead71)' }} />
-                    <span className="text-xs font-semibold text-foreground">API response format</span>
+                  <div className="rounded-[16px] border border-[#052415] bg-[#052415] p-4 text-white">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold">Pro</span>
+                      <span className="text-sm text-[#d3e4d7]">Monthly or Yearly</span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[#d3e4d7]">
+                      Unlock cloud sync. Billing, tax handling, invoices, and subscription changes
+                      are managed through Polar after you start from the extension.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">Returns JSON with cursor...</p>
                 </div>
+                <p className="mt-5 text-xs leading-5 text-muted-foreground">
+                  Install Canopy first, then use the extension settings to choose monthly or yearly Pro.
+                </p>
               </div>
             </div>
           </div>

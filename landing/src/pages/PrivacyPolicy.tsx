@@ -3,15 +3,16 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-16">
         <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-8">Effective date: March 31, 2026</p>
+        <p className="text-sm text-gray-500 mb-8">Effective date: April 1, 2026</p>
 
         <div className="prose prose-gray max-w-none space-y-6">
           <section>
             <h2 className="text-xl font-semibold mt-8 mb-3">What Canopy Does</h2>
             <p>
               Canopy is a browser extension that lets you attach notes to elements on any webpage.
-              It works in two modes: local-only (all data stays on your device) and authenticated
-              (data syncs to the cloud via your account).
+              It works in local-only mode and authenticated mode. Signing in does not automatically
+              enable paid cloud sync. Free signed-in accounts can still stay local-only, while Pro
+              enables cloud sync through our hosted billing provider.
             </p>
           </section>
 
@@ -28,11 +29,22 @@ export default function PrivacyPolicy() {
               storage API. It never leaves your device. We cannot access it.
             </p>
 
-            <h3 className="text-lg font-medium mt-4 mb-2">Authenticated Mode (cloud sync)</h3>
-            <p>When you sign in with Google, we additionally collect:</p>
+            <h3 className="text-lg font-medium mt-4 mb-2">Authenticated Free Mode</h3>
+            <p>When you sign in with Google or email, we additionally collect:</p>
             <ul className="list-disc pl-6 space-y-1">
               <li>Your email address (for account identification)</li>
-              <li>Your notes, tags, and folders are synced to our cloud database</li>
+              <li>Your account plan and entitlement status</li>
+            </ul>
+            <p className="mt-2">
+              A signed-in Free account does not automatically sync notes, folders, or tags to the
+              cloud. It can remain local-only until you upgrade.
+            </p>
+
+            <h3 className="text-lg font-medium mt-4 mb-2">Pro Cloud Sync</h3>
+            <p>When you have an active Pro entitlement, we additionally process:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Your synced notes, tags, and folders in our cloud database</li>
+              <li>Billing-linked customer and subscription identifiers needed to enforce access</li>
             </ul>
           </section>
 
@@ -64,6 +76,13 @@ export default function PrivacyPolicy() {
                 profile name. We do not access your Google Drive, Gmail, or any other Google
                 service.
               </li>
+              <li>
+                <strong>Polar</strong> — billing, tax handling, receipts, and subscription
+                management for Pro.{' '}
+                <a href="https://polar.sh/privacy" className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">
+                  Polar Privacy Policy
+                </a>
+              </li>
             </ul>
           </section>
 
@@ -87,7 +106,9 @@ export default function PrivacyPolicy() {
               </li>
               <li>
                 <strong>Cloud data:</strong> You can delete individual notes, tags, and folders at
-                any time. To delete all data and your account, contact us at the email below.
+                any time. Billing records needed for subscription administration may also be held
+                by Polar under their policies. To delete all synced data and your account, contact
+                us at the email below.
               </li>
             </ul>
           </section>

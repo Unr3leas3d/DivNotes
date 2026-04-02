@@ -82,6 +82,20 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
     const activeMainView = workspace.view.active === 'settings'
         ? previousViewRef.current
         : (workspace.view.active as MainPopupView);
+    const billingStatusLabel = isLocalMode
+        ? 'Free'
+        : workspace.auth.plan === 'pro' && workspace.auth.cloudSyncEnabled
+            ? 'Pro'
+            : workspace.auth.plan === 'pro'
+                ? 'Inactive'
+                : 'Free';
+    const billingStatusText = isLocalMode
+        ? 'Saving only on this browser.'
+        : billingStatusLabel === 'Pro'
+            ? 'Cloud sync is active for this account.'
+            : billingStatusLabel === 'Inactive'
+                ? 'Billing needs attention before cloud sync resumes.'
+                : 'Signed in on the free plan. Upgrade to unlock cloud sync.';
 
     const handleMainViewChange = (nextView: string) => {
         previousViewRef.current = nextView as MainPopupView;
@@ -323,6 +337,8 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         labels={settingsLabels}
                         email={email}
                         isLocalMode={isLocalMode}
+                        billingStatusLabel={billingStatusLabel}
+                        billingStatusText={billingStatusText}
                         version={chrome.runtime.getManifest().version}
                         noteCount={workspace.data.notes.length}
                         folderCount={workspace.data.folders.length}
@@ -334,6 +350,9 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onImport={workspace.actions.importNotes}
                         onOpenSidePanel={() => void handleOpenSidePanel()}
                         onClearAll={() => setDialogState(getInitialClearAllDialogState())}
+                        onUpgradeMonthly={() => void workspace.actions.startUpgrade('monthly')}
+                        onUpgradeYearly={() => void workspace.actions.startUpgrade('yearly')}
+                        onManageBilling={() => void workspace.actions.manageBilling()}
                     />
                 );
             default:
@@ -389,6 +408,24 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                 onConfirm={() => void handleClearAllNotes()}
                 isSubmitting={dialogSubmitting}
             />
+            <WorkspaceActionDialog
+                open={workspace.reconciliation.open}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        workspace.reconciliation.cancel();
+                    }
+                }}
+                title="Merge local and cloud data?"
+                description={workspace.reconciliation.description}
+                confirmLabel="Merge and Continue"
+                inlineError={workspace.reconciliation.error}
+                isSubmitting={workspace.reconciliation.isSubmitting}
+                onConfirm={() => void workspace.reconciliation.confirm()}
+            >
+                <p className="text-[12px] leading-[1.5] text-[#5b6a5f]">
+                    Conflicts detected: {workspace.reconciliation.conflicts.length}
+                </p>
+            </WorkspaceActionDialog>
             {editingNote ? (
                 <WorkspaceNoteEditorDialog
                     note={editingNote}

@@ -1,5 +1,11 @@
 import type { StoredFolder, StoredNote, StoredTag } from './types';
 import type {
+  BillingProvider,
+  EntitlementStatus,
+  SubscriptionInterval,
+  StoredAccountState,
+} from './account-state';
+import type {
   buildFolderSummaries,
   buildTagSummaries,
   groupNotesByHostname,
@@ -15,6 +21,11 @@ export interface WorkspaceAuth {
   label: string;
   isLocalMode: boolean;
   isAuthenticated: boolean;
+  plan: StoredAccountState['plan'];
+  entitlementStatus: EntitlementStatus | null;
+  billingProvider: BillingProvider;
+  subscriptionInterval: SubscriptionInterval;
+  cloudSyncEnabled: boolean;
 }
 
 export interface CurrentPageState {

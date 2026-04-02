@@ -57,6 +57,20 @@ export default function App() {
       : isMainSidePanelView(workspace.view.active)
         ? workspace.view.active
         : 'all-notes';
+  const billingStatusLabel = workspace.auth.isLocalMode
+    ? 'Free'
+    : workspace.auth.plan === 'pro' && workspace.auth.cloudSyncEnabled
+      ? 'Pro'
+      : workspace.auth.plan === 'pro'
+        ? 'Inactive'
+        : 'Free';
+  const billingStatusText = workspace.auth.isLocalMode
+    ? 'Saving only on this browser.'
+    : billingStatusLabel === 'Pro'
+      ? 'Cloud sync is active for this account.'
+      : billingStatusLabel === 'Inactive'
+        ? 'Billing needs attention before cloud sync resumes.'
+        : 'Signed in on the free plan. Upgrade to unlock cloud sync.';
 
   useEffect(() => {
     chrome.storage.local.get(['divnotes_screen_share'], (result) => {
@@ -261,6 +275,8 @@ export default function App() {
           <SettingsView
             email={workspace.auth.email}
             isLocalMode={workspace.auth.isLocalMode}
+            billingStatusLabel={billingStatusLabel}
+            billingStatusText={billingStatusText}
             version={chrome.runtime.getManifest().version}
             noteCount={workspace.data.notes.length}
             folderCount={workspace.data.folders.length}
@@ -274,6 +290,9 @@ export default function App() {
               setClearAllDialogError(null);
               setClearAllDialogOpen(true);
             }}
+            onUpgradeMonthly={() => void workspace.actions.startUpgrade('monthly')}
+            onUpgradeYearly={() => void workspace.actions.startUpgrade('yearly')}
+            onManageBilling={() => void workspace.actions.manageBilling()}
           />
         ) : null}
       </SidePanelShell>
@@ -312,6 +331,24 @@ export default function App() {
           }
         }}
       />
+      <WorkspaceActionDialog
+        open={workspace.reconciliation.open}
+        title="Merge local and cloud data?"
+        description={workspace.reconciliation.description}
+        confirmLabel="Merge and Continue"
+        inlineError={workspace.reconciliation.error}
+        isSubmitting={workspace.reconciliation.isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            workspace.reconciliation.cancel();
+          }
+        }}
+        onConfirm={() => void workspace.reconciliation.confirm()}
+      >
+        <p className="text-[12px] leading-[1.5] text-[#5b6a5f]">
+          Conflicts detected: {workspace.reconciliation.conflicts.length}
+        </p>
+      </WorkspaceActionDialog>
       {editingNote ? (
         <WorkspaceNoteEditorDialog
           note={editingNote}

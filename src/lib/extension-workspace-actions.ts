@@ -1,9 +1,17 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
+import {
+  buildStoredAccountState,
+  clearStoredAccountState,
+  type ProfileRecord,
+  type StoredAccountState,
+  writeStoredAccountState,
+} from './account-state.ts';
 import { resetFoldersService } from './folders-service.ts';
 import { type SyncQueueItem } from './types.ts';
 import { resetNotesService } from './notes-service.ts';
 import { resetTagsService } from './tags-service.ts';
+import type { WorkspaceSnapshot } from './sync-reconciliation.ts';
 import { supabase } from './supabase.ts';
 import {
   getCurrentTab,
@@ -12,6 +20,37 @@ import {
 } from './extension-workspace-helpers.ts';
 import type { AuthMode, WorkspaceAuth, WorkspaceData } from './extension-workspace-types.ts';
 import type { StoredFolder, StoredNote, StoredTag } from './types.ts';
+
+async function readCurrentProfile(userId: string): Promise<ProfileRecord | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('email, plan, entitlement_status, billing_provider, subscription_interval')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    email: data.email ?? '',
+    plan: data.plan,
+    entitlement_status: data.entitlement_status,
+    billing_provider: data.billing_provider,
+    subscription_interval: data.subscription_interval,
+  } as ProfileRecord;
+}
+
+async function persistAuthenticatedAccountState(account: StoredAccountState) {
+  await chrome.storage.local.set({
+    divnotes_auth: { mode: 'authenticated', email: account.email },
+  });
+  await writeStoredAccountState(account);
+}
 
 function normalizeImportedItems<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
@@ -35,6 +74,7 @@ function noteToDbRow(note: StoredNote, userId: string) {
     element_position: note.elementPosition || null,
     selected_text: note.selectedText || null,
     created_at: note.createdAt,
+    updated_at: note.updatedAt,
     folder_id: note.folderId || null,
     pinned: note.pinned || false,
   };
@@ -62,6 +102,192 @@ function tagToDbRow(tag: StoredTag, userId: string) {
     color: tag.color,
     created_at: tag.createdAt,
     updated_at: tag.updatedAt,
+  };
+}
+
+function noteTagToDbRow(link: { noteId: string; tagId: string }) {
+  return {
+    note_id: link.noteId,
+    tag_id: link.tagId,
+  };
+}
+
+function dbRowToNote(row: Record<string, unknown>, noteTagIds: string[]): StoredNote {
+  return {
+    id: row.id as string,
+    url: row.page_url as string,
+    hostname: row.page_domain as string,
+    pageTitle: (row.page_title as string) || '',
+    elementSelector: row.element_selector as string,
+    elementTag: row.element_tag as string,
+    elementInfo: (row.element_info as string) || '',
+    content: row.content as string,
+    color: (row.color as string) || '#7c3aed',
+    tagLabel: (row.tag_label as string) || undefined,
+    elementXPath: (row.element_xpath as string) || undefined,
+    elementTextHash: (row.element_text_hash as string) || undefined,
+    elementPosition: (row.element_position as string) || undefined,
+    selectedText: (row.selected_text as string) || undefined,
+    createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string) || (row.created_at as string),
+    folderId: (row.folder_id as string) || null,
+    tags: noteTagIds,
+    pinned: Boolean(row.pinned),
+  };
+}
+
+function dbRowToFolder(row: Record<string, unknown>): StoredFolder {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    parentId: (row.parent_id as string) || null,
+    order: Number(row.order ?? 0),
+    color: (row.color as string) || null,
+    pinned: Boolean(row.pinned),
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+function dbRowToTag(row: Record<string, unknown>): StoredTag {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    color: row.color as string,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export async function refreshStoredAccountStateFromSession(): Promise<StoredAccountState | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    await chrome.storage.local.remove('divnotes_auth');
+    await clearStoredAccountState();
+    return null;
+  }
+
+  const profile = await readCurrentProfile(session.user.id);
+  const account = buildStoredAccountState({
+    authMode: 'authenticated',
+    email: session.user.email ?? '',
+    profile,
+  });
+
+  await persistAuthenticatedAccountState(account);
+  return account;
+}
+
+export async function resetSyncQueue() {
+  await chrome.storage.local.set({ divnotes_sync_queue: [] });
+}
+
+export async function uploadWorkspaceSnapshotDiff(snapshot: WorkspaceSnapshot) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    throw new Error('Cannot reconcile cloud data without an authenticated session');
+  }
+
+  const userId = session.user.id;
+
+  if (snapshot.folders.length > 0) {
+    const { error } = await supabase
+      .from('folders')
+      .upsert(snapshot.folders.map((folder) => folderToDbRow(folder, userId)));
+    if (error) {
+      throw error;
+    }
+  }
+
+  if (snapshot.tags.length > 0) {
+    const { error } = await supabase
+      .from('tags')
+      .upsert(snapshot.tags.map((tag) => tagToDbRow(tag, userId)));
+    if (error) {
+      throw error;
+    }
+  }
+
+  if (snapshot.notes.length > 0) {
+    const { error } = await supabase
+      .from('notes')
+      .upsert(snapshot.notes.map((note) => noteToDbRow(note, userId)));
+    if (error) {
+      throw error;
+    }
+  }
+
+  if (snapshot.noteTags.length > 0) {
+    const { error } = await supabase
+      .from('note_tags')
+      .upsert(snapshot.noteTags.map(noteTagToDbRow));
+    if (error) {
+      throw error;
+    }
+  }
+}
+
+export async function readCloudWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    throw new Error('Cannot read cloud workspace data without an authenticated session');
+  }
+
+  const userId = session.user.id;
+  const [notesResponse, foldersResponse, tagsResponse, noteTagsResponse] = await Promise.all([
+    supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase.from('folders').select('*').eq('user_id', userId).order('order'),
+    supabase.from('tags').select('*').eq('user_id', userId).order('name'),
+    supabase
+      .from('note_tags')
+      .select('note_id, tag_id'),
+  ]);
+
+  if (notesResponse.error) {
+    throw notesResponse.error;
+  }
+  if (foldersResponse.error) {
+    throw foldersResponse.error;
+  }
+  if (tagsResponse.error) {
+    throw tagsResponse.error;
+  }
+  if (noteTagsResponse.error) {
+    throw noteTagsResponse.error;
+  }
+
+  const noteTags =
+    (noteTagsResponse.data ?? []).map((row) => ({
+      noteId: row.note_id,
+      tagId: row.tag_id,
+    })) ?? [];
+  const noteTagIdsByNoteId = new Map<string, string[]>();
+  for (const link of noteTags) {
+    const existing = noteTagIdsByNoteId.get(link.noteId) ?? [];
+    existing.push(link.tagId);
+    noteTagIdsByNoteId.set(link.noteId, existing);
+  }
+
+  return {
+    notes: (notesResponse.data ?? []).map((row) =>
+      dbRowToNote(row, noteTagIdsByNoteId.get(row.id) ?? [])
+    ),
+    folders: (foldersResponse.data ?? []).map(dbRowToFolder),
+    tags: (tagsResponse.data ?? []).map(dbRowToTag),
+    noteTags,
   };
 }
 
@@ -293,6 +519,26 @@ export function createExtensionWorkspaceActions(
     setSelectedTagIds,
   } = input;
 
+  const openBillingUrl = async (
+    functionName: 'create-checkout-session' | 'create-customer-portal-session',
+    body?: Record<string, unknown>
+  ) => {
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const url = data?.url;
+    if (typeof url !== 'string' || url.length === 0) {
+      throw new Error(`Billing function ${functionName} did not return a URL`);
+    }
+
+    await chrome.tabs.create({ url });
+  };
+
   return {
     activateInspector: async () => {
       clearActionError();
@@ -334,6 +580,28 @@ export function createExtensionWorkspaceActions(
         }
       } catch (caughtError) {
         setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to open popup');
+        throw caughtError;
+      }
+    },
+    startUpgrade: async (interval: 'monthly' | 'yearly') => {
+      clearActionError();
+      try {
+        await openBillingUrl('create-checkout-session', { interval });
+      } catch (caughtError) {
+        setActionError(
+          caughtError instanceof Error ? caughtError.message : 'Failed to open upgrade checkout'
+        );
+        throw caughtError;
+      }
+    },
+    manageBilling: async () => {
+      clearActionError();
+      try {
+        await openBillingUrl('create-customer-portal-session');
+      } catch (caughtError) {
+        setActionError(
+          caughtError instanceof Error ? caughtError.message : 'Failed to open billing portal'
+        );
         throw caughtError;
       }
     },
@@ -433,7 +701,7 @@ export function createExtensionWorkspaceActions(
         if (authModeRef.current === 'authenticated') {
           await supabase.auth.signOut();
         }
-        await chrome.storage.local.remove('divnotes_auth');
+        await chrome.storage.local.remove(['divnotes_auth', 'divnotes_account']);
         resetNotesService();
         resetFoldersService();
         resetTagsService();
@@ -443,6 +711,11 @@ export function createExtensionWorkspaceActions(
           label: '',
           isLocalMode: false,
           isAuthenticated: false,
+          plan: null,
+          entitlementStatus: null,
+          billingProvider: null,
+          subscriptionInterval: null,
+          cloudSyncEnabled: false,
         });
       } catch (caughtError) {
         setActionError(caughtError instanceof Error ? caughtError.message : 'Failed to logout');

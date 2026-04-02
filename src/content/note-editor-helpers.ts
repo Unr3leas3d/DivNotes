@@ -28,6 +28,7 @@ type SavedNoteForStorage = {
   elementPosition?: string;
   selectedText?: string;
   createdAt: string;
+  updatedAt: string;
   folderId: string | null;
   tags: string[];
   pinned: boolean;
@@ -328,6 +329,7 @@ function mapSavedNotesToStoredNotes({
     elementPosition: note.elementPosition,
     selectedText: note.selectedText,
     createdAt: note.createdAt,
+    updatedAt: note.updatedAt ?? note.createdAt,
     folderId: note.folderId,
     tags: note.tags,
     pinned: note.pinned,

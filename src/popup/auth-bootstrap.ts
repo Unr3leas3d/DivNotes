@@ -1,3 +1,9 @@
+import {
+  buildStoredAccountState,
+  type ProfileRecord,
+  type StoredAccountState,
+} from '../lib/account-state.ts';
+
 export type PopupAuthMode = 'login' | 'local' | 'authenticated';
 
 interface StoredAuthRecord {
@@ -5,6 +11,7 @@ interface StoredAuthRecord {
 }
 
 interface SessionUser {
+  id?: string;
   email?: string | null;
 }
 
@@ -16,13 +23,15 @@ interface PopupSessionResult {
 interface PopupBootstrapDependencies {
   readStoredAuth: () => Promise<StoredAuthRecord | undefined>;
   readSupabaseSession: () => Promise<PopupSessionResult>;
-  persistAuthenticatedAuth: (email: string) => Promise<void> | void;
+  readProfile: (userId: string) => Promise<ProfileRecord | null>;
+  persistAuthenticatedState: (account: StoredAccountState) => Promise<void> | void;
 }
 
 export interface PopupBootstrapState {
   mode: PopupAuthMode;
   email: string;
   error: string | null;
+  account: StoredAccountState;
 }
 
 interface PopupAuthStateChangeParams {
@@ -37,13 +46,57 @@ interface PopupAuthStateChangeResult {
   clearAuthError: boolean;
 }
 
+function buildPopupState(
+  mode: PopupAuthMode,
+  email: string,
+  error: string | null
+): PopupBootstrapState {
+  return {
+    mode,
+    email,
+    error,
+    account: buildStoredAccountState({
+      authMode: mode,
+      email,
+      profile: null,
+    }),
+  };
+}
+
+interface ResolveAuthenticatedPopupStateDependencies {
+  readProfile: (userId: string) => Promise<ProfileRecord | null>;
+  persistAuthenticatedState: (account: StoredAccountState) => Promise<void> | void;
+}
+
+export async function resolveAuthenticatedPopupState(
+  sessionUser: SessionUser,
+  deps: ResolveAuthenticatedPopupStateDependencies
+): Promise<PopupBootstrapState> {
+  const email = sessionUser.email?.trim() ?? '';
+  const profile = sessionUser.id ? await deps.readProfile(sessionUser.id) : null;
+  const account = buildStoredAccountState({
+    authMode: 'authenticated',
+    email,
+    profile,
+  });
+
+  await deps.persistAuthenticatedState(account);
+
+  return {
+    mode: 'authenticated',
+    email: account.email,
+    error: null,
+    account,
+  };
+}
+
 export async function resolvePopupBootstrapState(
   deps: PopupBootstrapDependencies
 ): Promise<PopupBootstrapState> {
   try {
     const storedAuth = await deps.readStoredAuth();
     if (storedAuth?.mode === 'local') {
-      return { mode: 'local', email: '', error: null };
+      return buildPopupState('local', '', null);
     }
 
     const { session, error } = await deps.readSupabaseSession();
@@ -52,19 +105,16 @@ export async function resolvePopupBootstrapState(
     }
 
     if (session?.user) {
-      const email = session.user.email?.trim() ?? '';
-      await deps.persistAuthenticatedAuth(email);
-      return { mode: 'authenticated', email, error: null };
+      return resolveAuthenticatedPopupState(session.user, deps);
     }
 
-    return { mode: 'login', email: '', error: null };
+    return buildPopupState('login', '', null);
   } catch (caughtError) {
-    return {
-      mode: 'login',
-      email: '',
-      error:
-        caughtError instanceof Error ? caughtError.message : 'Failed to determine auth state',
-    };
+    return buildPopupState(
+      'login',
+      '',
+      caughtError instanceof Error ? caughtError.message : 'Failed to determine auth state'
+    );
   }
 }
 

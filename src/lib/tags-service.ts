@@ -1,3 +1,4 @@
+import { canUseCloudSync, readStoredAccountState } from './account-state.ts';
 import { supabase } from './supabase.ts';
 import type { StoredTag, SyncQueueItem } from './types.ts';
 import { assignRandomColor } from './tag-utils.ts';
@@ -239,9 +240,9 @@ let _service: TagsService | null = null;
 
 export async function getTagsService(): Promise<TagsService> {
   if (_service) return _service;
-  const result = await chrome.storage.local.get(['divnotes_auth']);
-  const auth = result.divnotes_auth as { mode: string } | undefined;
-  if (auth?.mode === 'authenticated') {
+  const account = await readStoredAccountState();
+  const cloudSyncEnabled = canUseCloudSync(account);
+  if (cloudSyncEnabled) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       _service = new CloudTagsService(session.user.id);
