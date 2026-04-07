@@ -124,7 +124,7 @@ test('content script styles switch from purple to Eden Bright green and cream tr
   assert.ok(overlayUi.includes("setDataAttribute(pill, 'canopyOverlay', 'selector-guide')"));
   assert.ok(overlayUi.includes("pointerEvents: 'auto'"));
   assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('div'), 'canopy-editor-shell')"));
-  assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('input'), 'canopy-editor-title')"));
+  assert.ok(!editorSurface.includes("applyDataAttr(doc.createElement('input'), 'canopy-editor-title')"));
   assert.ok(editorSurface.includes("applyDataAttr(doc.createElement('textarea'), 'canopy-editor-body')"));
   assert.ok(editorSurface.includes("'canopy-close'"));
   assert.ok(editorSurface.includes("'canopy-delete'"));

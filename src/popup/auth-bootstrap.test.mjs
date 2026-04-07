@@ -16,6 +16,20 @@ function resolveWithin(promise, timeoutMs = 50) {
   ]);
 }
 
+function baseAccount(mode) {
+  return {
+    authMode: mode,
+    email: '',
+    plan: null,
+    entitlementStatus: null,
+    billingProvider: null,
+    subscriptionInterval: null,
+    currentPeriodEnd: null,
+    providerSubscriptionStatus: null,
+    cloudSyncEnabled: false,
+  };
+}
+
 test('resolvePopupBootstrapState falls back to login with error when storage lookup fails', async () => {
   const state = await resolvePopupBootstrapState({
     readStoredAuth: async () => {
@@ -36,15 +50,7 @@ test('resolvePopupBootstrapState falls back to login with error when storage loo
     mode: 'login',
     email: '',
     error: 'Storage unavailable',
-    account: {
-      authMode: 'login',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('login'),
   });
 });
 
@@ -67,15 +73,7 @@ test('resolvePopupBootstrapState falls back to login with error when session loo
     mode: 'login',
     email: '',
     error: 'Session fetch failed',
-    account: {
-      authMode: 'login',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('login'),
   });
 });
 
@@ -97,15 +95,7 @@ test('resolvePopupBootstrapState returns local mode without fetching a profile',
     mode: 'local',
     email: '',
     error: null,
-    account: {
-      authMode: 'local',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('local'),
   });
 });
 
@@ -131,6 +121,8 @@ test('resolvePopupBootstrapState normalizes a missing profile row to free and in
     entitlementStatus: 'inactive',
     billingProvider: null,
     subscriptionInterval: null,
+    currentPeriodEnd: null,
+    providerSubscriptionStatus: null,
     cloudSyncEnabled: false,
   });
   assert.deepEqual(persistedState, state.account);
@@ -149,6 +141,8 @@ test('resolvePopupBootstrapState enables cloud sync for pro users with active en
       entitlement_status: 'active',
       billing_provider: 'polar',
       subscription_interval: 'yearly',
+      current_period_end: null,
+      provider_subscription_status: 'active',
     }),
     persistAuthenticatedState: async () => {},
   });
@@ -178,15 +172,7 @@ test('resolvePopupBootstrapState falls back to login when session lookup stalls'
     mode: 'login',
     email: '',
     error: 'Session lookup timed out',
-    account: {
-      authMode: 'login',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('login'),
   });
 });
 
@@ -210,15 +196,7 @@ test('resolvePopupBootstrapState falls back to login when profile lookup stalls'
     mode: 'login',
     email: '',
     error: 'Profile lookup timed out',
-    account: {
-      authMode: 'login',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('login'),
   });
 });
 
@@ -236,15 +214,7 @@ test('resolvePostLoginPopupState stays on login when no persisted session exists
     mode: 'login',
     email: '',
     error: 'Sign-in did not create a persistent session. Please try again.',
-    account: {
-      authMode: 'login',
-      email: '',
-      plan: null,
-      entitlementStatus: null,
-      billingProvider: null,
-      subscriptionInterval: null,
-      cloudSyncEnabled: false,
-    },
+    account: baseAccount('login'),
   });
 });
 

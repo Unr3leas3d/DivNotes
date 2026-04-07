@@ -24,7 +24,9 @@ import type { StoredFolder, StoredNote, StoredTag } from './types.ts';
 async function readCurrentProfile(userId: string): Promise<ProfileRecord | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('email, plan, entitlement_status, billing_provider, subscription_interval')
+    .select(
+      'email, plan, entitlement_status, billing_provider, subscription_interval, current_period_end, provider_subscription_status'
+    )
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -42,6 +44,8 @@ async function readCurrentProfile(userId: string): Promise<ProfileRecord | null>
     entitlement_status: data.entitlement_status,
     billing_provider: data.billing_provider,
     subscription_interval: data.subscription_interval,
+    current_period_end: data.current_period_end,
+    provider_subscription_status: data.provider_subscription_status,
   } as ProfileRecord;
 }
 

@@ -45,6 +45,7 @@ create table if not exists profiles (
   plan text not null default 'free',
   entitlement_status text not null default 'inactive',
   billing_provider text,
+  provider_subscription_status text,
   polar_customer_id text,
   polar_subscription_id text,
   subscription_interval text,
@@ -64,6 +65,8 @@ create table if not exists billing_events (
   created_at timestamptz not null default now(),
   unique (provider, event_id)
 );
+
+alter table profiles add column if not exists provider_subscription_status text;
 
 create or replace function public.handle_new_user_profile()
 returns trigger

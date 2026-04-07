@@ -112,6 +112,17 @@ test('SYNC_NOTE_TAGS removes stale note_tag links and queues durable deletes', a
       tags: ['keep'],
     },
   ];
+  storageState.divnotes_account = {
+    authMode: 'authenticated',
+    email: 'pro@example.com',
+    plan: 'pro',
+    entitlementStatus: 'active',
+    billingProvider: 'polar',
+    subscriptionInterval: 'monthly',
+    currentPeriodEnd: null,
+    providerSubscriptionStatus: 'active',
+    cloudSyncEnabled: true,
+  };
   storageState.divnotes_sync_queue = [];
 
   await import(new URL(`../src/background/service-worker.js?test=${Date.now()}`, import.meta.url));

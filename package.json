@@ -8,7 +8,10 @@
     "build:content": "vite build --config vite.content.config.ts",
     "build:sw": "mkdir -p dist/background && cp src/background/service-worker.js dist/background/service-worker.js",
     "build": "npm run build:pages && npm run build:content && npm run build:sw",
-    "dev": "npm run build"
+    "dev": "npm run build",
+    "test:vitest": "vitest run",
+    "test:node": "find tests src -type f \\( -name '*.test.mjs' -o -name '*.test.js' -o -name '*.test.ts' \\) ! -path 'src/lib/account-state.test.ts' ! -path 'src/lib/editor-controller.test.ts' ! -path 'src/lib/sync-reconciliation.test.ts' -print0 | xargs -0 node --test",
+    "test": "npm run test:vitest && npm run test:node"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

@@ -12,6 +12,8 @@ export interface ProfileRecord {
   entitlement_status: EntitlementStatus;
   billing_provider: BillingProvider;
   subscription_interval: SubscriptionInterval;
+  current_period_end: string | null;
+  provider_subscription_status: string | null;
 }
 
 export interface StoredAccountState {
@@ -21,6 +23,8 @@ export interface StoredAccountState {
   entitlementStatus: EntitlementStatus | null;
   billingProvider: BillingProvider;
   subscriptionInterval: SubscriptionInterval;
+  currentPeriodEnd: string | null;
+  providerSubscriptionStatus: string | null;
   cloudSyncEnabled: boolean;
 }
 
@@ -36,7 +40,41 @@ export function normalizeProfileRecord(
     entitlement_status: profile?.entitlement_status ?? 'inactive',
     billing_provider: profile?.billing_provider ?? null,
     subscription_interval: profile?.subscription_interval ?? null,
+    current_period_end: profile?.current_period_end ?? null,
+    provider_subscription_status: profile?.provider_subscription_status ?? null,
   };
+}
+
+function isGracePeriodExpired(
+  currentPeriodEnd: string | null | undefined,
+  now = new Date()
+): boolean {
+  if (!currentPeriodEnd) {
+    return false;
+  }
+
+  const periodEnd = new Date(currentPeriodEnd);
+  if (Number.isNaN(periodEnd.getTime())) {
+    return false;
+  }
+
+  return periodEnd.getTime() <= now.getTime();
+}
+
+function shouldEnableCloudSync(profile: ProfileRecord): boolean {
+  if (profile.plan !== 'pro' || profile.entitlement_status !== 'active') {
+    return false;
+  }
+
+  if (
+    profile.provider_subscription_status &&
+    profile.provider_subscription_status !== 'active' &&
+    profile.provider_subscription_status !== 'trialing'
+  ) {
+    return !isGracePeriodExpired(profile.current_period_end);
+  }
+
+  return true;
 }
 
 export function buildStoredAccountState(params: {
@@ -52,15 +90,14 @@ export function buildStoredAccountState(params: {
       entitlementStatus: null,
       billingProvider: null,
       subscriptionInterval: null,
+      currentPeriodEnd: null,
+      providerSubscriptionStatus: null,
       cloudSyncEnabled: false,
     };
   }
 
   const profile = normalizeProfileRecord(params.profile, params.email);
-  const cloudSyncEnabled =
-    params.authMode === 'authenticated' &&
-    profile.plan === 'pro' &&
-    profile.entitlement_status === 'active';
+  const cloudSyncEnabled = params.authMode === 'authenticated' && shouldEnableCloudSync(profile);
 
   return {
     authMode: params.authMode,
@@ -69,6 +106,8 @@ export function buildStoredAccountState(params: {
     entitlementStatus: profile.entitlement_status,
     billingProvider: profile.billing_provider,
     subscriptionInterval: profile.subscription_interval,
+    currentPeriodEnd: profile.current_period_end,
+    providerSubscriptionStatus: profile.provider_subscription_status,
     cloudSyncEnabled,
   };
 }
@@ -80,7 +119,8 @@ export function canUseCloudSync(
     state &&
       state.authMode === 'authenticated' &&
       state.plan === 'pro' &&
-      state.entitlementStatus === 'active'
+      state.entitlementStatus === 'active' &&
+      state.cloudSyncEnabled
   );
 }
 

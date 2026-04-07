@@ -45,25 +45,31 @@ test('deployment backfill migration exists for older projects missing billing sc
 });
 
 test('billing edge functions and extension billing actions exist', () => {
+  const policyFnPath = 'supabase/functions/_shared/polar-billing-policy.ts';
   const checkoutFnPath = 'supabase/functions/create-checkout-session/index.ts';
   const portalFnPath = 'supabase/functions/create-customer-portal-session/index.ts';
   const webhookFnPath = 'supabase/functions/polar-webhook/index.ts';
 
+  assert.equal(existsSync(path.join(repoRoot, policyFnPath)), true);
   assert.equal(existsSync(path.join(repoRoot, checkoutFnPath)), true);
   assert.equal(existsSync(path.join(repoRoot, portalFnPath)), true);
   assert.equal(existsSync(path.join(repoRoot, webhookFnPath)), true);
 
+  const policyFn = read(policyFnPath);
   const checkoutFn = read(checkoutFnPath);
   const portalFn = read(portalFnPath);
   const webhookFn = read(webhookFnPath);
   const actions = read('src/lib/extension-workspace-actions.ts');
 
+  assert.match(policyFn, /derivePolarBillingState/);
   assert.match(checkoutFn, /POLAR_MONTHLY_PRICE_ID/);
   assert.match(checkoutFn, /POLAR_YEARLY_PRICE_ID/);
   assert.match(checkoutFn, /external_id|external_customer_id/);
   assert.match(portalFn, /polar_customer_id/);
   assert.match(webhookFn, /customer\.state_changed/);
   assert.match(webhookFn, /billing_events/);
+  assert.match(webhookFn, /derivePolarBillingState/);
+  assert.match(webhookFn, /provider_subscription_status/);
   assert.match(actions, /create-checkout-session/);
   assert.match(actions, /create-customer-portal-session/);
 });

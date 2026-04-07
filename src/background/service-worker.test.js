@@ -9,6 +9,12 @@ function createEvent() {
         addListener(listener) {
             listeners.push(listener);
         },
+        removeListener(listener) {
+            const index = listeners.indexOf(listener);
+            if (index >= 0) {
+                listeners.splice(index, 1);
+            }
+        },
     };
 }
 
@@ -51,6 +57,9 @@ function createChromeStub() {
                 onActivated: createEvent(),
                 onUpdated: createEvent(),
                 query: async () => [],
+                create(_props, callback) {
+                    callback?.({ id: 34, url: 'https://ign.com/article', windowId: 1 });
+                },
                 sendMessage() {},
                 update() {},
             },
@@ -69,14 +78,18 @@ function createChromeStub() {
     };
 }
 
-test('OPEN_NOTE_TARGET navigates and replays the note target after tab load', async () => {
+test('OPEN_NOTE_TARGET opens a new tab and replays the note target after tab load', async () => {
     const { chrome } = createChromeStub();
 
     // Extend stub for this test
-    chrome.tabs.updateCalls = [];
-    const originalUpdate = chrome.tabs.update;
-    chrome.tabs.update = (tabId, props) => {
-        chrome.tabs.updateCalls.push({ tabId, url: props.url });
+    chrome.tabs.createCalls = [];
+    chrome.tabs.create = (props, callback) => {
+        chrome.tabs.createCalls.push(props);
+        callback?.({ id: 34, url: props.url, windowId: 1 });
+    };
+    chrome.tabs.sendMessageCalls = [];
+    chrome.tabs.sendMessage = (tabId, payload) => {
+        chrome.tabs.sendMessageCalls.push({ tabId, payload });
     };
     chrome.tabs.onUpdated = createEvent();
     chrome.tabs.query = (_query, callback) => {
@@ -93,13 +106,31 @@ test('OPEN_NOTE_TARGET navigates and replays the note target after tab load', as
     await new Promise((resolve) => {
         messageHandler(
             { type: 'OPEN_NOTE_TARGET', note: { url: 'https://ign.com/article', elementSelector: '#headline' } },
-            { tab: { id: tabId, windowId: 1 } },
+            { tab: { id: 12, windowId: 1 } },
             resolve
         );
     });
 
-    assert.equal(chrome.tabs.updateCalls[0].url, 'https://ign.com/article');
+    assert.equal(chrome.tabs.createCalls[0].url, 'https://ign.com/article');
     assert.equal(chrome.tabs.onUpdated.listeners.length > 0, true);
+
+    chrome.tabs.onUpdated.listeners[0](34, { status: 'complete' });
+
+    assert.deepEqual(chrome.tabs.sendMessageCalls[0], {
+        tabId: 34,
+        payload: {
+            type: 'SCROLL_TO_NOTE',
+            selector: '#headline',
+            note: {
+                elementSelector: '#headline',
+                elementXPath: undefined,
+                elementTextHash: undefined,
+                elementPosition: undefined,
+                elementTag: undefined,
+                url: 'https://ign.com/article',
+            },
+        },
+    });
 });
 
 test('re-registering the install menu does not recreate a duplicate context-menu id', async () => {

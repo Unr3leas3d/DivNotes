@@ -4,6 +4,7 @@ create table if not exists profiles (
   plan text not null default 'free',
   entitlement_status text not null default 'inactive',
   billing_provider text,
+  provider_subscription_status text,
   polar_customer_id text,
   polar_subscription_id text,
   subscription_interval text,
@@ -90,4 +91,5 @@ using (user_id = auth.uid());
 create index if not exists idx_profiles_plan_status on profiles (plan, entitlement_status);
 create index if not exists idx_profiles_polar_customer_id on profiles (polar_customer_id);
 create index if not exists idx_profiles_polar_subscription_id on profiles (polar_subscription_id);
+create index if not exists idx_profiles_provider_subscription_status on profiles (provider_subscription_status);
 create index if not exists idx_billing_events_provider_event_id on billing_events (provider, event_id);

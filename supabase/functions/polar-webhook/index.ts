@@ -7,7 +7,10 @@ import {
 } from 'npm:@polar-sh/sdk/webhooks';
 
 import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
-import { mapRecurringInterval } from '../_shared/polar.ts';
+import {
+  derivePolarBillingState,
+  type PolarSubscriptionSnapshot,
+} from '../_shared/polar-billing-policy.ts';
 
 interface PolarCustomerState {
   id: string;
@@ -26,26 +29,6 @@ interface PolarCustomerStateChangedEvent {
   type: string;
   timestamp: string;
   data: PolarCustomerState;
-}
-
-function mapCustomerStateToEntitlement(customerState: PolarCustomerState) {
-  const subscription = customerState.active_subscriptions?.[0] ?? null;
-  const status = subscription?.status ?? null;
-
-  // Canopy intentionally cuts off paid access immediately once Polar indicates
-  // cancellation or lapse, even if a provider could otherwise allow grace-period access.
-  const hasActiveEntitlement =
-    Boolean(subscription) &&
-    (status === 'active' || status === 'trialing') &&
-    !subscription?.cancel_at_period_end;
-
-  return {
-    plan: hasActiveEntitlement ? 'pro' : 'free',
-    entitlement_status: hasActiveEntitlement ? 'active' : 'inactive',
-    polar_subscription_id: subscription?.id ?? null,
-    subscription_interval: mapRecurringInterval(subscription?.recurring_interval),
-    current_period_end: subscription?.current_period_end ?? null,
-  };
 }
 
 function getEventId(req: Request, event: PolarCustomerStateChangedEvent): string {
@@ -130,19 +113,22 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unable to resolve Supabase user for Polar customer state');
     }
 
-    const entitlement = mapCustomerStateToEntitlement(event.data);
+    const subscription: PolarSubscriptionSnapshot | null =
+      event.data.active_subscriptions?.[0] ?? null;
+    const billingState = derivePolarBillingState(subscription, event.timestamp);
 
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({
         email: event.data.email ?? undefined,
-        plan: entitlement.plan,
-        entitlement_status: entitlement.entitlement_status,
+        plan: billingState.plan,
+        entitlement_status: billingState.entitlementStatus,
         billing_provider: 'polar',
+        provider_subscription_status: billingState.providerSubscriptionStatus,
         polar_customer_id: event.data.id,
-        polar_subscription_id: entitlement.polar_subscription_id,
-        subscription_interval: entitlement.subscription_interval,
-        current_period_end: entitlement.current_period_end,
+        polar_subscription_id: billingState.polarSubscriptionId,
+        subscription_interval: billingState.subscriptionInterval,
+        current_period_end: billingState.currentPeriodEnd,
         last_entitlement_sync_at: event.timestamp,
       })
       .eq('user_id', userId);

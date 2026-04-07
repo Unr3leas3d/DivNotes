@@ -35,6 +35,7 @@ type FolderDialogState =
   | { type: 'rename-folder'; folderId: string; value: string; error: string | null }
   | { type: 'change-color'; folderId: string; selectedColor: string | null; error: string | null }
   | { type: 'delete-folder'; folderId: string; error: string | null }
+  | { type: 'open-tab-group'; folderId: string; tabCount: number; error: string | null }
   | { type: 'bulk-move'; value: string; error: string | null }
   | { type: 'bulk-tag'; value: string; error: string | null }
   | { type: 'bulk-delete'; error: string | null };
@@ -278,8 +279,13 @@ export function FoldersView({
     if (uniqueUrls.size === 0) return;
 
     if (uniqueUrls.size > 15) {
-      const confirmed = window.confirm(`Open ${uniqueUrls.size} tabs in a group?`);
-      if (!confirmed) return;
+      setDialogState({
+        type: 'open-tab-group',
+        folderId,
+        tabCount: uniqueUrls.size,
+        error: null,
+      });
+      return;
     }
 
     chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId });
@@ -492,6 +498,11 @@ export function FoldersView({
           onRefresh?.();
           return;
         }
+        case 'open-tab-group': {
+          chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId: dialogState.folderId });
+          setDialogState(null);
+          return;
+        }
         case 'bulk-move': {
           const folderName = dialogState.value.trim();
           if (!folderName) {
@@ -650,6 +661,13 @@ export function FoldersView({
             : 'Delete this folder? Notes inside will be moved to Inbox.',
           confirmLabel: 'Delete Folder',
           destructive: true,
+        };
+      case 'open-tab-group':
+        return {
+          title: 'Open Folder As Tab Group?',
+          description: `Open ${dialogState.tabCount} tabs in one group? This may take a moment.`,
+          confirmLabel: 'Open Tabs',
+          destructive: false,
         };
       case 'bulk-move':
         return {
