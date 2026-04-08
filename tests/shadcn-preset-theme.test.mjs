@@ -139,7 +139,7 @@ test('signed-out popup surfaces use theme tokens instead of the old auth palette
 
   assert.ok(loginForm.includes('bg-background text-foreground'));
   assert.ok(loginForm.includes('border border-border bg-card'));
-  assert.ok(loginForm.includes('bg-primary text-primary-foreground shadow-elevated'));
+  assert.ok(loginForm.includes('shadow-card'));
   assert.ok(loginForm.includes('text-muted-foreground'));
   assert.ok(loginForm.includes('bg-secondary'));
 });

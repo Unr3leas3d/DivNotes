@@ -194,7 +194,7 @@ export default function App() {
         <WorkspaceEmptyState
           icon={<LogIn className="h-5 w-5" />}
           title="Sign in to use the side panel"
-          description="Sign in through the extension popup to continue with Google, email, or local-only mode."
+          description="Open the extension popup to continue with Google or local-only mode."
         />
       </SidePanelShell>
     );

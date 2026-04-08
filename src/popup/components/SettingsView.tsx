@@ -84,15 +84,13 @@ export function SettingsView({
     <section className="rounded-[18px] border border-border bg-card shadow-card">
       {/* Profile Header */}
       <div className="relative flex flex-col items-center px-5 pb-5 pt-7">
-        {!isLocalMode && (
-          <button
-            type="button"
-            onClick={() => { void onLogout(); }}
-            className="absolute right-4 top-4 rounded-[10px] border border-border bg-secondary px-3 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-secondary/80"
-          >
-            Log Out
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => { void onLogout(); }}
+          className="absolute right-4 top-4 rounded-[10px] border border-border bg-secondary px-3 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-secondary/80"
+        >
+          Log Out
+        </button>
 
         {/* Avatar with sync dot */}
         <div className="relative mb-3.5">

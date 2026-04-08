@@ -11,22 +11,6 @@ interface PopupShellProps {
   children: React.ReactNode;
 }
 
-function CanopyMark() {
-  return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-primary text-primary-foreground shadow-elevated">
-      <svg width="22" height="22" viewBox="0 0 68 68" fill="none">
-        <path d="M32 62 C33 52 33 44 33 36" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" />
-        <path d="M33 36 C26 24 14 12 6 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-        <path d="M33 36 C42 22 54 10 62 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-        <path d="M33 36 C44 28 56 20 62 18" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-        <circle cx="6" cy="6" r="5" fill="var(--chart-1)" />
-        <circle cx="62" cy="6" r="5" fill="var(--chart-1)" />
-        <circle cx="62" cy="18" r="4.5" fill="var(--chart-1)" />
-      </svg>
-    </div>
-  );
-}
-
 export function PopupShell({
   navigation,
   utilityAction,
@@ -49,7 +33,6 @@ export function PopupShell({
               <HugeIcon icon={ArrowLeft01Icon} className="h-4 w-4" />
             </button>
           ) : null}
-          <CanopyMark />
           <div className="min-w-0 flex-1 text-left">
             <p className="font-serif text-[19px] font-semibold tracking-[-0.35px] text-foreground">Canopy</p>
             <p className="text-[11px] font-semibold text-muted-foreground">

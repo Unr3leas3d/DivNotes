@@ -93,9 +93,9 @@ test('settings and landing surfaces expose free/pro messaging and billing action
   const landingApp = read('landing/src/App.tsx');
   const privacyPolicy = read('landing/src/pages/PrivacyPolicy.tsx');
 
-  assert.match(popupSettings, /Upgrade Monthly/);
-  assert.match(popupSettings, /Upgrade Yearly/);
-  assert.match(popupSettings, /Manage Billing/);
+  assert.match(popupSettings, /Purchase Pro Plan/);
+  assert.match(popupSettings, /Contact Support/);
+  assert.match(popupSettings, /Signed in to the \{isPro \? 'Pro' : 'Free'\} plan/);
   assert.match(sidepanelSettings, /Free|Pro|Inactive/);
   assert.match(landingApp, /Free/);
   assert.match(landingApp, /Pro/);

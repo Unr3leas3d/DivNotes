@@ -50,6 +50,7 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   const loginForm = read('src/popup/LoginForm.tsx');
   const popupShell = read('src/popup/components/PopupShell.tsx');
   const popupDashboard = read('src/popup/Dashboard.tsx');
+  const popupSettingsView = read('src/popup/components/SettingsView.tsx');
   const popupThisPageView = read('src/popup/components/ThisPageView.tsx');
   const popupApp = read('src/popup/App.tsx');
   const workspaceHook = read('src/lib/use-extension-workspace.ts');
@@ -60,8 +61,10 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(loginForm.includes('exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code)'));
   assert.ok(!loginForm.includes('Sign in to sync across devices'));
   assert.ok(loginForm.includes('Continue with Google'));
-  assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
+  assert.ok(!loginForm.includes('Continue with Email'));
+  assert.ok(!loginForm.includes('signInWithPassword'));
+  assert.ok(!loginForm.includes('signUp('));
   assert.ok(loginForm.includes('Think on top of the web.'));
   assert.ok(loginForm.includes('pt-8'));
   assert.ok(loginForm.includes('mt-8'));
@@ -83,14 +86,14 @@ test('popup auth flow matches the Paper-driven redesign shell', () => {
   assert.ok(popupDashboard.includes('Folders'));
   assert.ok(popupDashboard.includes('Tags'));
   assert.ok(popupDashboard.includes('New Folder'));
-  assert.ok(popupDashboard.includes('Account'));
-  assert.ok(popupDashboard.includes('Data'));
-  assert.ok(popupDashboard.includes('About'));
-  assert.ok(popupDashboard.includes('Chrome Web Store'));
-  assert.ok(popupDashboard.includes('Privacy Policy'));
+  assert.ok(popupSettingsView.includes('Data'));
+  assert.ok(popupSettingsView.includes('About'));
+  assert.ok(popupSettingsView.includes('Chrome Web Store'));
+  assert.ok(popupSettingsView.includes('Privacy Policy'));
+  assert.ok(popupDashboard.includes('<SettingsView'));
   assert.ok(popupDashboard.includes('const handleOpenSidePanel = async () => {'));
   assert.ok(popupDashboard.includes('await workspace.actions.openSidePanel();'));
-  assert.ok(popupDashboard.includes('onOpenSidePanel={() => void handleOpenSidePanel()}'));
+  assert.ok(popupDashboard.includes('onClick={() => void handleOpenSidePanel()}'));
   assert.ok(!popupThisPageView.includes('No notes on this page yet'));
   assert.ok(!popupThisPageView.includes('Select an element and attach the first note for this page.'));
   assert.ok(popupDashboard.includes("const chromeWebStoreUrl = 'https://divnotes.com';"));
@@ -157,18 +160,14 @@ test('side panel segmented control uses themed active and inactive states', () =
   assert.ok(!segmentedControl.includes('counts?: Partial<Record<ViewMode, number>>'));
   assert.ok(workspaceNoteCard.includes('title?: string | null;'));
   assert.ok(workspaceNoteCard.includes('details?: React.ReactNode;'));
-  assert.ok(workspaceNoteCard.includes("interactionMode?: 'open' | 'toggle';"));
-  assert.ok(workspaceNoteCard.includes("aria-expanded={interactionMode === 'toggle' ? expanded : undefined}"));
+  assert.ok(workspaceNoteCard.includes('action?: React.ReactNode;'));
+  assert.ok(workspaceNoteCard.includes('resolvedAction'));
   assert.ok(noteCard.includes('WorkspaceNoteCard'));
-  assert.ok(noteCard.includes('interactionMode="toggle"'));
-  assert.ok(noteCard.includes('const [expanded, setExpanded] = useState(false);'));
-  assert.ok(noteCard.includes('DOMPurify.sanitize'));
-  assert.ok(noteCard.includes('marked.parse'));
+  assert.ok(noteCard.includes('action={'));
   assert.ok(noteCard.includes('Go to note'));
-  assert.ok(noteCard.includes('dangerouslySetInnerHTML'));
   assert.ok(allNotesView.includes('<PinnedSection'));
-  assert.ok(popupSettingsView.includes('showSidePanelAction = true'));
-  assert.ok(popupSettingsView.includes('{showSidePanelAction ? ('));
+  assert.ok(popupSettingsView.includes('onUpgrade'));
+  assert.ok(popupSettingsView.includes('onContactSupport'));
 });
 
 test('background worker keeps OPEN_POPUP support alongside ACTIVATE_INSPECTOR messaging', () => {

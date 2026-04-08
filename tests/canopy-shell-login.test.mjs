@@ -19,8 +19,13 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(loginForm.includes('signInWithGoogleInExtension'));
   assert.ok(!loginForm.includes('Sign in to sync across devices'));
   assert.ok(loginForm.includes('Continue with Google'));
-  assert.ok(loginForm.includes('Continue with Email'));
   assert.ok(loginForm.includes('Use Local Only'));
+  assert.ok(!loginForm.includes('Continue with Email'));
+  assert.ok(!loginForm.includes('Sign in with Email'));
+  assert.ok(!loginForm.includes('signInWithPassword'));
+  assert.ok(!loginForm.includes('signUp('));
+  assert.ok(!loginForm.includes('showEmailForm'));
+  assert.ok(!loginForm.includes('CanopyMark'));
   assert.ok(loginForm.includes('pt-8'));
   assert.ok(loginForm.includes('mt-8'));
   assert.ok(loginForm.includes('pb-3'));
@@ -32,6 +37,7 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(popupShell.includes('sticky top-0'));
   assert.ok(popupShell.includes('overflow-hidden'));
   assert.ok(popupShell.includes('text-left'));
+  assert.ok(!popupShell.includes('CanopyMark'));
   assert.ok(!popupShell.includes('text-center'));
   assert.ok(popupShell.includes('font-semibold'));
   assert.ok(!popupDashboard.includes('window.prompt'));
@@ -64,6 +70,8 @@ test('sidepanel shell removes This Page and keeps a centered work surface', () =
   assert.ok(!sidepanelApp.includes('PanelsTopLeft'));
   assert.ok(!sidepanelApp.includes('handleOpenPopup'));
   assert.ok(!sidepanelApp.includes('window.confirm'));
+  assert.ok(!sidepanelApp.includes('Google, email, or local-only mode.'));
+  assert.ok(sidepanelApp.includes('Google or local-only mode.'));
   assert.ok(!foldersView.includes('window.prompt'));
   assert.ok(!foldersView.includes('window.alert'));
   assert.ok(!foldersView.includes('window.confirm'));
@@ -71,6 +79,7 @@ test('sidepanel shell removes This Page and keeps a centered work surface', () =
   assert.ok(foldersView.includes('WorkspaceActionDialog'));
   assert.ok(tagManager.includes('WorkspaceActionDialog'));
   assert.ok(shell.includes('max-w-[720px]'));
+  assert.ok(!shell.includes('CanopyMark'));
   assert.ok(workspaceHook.includes('sidePanelAllowedViews'));
   assert.ok(workspaceHook.includes("const defaultView = options.shell === 'popup' ? 'this-page' : 'all-notes';"));
 });
