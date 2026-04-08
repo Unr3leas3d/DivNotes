@@ -152,6 +152,24 @@ test('buildTagSummaries computes counts and filtered note ids', () => {
   assert.deepEqual(summaries[0]?.noteIds, ['note-2', 'note-1', 'note-3']);
 });
 
+test('buildTagSummaries omits tags with zero matching notes', () => {
+  const summaries = buildTagSummaries(
+    [
+      ...sampleTags,
+      {
+        id: 'tag-4',
+        name: 'orphaned',
+        color: '#6ead71',
+        createdAt: '2026-03-04T00:00:00.000Z',
+        updatedAt: '2026-03-04T00:00:00.000Z',
+      },
+    ],
+    sampleNotes
+  );
+
+  assert.equal(summaries.some((summary) => summary.tag.id === 'tag-4'), false);
+});
+
 test('buildFolderSummaries computes sorted counts and filtered note ids per folder', () => {
   const summaries = buildFolderSummaries(sampleNotes, sampleFolders);
   assert.equal(summaries[0]?.folder.id, 'folder-1');
@@ -233,4 +251,24 @@ test('buildViewCounts returns shared pill counts for popup and side panel', () =
   });
   assert.equal(counts['this-page'], 2);
   assert.equal(counts['folders'], 4);
+});
+
+test('buildViewCounts excludes tags with zero notes', () => {
+  const counts = buildViewCounts({
+    notes: sampleNotes,
+    folders: sampleFolders,
+    tags: [
+      ...sampleTags,
+      {
+        id: 'tag-4',
+        name: 'orphaned',
+        color: '#6ead71',
+        createdAt: '2026-03-04T00:00:00.000Z',
+        updatedAt: '2026-03-04T00:00:00.000Z',
+      },
+    ],
+    currentPageUrl: 'https://app.example.com/docs',
+  });
+
+  assert.equal(counts.tags, 3);
 });

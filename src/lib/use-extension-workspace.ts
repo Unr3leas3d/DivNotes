@@ -687,6 +687,17 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
     [currentPage.url, data.folders, data.notes, data.tags]
   );
 
+  useEffect(() => {
+    const availableTagIds = new Set(
+      derived.tagSummaries.map((summary) => summary.tag.id)
+    );
+
+    setSelectedTagIds((current) => {
+      const next = current.filter((tagId) => availableTagIds.has(tagId));
+      return next.length === current.length ? current : next;
+    });
+  }, [derived.tagSummaries]);
+
   const setView = useCallback(
     (nextView: WorkspaceView) => {
       setActiveView(allowedViews.includes(nextView) ? nextView : defaultView);

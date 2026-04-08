@@ -322,7 +322,10 @@ test('savePageNotesToStorage preserves notes from other pages when the current p
         callback({ ...storageState });
       },
       set(
-        items: { divnotes_notes: typeof storageState.divnotes_notes },
+        items: {
+          divnotes_notes?: typeof storageState.divnotes_notes;
+          divnotes_tags?: unknown[];
+        },
         callback?: () => void
       ) {
         Object.assign(storageState, items);
@@ -340,6 +343,82 @@ test('savePageNotesToStorage preserves notes from other pages when the current p
     storageState.divnotes_notes.map((note: { id: string }) => note.id),
     ['other-page-note']
   );
+});
+
+test('savePageNotesToStorage prunes tags that no remaining note references', async () => {
+  const storageState = {
+    divnotes_notes: [
+      {
+        id: 'other-page-note',
+        url: 'https://example.com/other',
+        hostname: 'example.com',
+        pageTitle: 'Other',
+        elementSelector: '.other',
+        elementTag: 'div',
+        elementInfo: 'Other',
+        content: 'Keep me',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        folderId: 'folder-2',
+        tags: ['tag-keep'],
+        pinned: false,
+      },
+      {
+        id: 'current-page-note',
+        url: 'https://example.com/current',
+        hostname: 'example.com',
+        pageTitle: 'Current',
+        elementSelector: '.current',
+        elementTag: 'article',
+        elementInfo: 'Current',
+        content: 'Remove me',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        folderId: null,
+        tags: ['tag-remove'],
+        pinned: false,
+      },
+    ],
+    divnotes_tags: [
+      {
+        id: 'tag-keep',
+        name: 'keep',
+        color: '#22c55e',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        updatedAt: '2026-03-27T00:00:00.000Z',
+      },
+      {
+        id: 'tag-remove',
+        name: 'remove',
+        color: '#ef4444',
+        createdAt: '2026-03-27T00:00:00.000Z',
+        updatedAt: '2026-03-27T00:00:00.000Z',
+      },
+    ],
+  };
+
+  await savePageNotesToStorage({
+    savedNotes: [],
+    pageUrl: 'https://example.com/current',
+    hostname: 'example.com',
+    pageTitle: 'Current',
+    storage: {
+      get(_keys, callback) {
+        callback({ ...storageState });
+      },
+      set(
+        items: {
+          divnotes_notes?: typeof storageState.divnotes_notes;
+          divnotes_tags?: typeof storageState.divnotes_tags;
+        },
+        callback?: () => void
+      ) {
+        Object.assign(storageState, items);
+        callback?.();
+      },
+    },
+    updateBadgeCount() {},
+  });
+
+  assert.deepEqual(storageState.divnotes_tags.map((tag) => tag.id), ['tag-keep']);
 });
 
 const sampleFolders = [

@@ -76,6 +76,68 @@ function normalizeUrl(url) {
     }
 }
 
+function normalizeTagValue(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    return value.trim().toLowerCase();
+}
+
+function noteHasTagValue(note, tagValue, tagCatalog) {
+    const normalizedTargetValue = normalizeTagValue(tagValue);
+    if (!normalizedTargetValue || !Array.isArray(note?.tags)) {
+        return false;
+    }
+
+    return note.tags.some((value) => {
+        const normalizedValue = normalizeTagValue(value);
+        if (!normalizedValue) {
+            return false;
+        }
+
+        if (normalizedValue === normalizedTargetValue) {
+            return true;
+        }
+
+        const matchedTag = (Array.isArray(tagCatalog) ? tagCatalog : []).find((candidate) => {
+            return (
+                normalizeTagValue(candidate.id) === normalizedValue ||
+                normalizeTagValue(candidate.name) === normalizedValue
+            );
+        });
+
+        if (!matchedTag) {
+            return false;
+        }
+
+        return (
+            normalizeTagValue(matchedTag.id) === normalizedTargetValue ||
+            normalizeTagValue(matchedTag.name) === normalizedTargetValue
+        );
+    });
+}
+
+function pruneUnusedTags(tags, notes) {
+    const remainingTags = [];
+    const removedTags = [];
+
+    for (const tag of Array.isArray(tags) ? tags : []) {
+        const isReferenced = (Array.isArray(notes) ? notes : []).some((note) =>
+            noteHasTagValue(note, tag.id, tags)
+        );
+
+        if (isReferenced) {
+            remainingTags.push(tag);
+            continue;
+        }
+
+        removedTags.push(tag);
+    }
+
+    return { remainingTags, removedTags };
+}
+
 /**
  * Validate a URL is safe for tab navigation.
  * Only allows http: and https: schemes.
@@ -345,12 +407,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 notes[noteIdx].tags = resolvedTagIds;
             }
 
+            const { remainingTags, removedTags } = pruneUnusedTags(tags, notes);
+
             // Compute which note_tag associations are actually new
             const newAssociations = resolvedTagIds.filter(id => !existingTags.includes(id));
             const removedAssociations = existingTags.filter(id => !resolvedTagIds.includes(id));
 
             chrome.storage.local.set({
-                divnotes_tags: tags,
+                divnotes_tags: remainingTags,
                 divnotes_notes: notes,
             }, () => {
                 // Enqueue cloud sync only for new items
@@ -370,7 +434,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     // Only enqueue tag:save for newly created tags
                     for (const tagId of newlyCreatedTagIds) {
                         if (!hasEntry('tag', 'save', tagId)) {
-                            const tag = tags.find(t => t.id === tagId);
+                            const tag = remainingTags.find(t => t.id === tagId);
                             queue.push({
                                 id: crypto.randomUUID(),
                                 entityType: 'tag',
@@ -404,6 +468,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 action: 'delete',
                                 entityId,
                                 payload: { note_id: noteId, tag_id: tagId },
+                                timestamp: Date.now(),
+                            });
+                        }
+                    }
+                    for (const tag of removedTags) {
+                        if (!hasEntry('tag', 'delete', tag.id)) {
+                            queue.push({
+                                id: crypto.randomUUID(),
+                                entityType: 'tag',
+                                action: 'delete',
+                                entityId: tag.id,
                                 timestamp: Date.now(),
                             });
                         }

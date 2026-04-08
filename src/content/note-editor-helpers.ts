@@ -1,3 +1,4 @@
+import { pruneUnusedTags } from '../lib/tag-cleanup.ts';
 import type { StoredFolder, StoredNote, StoredTag } from '../lib/types.ts';
 
 type DomainNoteLike = Pick<StoredNote, 'hostname' | 'folderId'>;
@@ -37,9 +38,12 @@ type SavedNoteForStorage = {
 type StorageLike = {
   get(
     keys: string[],
-    callback: (items: { divnotes_notes?: StoredNote[] }) => void
+    callback: (items: { divnotes_notes?: StoredNote[]; divnotes_tags?: StoredTag[] }) => void
   ): void;
-  set(items: { divnotes_notes: StoredNote[] }, callback?: () => void): void;
+  set(
+    items: { divnotes_notes: StoredNote[]; divnotes_tags?: StoredTag[] },
+    callback?: () => void
+  ): void;
 };
 
 type EditorDraft = {
@@ -361,7 +365,7 @@ export function savePageNotesToStorage({
   });
 
   return new Promise((resolve, reject) => {
-    storage.get(['divnotes_notes'], (result) => {
+    storage.get(['divnotes_notes', 'divnotes_tags'], (result) => {
       const readError = getLastError?.();
       if (readError) {
         reject(readError);
@@ -369,10 +373,12 @@ export function savePageNotesToStorage({
       }
 
       const allNotes: StoredNote[] = result.divnotes_notes || [];
+      const allTags: StoredTag[] = result.divnotes_tags || [];
       const otherPageNotes = allNotes.filter((note) => note.url !== pageUrl);
       const merged = [...otherPageNotes, ...storedNotes];
+      const { remainingTags } = pruneUnusedTags(allTags, merged);
 
-      storage.set({ divnotes_notes: merged }, () => {
+      storage.set({ divnotes_notes: merged, divnotes_tags: remainingTags }, () => {
         const writeError = getLastError?.();
         if (writeError) {
           reject(writeError);

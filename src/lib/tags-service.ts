@@ -1,6 +1,7 @@
 import { canUseCloudSync, readStoredAccountState } from './account-state.ts';
+import { pruneUnusedTags } from './tag-cleanup.ts';
 import { supabase } from './supabase.ts';
-import type { StoredTag, SyncQueueItem } from './types.ts';
+import type { StoredNote, StoredTag, SyncQueueItem } from './types.ts';
 import { assignRandomColor } from './tag-utils.ts';
 
 export interface TagsService {
@@ -25,6 +26,19 @@ export class LocalTagsService implements TagsService {
 
   private async setAllTags(tags: StoredTag[]): Promise<void> {
     await chrome.storage.local.set({ [STORAGE_KEY]: tags });
+  }
+
+  private async setAllNotesAndPruneTags(notes: StoredNote[]): Promise<StoredTag[]> {
+    const tagsResult = await chrome.storage.local.get([STORAGE_KEY]);
+    const allTags = (tagsResult[STORAGE_KEY] || []) as StoredTag[];
+    const { remainingTags, removedTags } = pruneUnusedTags(allTags, notes);
+
+    await chrome.storage.local.set({
+      divnotes_notes: notes,
+      [STORAGE_KEY]: remainingTags,
+    });
+
+    return removedTags;
   }
 
   async create(tag: StoredTag): Promise<void> {
@@ -83,14 +97,20 @@ export class LocalTagsService implements TagsService {
     return tag;
   }
 
-  async setNoteTags(noteId: string, tagIds: string[]): Promise<void> {
+  async setNoteTagsAndPrune(noteId: string, tagIds: string[]): Promise<StoredTag[]> {
     const notesResult = await chrome.storage.local.get(['divnotes_notes']);
-    const notes = notesResult.divnotes_notes || [];
-    const idx = notes.findIndex((n: any) => n.id === noteId);
+    const notes = (notesResult.divnotes_notes || []) as StoredNote[];
+    const idx = notes.findIndex((n) => n.id === noteId);
     if (idx > -1) {
       notes[idx].tags = tagIds;
-      await chrome.storage.local.set({ divnotes_notes: notes });
+      return this.setAllNotesAndPruneTags(notes);
     }
+
+    return [];
+  }
+
+  async setNoteTags(noteId: string, tagIds: string[]): Promise<void> {
+    await this.setNoteTagsAndPrune(noteId, tagIds);
   }
 }
 
@@ -208,8 +228,8 @@ export class CloudTagsService implements TagsService {
     const note = notes.find((n: any) => n.id === noteId);
     const oldTagIds: string[] = note?.tags || [];
 
-    // Update locally
-    await this.local.setNoteTags(noteId, tagIds);
+    // Update locally and prune tags that no notes reference anymore.
+    const removedTags = await this.local.setNoteTagsAndPrune(noteId, tagIds);
 
     // Sync diff to cloud
     const added = tagIds.filter(id => !oldTagIds.includes(id));
@@ -230,6 +250,18 @@ export class CloudTagsService implements TagsService {
         if (error) throw error;
       } catch {
         await this.queueOperation('delete', `${noteId}:${tagId}`, { note_id: noteId, tag_id: tagId }, 'note_tag');
+      }
+    }
+
+    for (const tag of removedTags) {
+      try {
+        const { error } = await supabase.from('tags')
+          .delete()
+          .eq('id', tag.id)
+          .eq('user_id', this.userId);
+        if (error) throw error;
+      } catch {
+        await this.queueOperation('delete', tag.id);
       }
     }
   }

@@ -1,6 +1,7 @@
 import { canUseCloudSync, readStoredAccountState } from './account-state.ts';
+import { pruneUnusedTags } from './tag-cleanup.ts';
 import { supabase } from './supabase.ts';
-import type { StoredNote, SyncQueueItem } from './types.ts';
+import type { StoredNote, StoredTag, SyncQueueItem } from './types.ts';
 export type { StoredNote, SyncQueueItem };
 
 export function withNoteDefaults(note: Partial<StoredNote> & { id: string }): StoredNote {
@@ -45,6 +46,19 @@ export class LocalNotesService implements NotesService {
         await chrome.storage.local.set({ [this.key]: notes });
     }
 
+    private async setAllNotesAndPruneTags(notes: StoredNote[]): Promise<StoredTag[]> {
+        const result = await chrome.storage.local.get(['divnotes_tags']);
+        const allTags = (result.divnotes_tags || []) as StoredTag[];
+        const { remainingTags, removedTags } = pruneUnusedTags(allTags, notes);
+
+        await chrome.storage.local.set({
+            [this.key]: notes,
+            divnotes_tags: remainingTags,
+        });
+
+        return removedTags;
+    }
+
     async save(note: StoredNote): Promise<void> {
         const all = await this.getAllNotes();
         all.push(withNoteDefaults(note));
@@ -65,10 +79,14 @@ export class LocalNotesService implements NotesService {
         }
     }
 
-    async delete(id: string): Promise<void> {
+    async deleteAndPruneTags(id: string): Promise<StoredTag[]> {
         const all = await this.getAllNotes();
         const filtered = all.filter(n => n.id !== id);
-        await this.setAllNotes(filtered);
+        return this.setAllNotesAndPruneTags(filtered);
+    }
+
+    async delete(id: string): Promise<void> {
+        await this.deleteAndPruneTags(id);
     }
 
     async getForPage(url: string): Promise<StoredNote[]> {
@@ -348,7 +366,7 @@ export class CloudNotesService implements NotesService {
 
     async delete(id: string): Promise<void> {
         // Delete locally first
-        await this.local.delete(id);
+        const removedTags = await this.local.deleteAndPruneTags(id);
 
         try {
             const { error } = await supabase
@@ -357,10 +375,23 @@ export class CloudNotesService implements NotesService {
                 .eq('id', id)
                 .eq('user_id', this.userId);
             if (error) throw error;
+
+            for (const tag of removedTags) {
+                const { error: tagDeleteError } = await supabase
+                    .from('tags')
+                    .delete()
+                    .eq('id', tag.id)
+                    .eq('user_id', this.userId);
+                if (tagDeleteError) throw tagDeleteError;
+            }
+
             this.processSyncQueue();
         } catch (err) {
             console.warn('[Canopy] Offline — queuing delete for later');
             await this.queueOperation('delete', id);
+            for (const tag of removedTags) {
+                await this.queueOperation('delete', tag.id, undefined, 'tag');
+            }
         }
     }
 

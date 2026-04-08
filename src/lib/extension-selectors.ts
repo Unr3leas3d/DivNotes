@@ -304,6 +304,7 @@ export function buildTagSummaries(tags: StoredTag[], notes: StoredNote[]): TagSu
         noteIds: taggedNotes.map((note) => note.id),
       };
     })
+    .filter((summary) => summary.count > 0)
     .sort((left, right) => {
       const countDiff = right.count - left.count;
       if (countDiff !== 0) {
@@ -321,7 +322,7 @@ export function buildViewCounts(
     'this-page': selectThisPageNotes(input.notes, input.currentPageUrl).length,
     'all-notes': input.notes.length,
     folders: input.folders.length,
-    tags: input.tags.length,
+    tags: buildTagSummaries(input.tags, input.notes).length,
   };
 }
 

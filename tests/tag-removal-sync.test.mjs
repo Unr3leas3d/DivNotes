@@ -136,16 +136,95 @@ test('SYNC_NOTE_TAGS removes stale note_tag links and queues durable deletes', a
 
   assert.deepEqual(response, { success: true, tagIds: ['tag-keep'] });
   assert.deepEqual(storageState.divnotes_notes[0].tags, ['tag-keep']);
-  assert.equal(storageState.divnotes_sync_queue.length, 1);
+  assert.deepEqual(storageState.divnotes_tags.map((tag) => tag.id), ['tag-keep']);
   assert.deepEqual(
-    storageState.divnotes_sync_queue[0],
+    storageState.divnotes_sync_queue.map((item) => ({
+      entityType: item.entityType,
+      action: item.action,
+      entityId: item.entityId,
+      payload: item.payload,
+    })),
+    [
+      {
+        entityType: 'note_tag',
+        action: 'delete',
+        entityId: 'note-1:tag-remove',
+        payload: { note_id: 'note-1', tag_id: 'tag-remove' },
+      },
+      {
+        entityType: 'tag',
+        action: 'delete',
+        entityId: 'tag-remove',
+        payload: undefined,
+      },
+    ]
+  );
+});
+
+test('SYNC_NOTE_TAGS deletes a tag when its note count drops to zero', async () => {
+  const { chrome, storageState } = createChromeStub();
+  globalThis.chrome = chrome;
+
+  storageState.divnotes_tags = [
     {
-      id: storageState.divnotes_sync_queue[0].id,
+      id: 'tag-remove',
+      name: 'remove',
+      color: '#ef4444',
+      createdAt: '2026-03-29T00:00:00.000Z',
+      updatedAt: '2026-03-29T00:00:00.000Z',
+    },
+  ];
+  storageState.divnotes_notes = [
+    {
+      id: 'note-1',
+      tags: ['tag-remove'],
+    },
+  ];
+  storageState.divnotes_account = {
+    authMode: 'authenticated',
+    email: 'pro@example.com',
+    plan: 'pro',
+    entitlementStatus: 'active',
+    billingProvider: 'polar',
+    subscriptionInterval: 'monthly',
+    currentPeriodEnd: null,
+    providerSubscriptionStatus: 'active',
+    cloudSyncEnabled: true,
+  };
+  storageState.divnotes_sync_queue = [];
+
+  await import(new URL(`../src/background/service-worker.js?test=${Date.now()}`, import.meta.url));
+
+  const response = await sendRuntimeMessage(chrome, {
+    type: 'SYNC_NOTE_TAGS',
+    noteId: 'note-1',
+    tagNames: [],
+    previousTagNames: ['remove'],
+  });
+
+  assert.deepEqual(response, { success: true, tagIds: [] });
+  assert.deepEqual(storageState.divnotes_notes[0].tags, []);
+  assert.deepEqual(storageState.divnotes_tags, []);
+
+  const queuedDeletes = storageState.divnotes_sync_queue.map((item) => ({
+    entityType: item.entityType,
+    action: item.action,
+    entityId: item.entityId,
+    payload: item.payload,
+  }));
+
+  assert.deepEqual(queuedDeletes, [
+    {
       entityType: 'note_tag',
       action: 'delete',
       entityId: 'note-1:tag-remove',
       payload: { note_id: 'note-1', tag_id: 'tag-remove' },
-      timestamp: storageState.divnotes_sync_queue[0].timestamp,
-    }
-  );
+    },
+    {
+      entityType: 'tag',
+      action: 'delete',
+      entityId: 'tag-remove',
+      payload: undefined,
+    },
+  ]);
 });
