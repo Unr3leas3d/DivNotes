@@ -312,7 +312,13 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                         onOpenNote={handleOpenNote}
                         onEditNote={handleEditNote}
                         onOpenAsTabGroup={(folderId) => {
-                            chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId });
+                            const folder = foldersById.get(folderId);
+                            chrome.runtime.sendMessage({
+                                type: 'OPEN_FOLDER_AS_GROUP',
+                                folderId,
+                                folderName: folder?.name,
+                                folderColor: folder?.color ?? null,
+                            });
                         }}
                     />
                 );

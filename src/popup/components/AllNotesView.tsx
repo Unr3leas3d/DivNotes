@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search01Icon, StickyNote01Icon } from '@hugeicons/core-free-icons';
+import { ArrowDown01Icon, ArrowRight01Icon, Search01Icon, StickyNote01Icon } from '@hugeicons/core-free-icons';
 
 import { HugeIcon } from '@/components/ui/huge-icon';
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
@@ -125,6 +125,10 @@ export function AllNotesView({
                   }}
                   className="flex w-full items-center justify-between gap-3 rounded-[14px] bg-card px-3 py-2 text-left"
                 >
+                  <HugeIcon
+                    icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon}
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform"
+                  />
                   <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
                     {group.hostname}
                   </h3>

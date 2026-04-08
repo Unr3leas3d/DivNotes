@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StickyNote } from '@/lib/icon-aliases';
+import { StickyNote, ChevronDown, ChevronRight } from '@/lib/icon-aliases';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
@@ -132,6 +132,11 @@ export function AllNotesView({
               }}
               className="flex w-full items-center justify-between gap-3 rounded-[16px] bg-card px-3 py-2 text-left"
             >
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              )}
               <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-foreground">
                 {group.hostname}
               </h3>

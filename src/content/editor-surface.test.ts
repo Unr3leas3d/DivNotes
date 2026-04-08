@@ -104,7 +104,7 @@ function createFakeDocument() {
 const sampleState = {
   isNew: false,
   body: 'Tighten the supporting sentence before release.',
-  folderLabel: 'Inbox',
+  folderLabel: 'All Notes',
   tagLabels: ['#launch', '#copy'],
   pinned: true,
   errorMessage: 'Could not save note.',

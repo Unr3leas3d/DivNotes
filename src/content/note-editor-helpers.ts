@@ -229,10 +229,10 @@ export function getFolderChipLabel(
   selectedFolderId: string | null
 ): string {
   if (!selectedFolderId) {
-    return 'Inbox';
+    return 'All Notes';
   }
 
-  return folders.find((folder) => folder.id === selectedFolderId)?.name ?? 'Inbox';
+  return folders.find((folder) => folder.id === selectedFolderId)?.name ?? 'All Notes';
 }
 
 export function getTagChipLabels(tags: readonly string[]): string[] {

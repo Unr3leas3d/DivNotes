@@ -7,7 +7,7 @@ import { PinnedSection } from './PinnedSection';
 import { FolderTreeNodeItem } from './FolderTreeNodeItem';
 import { NoteCard } from './NoteCard';
 import { BulkActionBar } from './BulkActionBar';
-import { buildFolderTree, getUnfiledNotes, countNotesInTree } from '@/lib/tree-utils';
+import { buildFolderTree, getUnfiledNotes, countNotesInTree, getDescendantFolderIds } from '@/lib/tree-utils';
 import { getNextOrder } from '@/lib/tag-utils';
 import { getFoldersService } from '@/lib/folders-service';
 import { getNotesService } from '@/lib/notes-service';
@@ -34,7 +34,7 @@ type FolderDialogState =
   | { type: 'new-subfolder'; parentId: string; value: string; error: string | null }
   | { type: 'rename-folder'; folderId: string; value: string; error: string | null }
   | { type: 'change-color'; folderId: string; selectedColor: string | null; error: string | null }
-  | { type: 'delete-folder'; folderId: string; error: string | null }
+  | { type: 'delete-folder'; folderId: string; noteAction: 'move' | 'delete'; noteCount: number; error: string | null }
   | { type: 'open-tab-group'; folderId: string; tabCount: number; error: string | null }
   | { type: 'bulk-move'; value: string; error: string | null }
   | { type: 'bulk-tag'; value: string; error: string | null }
@@ -255,7 +255,21 @@ export function FoldersView({
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
 
-    setDialogState({ type: 'delete-folder', folderId, error: null });
+    const descendantIds = getDescendantFolderIds(folderId, folders);
+    const allFolderIds = new Set([folderId, ...descendantIds]);
+    const noteCount = notes.filter(n => n.folderId && allFolderIds.has(n.folderId)).length;
+
+    setDialogState({ type: 'delete-folder', folderId, noteAction: 'move', noteCount, error: null });
+  }, [folders, notes]);
+
+  const sendOpenFolderAsTabGroup = useCallback((folderId: string) => {
+    const folder = folders.find((item) => item.id === folderId);
+    chrome.runtime.sendMessage({
+      type: 'OPEN_FOLDER_AS_GROUP',
+      folderId,
+      folderName: folder?.name,
+      folderColor: folder?.color ?? null,
+    });
   }, [folders]);
 
   const handleOpenAsTabGroup = useCallback((folderId: string) => {
@@ -288,8 +302,8 @@ export function FoldersView({
       return;
     }
 
-    chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId });
-  }, [folders, notes]);
+    sendOpenFolderAsTabGroup(folderId);
+  }, [folders, notes, sendOpenFolderAsTabGroup]);
 
   const handleToggleNotePin = useCallback(async (noteId: string) => {
     const note = notes.find(n => n.id === noteId);
@@ -492,6 +506,17 @@ export function FoldersView({
           return;
         }
         case 'delete-folder': {
+          if (dialogState.noteAction === 'delete') {
+            // Delete all notes in folder and descendants first
+            const descendantIds = getDescendantFolderIds(dialogState.folderId, folders);
+            const allFolderIds = new Set([dialogState.folderId, ...descendantIds]);
+            const notesService = await getNotesService();
+            for (const note of notes) {
+              if (note.folderId && allFolderIds.has(note.folderId)) {
+                await notesService.delete(note.id);
+              }
+            }
+          }
           const service = await getFoldersService();
           await service.delete(dialogState.folderId);
           setDialogState(null);
@@ -499,7 +524,7 @@ export function FoldersView({
           return;
         }
         case 'open-tab-group': {
-          chrome.runtime.sendMessage({ type: 'OPEN_FOLDER_AS_GROUP', folderId: dialogState.folderId });
+          sendOpenFolderAsTabGroup(dialogState.folderId);
           setDialogState(null);
           return;
         }
@@ -579,7 +604,7 @@ export function FoldersView({
     } finally {
       setDialogSubmitting(false);
     }
-  }, [clearSelection, dialogState, folders, notes, onRefresh, selectedIds, tags]);
+  }, [clearSelection, dialogState, folders, notes, onRefresh, selectedIds, sendOpenFolderAsTabGroup, tags]);
 
   const dialogFolder = useMemo(() => {
     if (!dialogState) {
@@ -653,15 +678,18 @@ export function FoldersView({
           confirmLabel: 'Apply Color',
           destructive: false,
         };
-      case 'delete-folder':
+      case 'delete-folder': {
+        const folderName = dialogFolder?.name ?? 'this folder';
+        const hasNotes = dialogState.noteCount > 0;
         return {
           title: 'Delete Folder?',
-          description: dialogFolder
-            ? `Delete "${dialogFolder.name}"? Notes inside will be moved to Inbox.`
-            : 'Delete this folder? Notes inside will be moved to Inbox.',
-          confirmLabel: 'Delete Folder',
+          description: hasNotes
+            ? `"${folderName}" contains ${dialogState.noteCount} ${dialogState.noteCount === 1 ? 'note' : 'notes'}. What would you like to do with ${dialogState.noteCount === 1 ? 'it' : 'them'}?`
+            : `Delete "${folderName}"?`,
+          confirmLabel: dialogState.noteAction === 'delete' ? 'Delete Folder & Notes' : 'Delete Folder',
           destructive: true,
         };
+      }
       case 'open-tab-group':
         return {
           title: 'Open Folder As Tab Group?',
@@ -761,7 +789,7 @@ export function FoldersView({
             <span className="w-3.5 h-3.5 shrink-0" />
           )}
           <Inbox className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <span className="text-sm font-medium flex-1">Inbox</span>
+          <span className="text-sm font-medium flex-1">All Notes</span>
           {filteredUnfiledNotes.length > 0 && (
             <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
               {filteredUnfiledNotes.length}
@@ -894,6 +922,54 @@ export function FoldersView({
           onConfirm={() => void handleDialogConfirm()}
           isSubmitting={dialogSubmitting}
         >
+          {dialogState?.type === 'delete-folder' && dialogState.noteCount > 0 ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setDialogState(s => s?.type === 'delete-folder' ? { ...s, noteAction: 'move' } : s)}
+                className={cn(
+                  'w-full rounded-[12px] border px-3 py-2.5 text-left text-[12px] font-medium transition-colors',
+                  dialogState.noteAction === 'move'
+                    ? 'border-primary bg-primary/5 text-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={cn(
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
+                    dialogState.noteAction === 'move' ? 'border-primary' : 'border-muted-foreground/40'
+                  )}>
+                    {dialogState.noteAction === 'move' && (
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </span>
+                  Move {dialogState.noteCount === 1 ? 'note' : 'notes'} to All Notes
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialogState(s => s?.type === 'delete-folder' ? { ...s, noteAction: 'delete' } : s)}
+                className={cn(
+                  'w-full rounded-[12px] border px-3 py-2.5 text-left text-[12px] font-medium transition-colors',
+                  dialogState.noteAction === 'delete'
+                    ? 'border-destructive bg-destructive/5 text-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={cn(
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
+                    dialogState.noteAction === 'delete' ? 'border-destructive' : 'border-muted-foreground/40'
+                  )}>
+                    {dialogState.noteAction === 'delete' && (
+                      <span className="h-2 w-2 rounded-full bg-destructive" />
+                    )}
+                  </span>
+                  Delete {dialogState.noteCount === 1 ? 'note' : 'notes'} permanently
+                </span>
+              </button>
+            </div>
+          ) : null}
           {dialogState?.type === 'change-color' ? (
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">

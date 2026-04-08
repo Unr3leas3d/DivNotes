@@ -19,6 +19,11 @@ interface HoverSelectorPillOptions {
 }
 
 interface NotePreviewCardShellOptions {
+  notes: NotePreviewCardItemOptions[];
+}
+
+interface NotePreviewCardItemOptions {
+  id: string;
   elementInfo: string;
   displayDate: string;
   title: string;
@@ -200,12 +205,12 @@ export function createSelectionConfirmationPill<TElement extends OverlayElement>
 
 export function createPlacedNoteBadge<TElement extends OverlayElement>(
   documentRef: OverlayDocument<TElement>,
-  label = '1'
+  noteCount = 1
 ) {
   const badge = documentRef.createElement('div');
   badge.className = 'canopy-badge';
-  badge.title = 'DivNotes note';
-  badge.textContent = label;
+  badge.title = `${noteCount} DivNotes ${noteCount === 1 ? 'note' : 'notes'}`;
+  badge.textContent = String(noteCount);
   setDataAttribute(badge, 'canopyOverlay', 'placed-note-badge');
   applyStyles(badge, {
     position: 'fixed',
@@ -286,81 +291,152 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
     boxShadow: '0 24px 72px oklch(0 0 0 / 0.34)',
     overflow: 'hidden',
     width: '340px',
-  });
-
-  const body = documentRef.createElement('div');
-  applyStyles(body, {
-    padding: '18px 18px 16px',
+    maxHeight: '460px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
   });
 
-  const previewBody = createTextElement(
-    documentRef,
-    'div',
-    options.previewText,
-    'canopyPreviewBody'
-  );
-  applyStyles(previewBody, {
-    fontSize: '14px',
-    lineHeight: '1.75',
-    color: 'oklch(0.987 0.002 197.1)',
-    maxHeight: '200px',
+  const noteList = documentRef.createElement('div');
+  applyStyles(noteList, {
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: '460px',
     overflowY: 'auto',
   });
 
-  const tags = createTextElement(documentRef, 'div', '', 'canopyPreviewTags');
-  applyStyles(tags, {
-    display: options.tags.length > 0 ? 'flex' : 'none',
-    flexWrap: 'wrap',
-    gap: '8px',
-  });
-
-  options.tags.forEach((tag) => {
-    const chip = createTextElement(documentRef, 'span', `#${tag}`, 'canopyPreviewTagChip');
-    applyStyles(chip, {
-      display: 'inline-flex',
-      alignItems: 'center',
-      padding: '7px 11px',
-      borderRadius: '999px',
-      background: 'oklch(0.432 0.095 166.913 / 0.14)',
-      color: 'oklch(0.432 0.095 166.913)',
-      fontSize: '11px',
-      fontWeight: '800',
-      letterSpacing: '0.05em',
-      textTransform: 'uppercase',
+  options.notes.forEach((note, index) => {
+    const item = documentRef.createElement('section');
+    setDataAttribute(item, 'canopyPreviewItem', note.id);
+    applyStyles(item, {
+      padding: '18px 18px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '14px',
+      borderTop: index === 0 ? undefined : '1px solid oklch(1 0 0 / 8%)',
     });
-    tags.appendChild(chip);
+
+    const meta = documentRef.createElement('div');
+    applyStyles(meta, {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    });
+
+    const titleRow = documentRef.createElement('div');
+    applyStyles(titleRow, {
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: '12px',
+    });
+
+    const title = createTextElement(documentRef, 'div', note.title, 'canopyPreviewTitle');
+    applyStyles(title, {
+      fontSize: '14px',
+      fontWeight: '700',
+      lineHeight: '1.4',
+      color: 'oklch(0.987 0.002 197.1)',
+      flex: '1',
+    });
+
+    const date = createTextElement(documentRef, 'div', note.displayDate, 'canopyPreviewDate');
+    applyStyles(date, {
+      fontSize: '11px',
+      fontWeight: '600',
+      lineHeight: '1.4',
+      color: 'oklch(0.865 0.127 207.078 / 0.76)',
+      whiteSpace: 'nowrap',
+    });
+
+    const elementInfo = createTextElement(
+      documentRef,
+      'div',
+      note.elementInfo,
+      'canopyElementInfo'
+    );
+    applyStyles(elementInfo, {
+      fontSize: '11px',
+      lineHeight: '1.4',
+      color: 'oklch(0.865 0.127 207.078 / 0.66)',
+      fontFamily:
+        "'SF Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+    });
+
+    titleRow.appendChild(title);
+    titleRow.appendChild(date);
+    meta.appendChild(titleRow);
+    meta.appendChild(elementInfo);
+
+    const previewBody = createTextElement(
+      documentRef,
+      'div',
+      note.previewText,
+      'canopyPreviewBody'
+    );
+    applyStyles(previewBody, {
+      fontSize: '14px',
+      lineHeight: '1.75',
+      color: 'oklch(0.987 0.002 197.1)',
+      maxHeight: '180px',
+      overflowY: 'auto',
+    });
+
+    const tags = createTextElement(documentRef, 'div', '', 'canopyPreviewTags');
+    applyStyles(tags, {
+      display: note.tags.length > 0 ? 'flex' : 'none',
+      flexWrap: 'wrap',
+      gap: '8px',
+    });
+
+    note.tags.forEach((tag) => {
+      const chip = createTextElement(documentRef, 'span', `#${tag}`, 'canopyPreviewTagChip');
+      applyStyles(chip, {
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '7px 11px',
+        borderRadius: '999px',
+        background: 'oklch(0.432 0.095 166.913 / 0.14)',
+        color: 'oklch(0.432 0.095 166.913)',
+        fontSize: '11px',
+        fontWeight: '800',
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+      });
+      tags.appendChild(chip);
+    });
+
+    const actions = documentRef.createElement('div');
+    applyStyles(actions, {
+      display: 'flex',
+      gap: '10px',
+      justifyContent: 'flex-end',
+      flexWrap: 'wrap',
+    });
+
+    const moveButton = createPreviewActionButton(documentRef, 'Move', 'canopyMove');
+    setDataAttribute(moveButton, 'canopyNoteId', note.id);
+    const editButton = createPreviewActionButton(documentRef, 'Edit', 'canopyEdit');
+    setDataAttribute(editButton, 'canopyNoteId', note.id);
+    const deleteButton = createPreviewActionButton(
+      documentRef,
+      'Delete',
+      'canopyDelete',
+      true
+    );
+    setDataAttribute(deleteButton, 'canopyNoteId', note.id);
+
+    actions.appendChild(moveButton);
+    actions.appendChild(editButton);
+    actions.appendChild(deleteButton);
+
+    item.appendChild(meta);
+    item.appendChild(previewBody);
+    item.appendChild(tags);
+    item.appendChild(actions);
+    noteList.appendChild(item);
   });
 
-  body.appendChild(previewBody);
-  body.appendChild(tags);
-
-  const actions = documentRef.createElement('div');
-  applyStyles(actions, {
-    padding: '14px 16px 16px',
-    borderTop: '1px solid oklch(1 0 0 / 10%)',
-    display: 'flex',
-    gap: '10px',
-    justifyContent: 'flex-end',
-  });
-
-  const moveButton = createPreviewActionButton(documentRef, 'Move', 'canopyMove');
-  const editButton = createPreviewActionButton(documentRef, 'Edit', 'canopyEdit');
-  const deleteButton = createPreviewActionButton(
-    documentRef,
-    'Delete',
-    'canopyDelete',
-    true
-  );
-
-  actions.appendChild(moveButton);
-  actions.appendChild(editButton);
-  actions.appendChild(deleteButton);
-
-  panel.appendChild(body);
-  panel.appendChild(actions);
+  panel.appendChild(noteList);
   card.appendChild(panel);
 
   return card;

@@ -96,7 +96,7 @@ export class LocalFoldersService implements FoldersService {
     const filtered = all.filter(f => !toRemove.has(f.id));
     await this.setAllFolders(filtered);
 
-    // Move notes in deleted folders to Inbox
+    // Move notes in deleted folders to All Notes (root)
     const notesResult = await chrome.storage.local.get(['divnotes_notes']);
     const notes = notesResult.divnotes_notes || [];
     let changed = false;

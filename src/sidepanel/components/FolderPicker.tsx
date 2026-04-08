@@ -92,7 +92,7 @@ export function FolderPicker({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-56 p-1.5" align="start">
         <div className="max-h-[200px] overflow-y-auto">
-          {/* Inbox option */}
+          {/* All Notes option */}
           <button
             onClick={() => handleSelect(null)}
             className={`flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded-md transition-colors hover:bg-accent ${
@@ -100,7 +100,7 @@ export function FolderPicker({
             }`}
           >
             <Inbox className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-            <span className="flex-1 text-left">Inbox</span>
+            <span className="flex-1 text-left">All Notes</span>
             {!currentFolderId && <Check className="w-3.5 h-3.5 shrink-0 text-primary" />}
           </button>
 

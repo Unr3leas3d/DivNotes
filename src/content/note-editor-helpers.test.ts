@@ -146,7 +146,7 @@ test('getInitialSelectedFolderId uses the suggested folder for new notes', () =>
   );
 });
 
-test('getFolderChipLabel returns the selected folder name and falls back to Inbox', () => {
+test('getFolderChipLabel returns the selected folder name and falls back to All Notes', () => {
   assert.equal(
     getFolderChipLabel(
       [
@@ -159,9 +159,9 @@ test('getFolderChipLabel returns the selected folder name and falls back to Inbo
   );
   assert.equal(
     getFolderChipLabel([{ id: 'folder-1', name: 'Product' }], 'missing-folder'),
-    'Inbox'
+    'All Notes'
   );
-  assert.equal(getFolderChipLabel([], null), 'Inbox');
+  assert.equal(getFolderChipLabel([], null), 'All Notes');
 });
 
 test('getTagChipLabels normalizes chip labels for display', () => {

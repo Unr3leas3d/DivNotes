@@ -1,6 +1,4 @@
-import React, { useMemo, useState } from 'react';
-import DOMPurify from 'dompurify';
-import { marked } from 'marked';
+import React, { useMemo } from 'react';
 import { Pin, Trash2 } from '@/lib/icon-aliases';
 
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
@@ -24,17 +22,6 @@ interface NoteCardProps {
   onDragEnd?: (e: React.DragEvent) => void;
 }
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/`[^`]*`/g, ' ')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/[#*_~>\-[\]()!]/g, '')
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function deriveTitle(text: string): string {
   const lines = text
     .split('\n')
@@ -49,49 +36,6 @@ function deriveTitle(text: string): string {
   return firstMeaningfulLine.length > 72
     ? `${firstMeaningfulLine.slice(0, 72).trimEnd()}...`
     : firstMeaningfulLine;
-}
-
-function derivePreview(text: string, title: string): string {
-  const plainText = stripMarkdown(text);
-  const withoutTitle = plainText.startsWith(title) ? plainText.slice(title.length).trim() : plainText;
-  const source = withoutTitle || plainText;
-
-  if (source.length <= 180) {
-    return source;
-  }
-
-  return `${source.slice(0, 180).trimEnd()}...`;
-}
-
-function renderMarkdown(text: string): string {
-  try {
-    const rawHtml = marked.parse(text, { async: false }) as string;
-    return DOMPurify.sanitize(rawHtml, {
-      ALLOWED_TAGS: [
-        'a',
-        'b',
-        'blockquote',
-        'br',
-        'code',
-        'div',
-        'em',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'li',
-        'ol',
-        'p',
-        'pre',
-        'span',
-        'strong',
-        'ul',
-      ],
-      ALLOWED_ATTR: ['class', 'href', 'rel', 'target'],
-    });
-  } catch {
-    return DOMPurify.sanitize(text);
-  }
 }
 
 export function NoteCard({
@@ -109,12 +53,9 @@ export function NoteCard({
   onDragStart,
   onDragEnd,
 }: NoteCardProps) {
-  const [expanded, setExpanded] = useState(false);
   const tagResolver = useMemo(() => createTagResolver(tags), [tags]);
 
   const title = useMemo(() => deriveTitle(note.content), [note.content]);
-  const preview = useMemo(() => derivePreview(note.content, title), [note.content, title]);
-  const renderedContent = useMemo(() => (expanded ? renderMarkdown(note.content) : ''), [expanded, note.content]);
   const tagNames = useMemo(
     () => tagResolver.resolveStoredTagLabels(note.tags),
     [note.tags, tagResolver]
@@ -145,20 +86,10 @@ export function NoteCard({
         note={note}
         density="comfortable"
         title={title}
-        preview={preview}
         folderName={showFolderPath ? folderPath || null : null}
         tagNames={tagNames}
-        onOpen={() => setExpanded((current) => !current)}
-        interactionMode="toggle"
-        expanded={expanded}
-        details={
-          expanded ? (
-            <div
-              className="prose prose-sm max-w-none text-[12px] leading-[1.65] text-foreground prose-headings:text-foreground prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-pre:bg-muted"
-              dangerouslySetInnerHTML={{ __html: renderedContent }}
-            />
-          ) : undefined
-        }
+        onOpen={onNavigate}
+        onEdit={onEdit}
         action={
           <div className="flex flex-wrap items-center gap-2">
             {onEdit ? (

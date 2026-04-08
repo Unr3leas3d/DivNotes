@@ -418,22 +418,91 @@ function getNotePreviewTitle(note: SavedNote) {
   return plainText.length > 56 ? `${plainText.slice(0, 53)}...` : plainText;
 }
 
-function createNoteBadge(note: SavedNote) {
-  if (note.badgeEl) note.badgeEl.remove();
-  if (note.expandedEl) note.expandedEl.remove();
+function getNoteTargetKey(
+  note: Pick<SavedNote, 'elementSelector' | 'elementXPath' | 'elementTextHash' | 'elementPosition'>
+) {
+  return [
+    note.elementSelector || '',
+    note.elementXPath || '',
+    note.elementTextHash || '',
+    note.elementPosition || '',
+  ].join('::');
+}
 
-  const pos = getBadgePosition(note.element);
-  const badge = createPlacedNoteBadge(document);
+function getNotesForTarget(
+  target:
+    | string
+    | Pick<SavedNote, 'elementSelector' | 'elementXPath' | 'elementTextHash' | 'elementPosition'>
+) {
+  const targetKey = typeof target === 'string' ? target : getNoteTargetKey(target);
+  return savedNotes.filter((note) => getNoteTargetKey(note) === targetKey);
+}
+
+function getSharedBadge(notes: SavedNote[]) {
+  return notes.find((note) => note.badgeEl)?.badgeEl ?? null;
+}
+
+function getSharedCard(notes: SavedNote[]) {
+  return notes.find((note) => note.expandedEl)?.expandedEl ?? null;
+}
+
+function clearGroupedCard(notes: SavedNote[]) {
+  const sharedCard = getSharedCard(notes);
+  if (sharedCard) {
+    sharedCard.remove();
+  }
+  if (sharedCard && stopCardAnchorWatch) {
+    stopCardAnchorWatch();
+    stopCardAnchorWatch = null;
+  }
+  notes.forEach((groupNote) => {
+    groupNote.expandedEl = null;
+  });
+}
+
+function clearGroupedBadge(notes: SavedNote[]) {
+  const sharedBadge = getSharedBadge(notes);
+  if (sharedBadge) {
+    sharedBadge.remove();
+  }
+  notes.forEach((groupNote) => {
+    groupNote.badgeEl = null;
+  });
+}
+
+function resetGroupedVisuals(notes: SavedNote[]) {
+  clearGroupedCard(notes);
+  clearGroupedBadge(notes);
+  notes.forEach((groupNote) => {
+    groupNote.element.classList.remove('canopy-has-note');
+  });
+}
+
+function createNoteBadge(note: SavedNote) {
+  const targetKey = getNoteTargetKey(note);
+  const groupedNotes = getNotesForTarget(targetKey);
+  if (groupedNotes.length === 0) {
+    return;
+  }
+
+  resetGroupedVisuals(groupedNotes);
+
+  const anchorNote = groupedNotes[0];
+  const pos = getBadgePosition(anchorNote.element);
+  const badge = createPlacedNoteBadge(document, groupedNotes.length);
   badge.style.top = `${pos.top}px`;
   badge.style.left = `${pos.left}px`;
-  note.element.classList.add('canopy-has-note');
+  badge.style.display = notesVisible && !screenShareMode ? 'flex' : 'none';
+  groupedNotes.forEach((groupNote) => {
+    groupNote.element.classList.add('canopy-has-note');
+  });
 
   let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
   badge.addEventListener('mouseenter', () => {
     badge.style.transform = 'scale(1.1)';
     badge.style.boxShadow = '0 4px 16px oklch(0.148 0.004 228.8 / 0.3)';
-    hoverTimeout = setTimeout(() => showNoteCard(note), 150);
+    hoverTimeout = setTimeout(() => showNoteCard(anchorNote), 150);
   });
   badge.addEventListener('mouseleave', () => {
     badge.style.transform = 'scale(1)';
@@ -441,9 +510,10 @@ function createNoteBadge(note: SavedNote) {
     if (hoverTimeout) { clearTimeout(hoverTimeout); hoverTimeout = null; }
     // Grace period — don't close if cursor moves to the card
     setTimeout(() => {
-      if (note.expandedEl && !note.expandedEl.matches(':hover') && !badge.matches(':hover')) {
-        note.expandedEl.remove();
-        note.expandedEl = null;
+      const currentGroup = getNotesForTarget(targetKey);
+      const sharedCard = getSharedCard(currentGroup);
+      if (sharedCard && !sharedCard.matches(':hover') && !badge.matches(':hover')) {
+        clearGroupedCard(currentGroup);
       }
     }, 200);
   });
@@ -454,22 +524,31 @@ function createNoteBadge(note: SavedNote) {
   });
 
   document.body.appendChild(badge);
-  note.badgeEl = badge;
+  groupedNotes.forEach((groupNote) => {
+    groupNote.badgeEl = badge;
+  });
 }
 
 function showNoteCard(note: SavedNote) {
+  const targetKey = getNoteTargetKey(note);
+  const groupedNotes = getNotesForTarget(targetKey);
+  if (groupedNotes.length === 0) {
+    return;
+  }
+
   // Already showing
-  if (note.expandedEl) return;
+  if (groupedNotes.some((groupNote) => groupNote.expandedEl)) return;
 
   // Close any other expanded cards
   if (stopCardAnchorWatch) { stopCardAnchorWatch(); stopCardAnchorWatch = null; }
-  savedNotes.forEach(n => {
-    if (n.expandedEl) { n.expandedEl.remove(); n.expandedEl = null; }
+  savedNotes.forEach((savedNote) => {
+    if (savedNote.expandedEl) { savedNote.expandedEl.remove(); savedNote.expandedEl = null; }
   });
 
-  const rect = note.element.getBoundingClientRect();
+  const anchorNote = groupedNotes[0];
+  const rect = anchorNote.element.getBoundingClientRect();
   const cardWidth = 340;
-  const cardHeight = 240;
+  const cardHeight = Math.min(440, 200 + groupedNotes.length * 120);
 
   const pos = computeAnchoredOverlayPosition({
     anchorRect: rect,
@@ -478,22 +557,32 @@ function showNoteCard(note: SavedNote) {
     offset: 12,
   });
 
-  const displayDate = note.createdAt.includes('T')
-    ? new Date(note.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : note.createdAt;
   const card = createNotePreviewCardShell(document, {
-    elementInfo: note.elementInfo,
-    displayDate,
-    title: getNotePreviewTitle(note),
-    previewText: note.content,
-    tags: note.tags.length > 0 ? note.tags : extractHashtagsFromContent(note.content),
+    notes: groupedNotes.map((groupNote) => ({
+      id: groupNote.id,
+      elementInfo: groupNote.elementInfo,
+      displayDate: groupNote.createdAt.includes('T')
+        ? new Date(groupNote.createdAt).toLocaleString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : groupNote.createdAt,
+      title: getNotePreviewTitle(groupNote),
+      previewText: groupNote.content,
+      tags:
+        groupNote.tags.length > 0
+          ? groupNote.tags
+          : extractHashtagsFromContent(groupNote.content),
+    })),
   });
   card.style.top = `${pos.top}px`;
   card.style.left = `${pos.left}px`;
 
   // Watch anchor position so the card follows the element on scroll/resize
   if (stopCardAnchorWatch) stopCardAnchorWatch();
-  stopCardAnchorWatch = watchAnchorPosition(window, note.element, (newRect) => {
+  stopCardAnchorWatch = watchAnchorPosition(window, anchorNote.element, (newRect) => {
     const updated = computeAnchoredOverlayPosition({
       anchorRect: newRect,
       overlaySize: { width: cardWidth, height: cardHeight },
@@ -504,50 +593,66 @@ function showNoteCard(note: SavedNote) {
     card.style.left = `${updated.left}px`;
   });
 
-  const previewBody = card.querySelector('[data-canopy-preview-body]') as HTMLElement | null;
-  if (previewBody) {
-    previewBody.innerHTML = simpleMarkdown(note.content);
-  }
-
-  const moveButton = card.querySelector('[data-canopy-move]') as HTMLButtonElement | null;
-  const editButton = card.querySelector('[data-canopy-edit]') as HTMLButtonElement | null;
-  const deleteButton = card.querySelector('[data-canopy-delete]') as HTMLButtonElement | null;
-
-  moveButton?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    card.remove();
-    note.expandedEl = null;
-    moveNote(note);
+  const previewBodies = card.querySelectorAll('[data-canopy-preview-body]');
+  groupedNotes.forEach((groupNote, index) => {
+    const previewBody = previewBodies[index] as HTMLElement | undefined;
+    if (previewBody) {
+      previewBody.innerHTML = simpleMarkdown(groupNote.content);
+    }
   });
 
-  editButton?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    card.remove();
-    note.expandedEl = null;
-    showNoteEditor(note.element, note);
+  const handleActionClick = (
+    selector: string,
+    action: (targetNote: SavedNote, event: MouseEvent) => void
+  ) => {
+    card.querySelectorAll(selector).forEach((buttonNode) => {
+      const button = buttonNode as HTMLButtonElement;
+      const noteId = button.dataset.canopyNoteId;
+      const targetNote = groupedNotes.find((groupNote) => groupNote.id === noteId);
+      if (!targetNote) {
+        return;
+      }
+      button.addEventListener('click', (event) => action(targetNote, event));
+    });
+  };
+
+  handleActionClick('[data-canopy-move]', (targetNote, event) => {
+    event.stopPropagation();
+    clearGroupedCard(groupedNotes);
+    moveNote(targetNote);
   });
 
-  deleteButton?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    deleteNote(note.id);
+  handleActionClick('[data-canopy-edit]', (targetNote, event) => {
+    event.stopPropagation();
+    clearGroupedCard(groupedNotes);
+    showNoteEditor(targetNote.element, targetNote);
+  });
+
+  handleActionClick('[data-canopy-delete]', (targetNote, event) => {
+    event.stopPropagation();
+    deleteNote(targetNote.id);
   });
 
   // Hover effects on buttons
-  [moveButton, editButton].filter(Boolean).forEach(btn => {
-    btn.addEventListener('mouseenter', (e) => {
-      (e.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
-      (e.target as HTMLElement).style.background = 'oklch(0.148 0.004 228.8 / 0.34)';
+  card.querySelectorAll('[data-canopy-move], [data-canopy-edit]').forEach((buttonNode) => {
+    const button = buttonNode as HTMLElement;
+    button.addEventListener('mouseenter', (event) => {
+      (event.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
+      (event.target as HTMLElement).style.background = 'oklch(0.148 0.004 228.8 / 0.34)';
     });
-    btn.addEventListener('mouseleave', (e) => {
-      (e.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
-      (e.target as HTMLElement).style.background = 'oklch(0.274 0.006 286.033)';
+    button.addEventListener('mouseleave', (event) => {
+      (event.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
+      (event.target as HTMLElement).style.background = 'oklch(0.274 0.006 286.033)';
     });
   });
-  deleteButton?.addEventListener('mouseenter', (e) => {
-    (e.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.22)';
-  });
-  deleteButton?.addEventListener('mouseleave', (e) => {
-    (e.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.14)';
+  card.querySelectorAll('[data-canopy-delete]').forEach((buttonNode) => {
+    const button = buttonNode as HTMLElement;
+    button.addEventListener('mouseenter', (event) => {
+      (event.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.22)';
+    });
+    button.addEventListener('mouseleave', (event) => {
+      (event.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.14)';
+    });
   });
 
   card.addEventListener('click', (e) => e.stopPropagation());
@@ -556,29 +661,33 @@ function showNoteCard(note: SavedNote) {
   // Auto-close when cursor leaves the card (with grace period for badge)
   card.addEventListener('mouseleave', () => {
     setTimeout(() => {
-      if (note.expandedEl && !card.matches(':hover') && (!note.badgeEl || !note.badgeEl.matches(':hover'))) {
-        if (stopCardAnchorWatch) { stopCardAnchorWatch(); stopCardAnchorWatch = null; }
-        card.remove();
-        note.expandedEl = null;
+      const currentGroup = getNotesForTarget(targetKey);
+      const sharedBadge = getSharedBadge(currentGroup);
+      if (getSharedCard(currentGroup) && !card.matches(':hover') && (!sharedBadge || !sharedBadge.matches(':hover'))) {
+        clearGroupedCard(currentGroup);
       }
     }, 300);
   });
 
   document.body.appendChild(card);
-  note.expandedEl = card;
+  groupedNotes.forEach((groupNote) => {
+    groupNote.expandedEl = card;
+  });
 }
 
 async function deleteNote(id: string, skipStorage = false) {
   const idx = savedNotes.findIndex(n => n.id === id);
   if (idx > -1) {
     const note = savedNotes[idx];
-    if (note.badgeEl) note.badgeEl.remove();
-    if (note.expandedEl) note.expandedEl.remove();
-    note.badgeEl = null;
-    note.expandedEl = null;
-    note.element.classList.remove('canopy-has-note');
+    const targetKey = getNoteTargetKey(note);
+    const groupedNotes = getNotesForTarget(targetKey);
+    resetGroupedVisuals(groupedNotes);
     clearTextHighlight(note);
     savedNotes.splice(idx, 1);
+    const remainingGroupedNotes = getNotesForTarget(targetKey);
+    if (remainingGroupedNotes.length > 0) {
+      createNoteBadge(remainingGroupedNotes[0]);
+    }
     updateNoteBadgeCount();
 
     if (!skipStorage) {
@@ -586,7 +695,6 @@ async function deleteNote(id: string, skipStorage = false) {
         await saveNotesToStorage();
       } catch (error) {
         savedNotes.splice(idx, 0, note);
-        note.element.classList.add('canopy-has-note');
         createNoteBadge(note);
         if (note.selectedText) applyTextHighlight(note);
         updateNoteBadgeCount();
@@ -634,12 +742,20 @@ function moveNote(note: SavedNote) {
 
     const previousElement = note.element;
     const previousSelector = note.elementSelector;
+    const previousXPath = note.elementXPath;
+    const previousTextHash = note.elementTextHash;
+    const previousPosition = note.elementPosition;
     const previousInfo = note.elementInfo;
+    const previousTargetKey = getNoteTargetKey(note);
+    const previousGroupedNotes = getNotesForTarget(previousTargetKey);
+    resetGroupedVisuals(previousGroupedNotes);
 
     // Re-attach note to new element
-    note.element.classList.remove('canopy-has-note');
     note.element = newEl;
     note.elementSelector = getCssSelector(newEl);
+    note.elementXPath = getXPath(newEl);
+    note.elementTextHash = getTextHash(newEl);
+    note.elementPosition = getPosition(newEl);
     const tag = newEl.tagName.toLowerCase();
     const id = newEl.id ? `#${newEl.id}` : '';
     const cls = newEl.className && typeof newEl.className === 'string'
@@ -647,19 +763,27 @@ function moveNote(note: SavedNote) {
       : '';
     note.elementInfo = `<${tag}${id}${cls}>`;
 
-    // Move badge
-    if (note.badgeEl) note.badgeEl.remove();
-    createNoteBadge(note);
+    const nextTargetKey = getNoteTargetKey(note);
     try {
       await saveNotesToStorage();
     } catch (error) {
-      note.element.classList.remove('canopy-has-note');
       note.element = previousElement;
       note.elementSelector = previousSelector;
+      note.elementXPath = previousXPath;
+      note.elementTextHash = previousTextHash;
+      note.elementPosition = previousPosition;
       note.elementInfo = previousInfo;
       createNoteBadge(note);
       console.error('[Canopy] Failed to move note', error);
       return;
+    }
+    const remainingPreviousGroupedNotes = getNotesForTarget(previousTargetKey);
+    if (remainingPreviousGroupedNotes.length > 0) {
+      createNoteBadge(remainingPreviousGroupedNotes[0]);
+    }
+    createNoteBadge(note);
+    if (previousTargetKey !== nextTargetKey) {
+      updateNoteBadgeCount();
     }
     console.log('[Canopy] Note moved to', note.elementSelector);
   };
@@ -824,7 +948,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   noteEditorContainer = createEditorSurface(document as unknown as Parameters<typeof createEditorSurface>[0], {
     isNew: !existingNote,
     body: editorState.body,
-    folderLabel: 'Inbox',
+    folderLabel: 'All Notes',
     tagLabels: getTagChipLabels(buildEditorTagNames(manualTags, { title: '', body: editorState.body })),
     pinned: editorState.pinned,
     errorMessage: '',
@@ -1095,7 +1219,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     });
 
     // Inbox option (null folder)
-    folderDropdown.appendChild(createFolderOption('Inbox', null));
+    folderDropdown.appendChild(createFolderOption('All Notes', null));
 
     // Build flat selection tree with nested labels
     const tree = buildFolderSelectionTree(availableFolders);
@@ -1412,10 +1536,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
         existingNote.tags = nextTags;
         existingNote.pinned = nextPinned;
         existingNote.updatedAt = updatedAt;
-        if (existingNote.expandedEl) {
-          existingNote.expandedEl.remove();
-          existingNote.expandedEl = null;
-        }
+        clearGroupedCard(getNotesForTarget(existingNote));
         updateNoteBadgeCount();
         console.log('[Canopy] Note updated');
 
@@ -1641,11 +1762,21 @@ function loadNotesFromStorage() {
           expandedEl: null,
         };
         savedNotes.push(note);
-        createNoteBadge(note);
-        if (note.selectedText) applyTextHighlight(note);
       } catch (err) {
         console.warn('[Canopy] Error restoring note:', err);
       }
+    });
+    const renderedTargets = new Set<string>();
+    savedNotes.forEach((note) => {
+      const targetKey = getNoteTargetKey(note);
+      if (renderedTargets.has(targetKey)) {
+        return;
+      }
+      createNoteBadge(note);
+      renderedTargets.add(targetKey);
+    });
+    savedNotes.forEach((note) => {
+      if (note.selectedText) applyTextHighlight(note);
     });
     updateNoteBadgeCount();
   });

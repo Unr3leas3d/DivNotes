@@ -1,7 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-  ArrowDown01Icon,
-  ArrowRight01Icon,
   FolderOpenIcon,
   HashtagIcon,
   LinkSquare02Icon,
@@ -23,8 +21,6 @@ interface WorkspaceNoteCardProps {
   tagNames?: string[];
   onOpen: (note: StoredNote) => void;
   onEdit?: (note: StoredNote) => void;
-  interactionMode?: 'open' | 'toggle';
-  expanded?: boolean;
   details?: React.ReactNode;
   action?: React.ReactNode;
 }
@@ -52,8 +48,6 @@ export function WorkspaceNoteCard({
   tagNames = [],
   onOpen,
   onEdit,
-  interactionMode = 'open',
-  expanded = false,
   details,
   action,
 }: WorkspaceNoteCardProps) {
@@ -72,7 +66,7 @@ export function WorkspaceNoteCard({
   const visibleTags = tagNames.slice(0, density === 'compact' ? 1 : 2);
   const overflowTagCount = tagNames.length - visibleTags.length;
   const resolvedAction = action ?? (
-    interactionMode === 'open' && onEdit ? (
+    onEdit ? (
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -101,89 +95,62 @@ export function WorkspaceNoteCard({
   return (
     <div
       className={cn(
-        'w-full rounded-[16px] border border-border bg-card text-left shadow-card transition-colors hover:bg-muted',
+        'w-full rounded-[16px] border border-border bg-card text-left shadow-card transition-colors',
         resolvedAction ? 'overflow-hidden' : undefined
       )}
     >
-      <button
-        type="button"
-        onClick={() => onOpen(note)}
-        aria-expanded={interactionMode === 'toggle' ? expanded : undefined}
-        aria-label={interactionMode === 'toggle' ? (expanded ? 'Collapse note details' : 'Expand note details') : 'Open note'}
+      <div
         className={cn(
-          'w-full text-left transition-colors hover:bg-muted',
           density === 'compact' ? 'px-3 py-3' : 'px-3.5 py-3.5'
         )}
       >
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
-                {note.elementTag}
-              </span>
-              <span className="truncate text-[10px] text-muted-foreground">{note.hostname}</span>
-              {note.pinned ? <HugeIcon icon={MapPinIcon} className="ml-auto h-3 w-3 text-primary" /> : null}
-            </div>
-
-            {title ? (
-              <>
-                <h3 className="mt-2 text-[13px] font-semibold leading-[1.35] text-foreground">{title}</h3>
-                <p
-                  className={cn(
-                    'mt-1 text-muted-foreground',
-                    density === 'compact'
-                      ? 'line-clamp-2 text-[12px] leading-[1.45]'
-                      : 'line-clamp-3 text-[12px] leading-[1.55]'
-                  )}
-                >
-                  {resolvedPreview || 'Open the note to read more.'}
-                </p>
-              </>
-            ) : (
-              <p
-                className={cn(
-                  'mt-2 text-foreground',
-                  density === 'compact'
-                    ? 'line-clamp-2 text-[12px] leading-[1.45]'
-                    : 'line-clamp-3 text-[12.5px] leading-[1.55]'
-                )}
-              >
-                {resolvedPreview || 'Untitled note'}
-              </p>
-            )}
-
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
-              <span className="truncate">{note.pageTitle || note.hostname}</span>
-              {folderName ? (
-                <span className="inline-flex items-center gap-1 truncate">
-                  <HugeIcon icon={FolderOpenIcon} className="h-3 w-3" />
-                  {folderName}
-                </span>
-              ) : null}
-              {visibleTags.map((tagName) => (
-                <span key={tagName} className="inline-flex items-center gap-1 truncate">
-                  <HugeIcon icon={HashtagIcon} className="h-3 w-3" />
-                  {tagName}
-                </span>
-              ))}
-              {overflowTagCount > 0 ? <span>+{overflowTagCount} more</span> : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-end gap-2 text-muted-foreground">
-            {interactionMode === 'toggle' ? (
-              expanded ? (
-                <HugeIcon icon={ArrowDown01Icon} className="h-3.5 w-3.5" />
-              ) : (
-                <HugeIcon icon={ArrowRight01Icon} className="h-3.5 w-3.5" />
-              )
-            ) : (
-              <HugeIcon icon={LinkSquare02Icon} className="h-3.5 w-3.5" />
-            )}
-            <span className="text-[10px]">{formatTimestamp(note.createdAt)}</span>
-          </div>
+        {/* Row 1: Tag pill + hostname + link icon */}
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+            {note.elementTag}
+          </span>
+          <span className="truncate text-[10px] text-muted-foreground">{note.hostname}</span>
+          {note.pinned ? (
+            <HugeIcon icon={MapPinIcon} className="ml-auto h-3 w-3 text-primary" />
+          ) : (
+            <HugeIcon icon={LinkSquare02Icon} className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+          )}
         </div>
-      </button>
+
+        {/* Row 2: Title + date */}
+        <div className="mt-2 flex items-baseline justify-between gap-2">
+          <h3 className="min-w-0 flex-1 text-[13px] font-semibold leading-[1.35] text-foreground">
+            {title || resolvedPreview || 'Untitled note'}
+          </h3>
+          <span className="shrink-0 text-[10px] text-muted-foreground">
+            {formatTimestamp(note.createdAt)}
+          </span>
+        </div>
+
+        {/* Row 3: Page title */}
+        <p className="mt-1 truncate text-[12px] leading-[1.45] text-muted-foreground">
+          {note.pageTitle || note.hostname}
+        </p>
+
+        {/* Row 4: Folders & tags */}
+        {(folderName || visibleTags.length > 0) ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+            {folderName ? (
+              <span className="inline-flex items-center gap-1 truncate">
+                <HugeIcon icon={FolderOpenIcon} className="h-3 w-3" />
+                {folderName}
+              </span>
+            ) : null}
+            {visibleTags.map((tagName) => (
+              <span key={tagName} className="inline-flex items-center gap-1 truncate">
+                <HugeIcon icon={HashtagIcon} className="h-3 w-3" />
+                {tagName}
+              </span>
+            ))}
+            {overflowTagCount > 0 ? <span>+{overflowTagCount} more</span> : null}
+          </div>
+        ) : null}
+      </div>
       {details ? <div className="border-t border-border px-3.5 py-3">{details}</div> : null}
       {resolvedAction ? <div className="border-t border-border px-3.5 py-2.5">{resolvedAction}</div> : null}
     </div>

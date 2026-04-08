@@ -44,6 +44,19 @@ class FakeElement {
     return null;
   }
 
+  querySelectorAll(selector: string): FakeElement[] {
+    const matches: FakeElement[] = [];
+
+    for (const child of this.children) {
+      if (matchesSelector(child, selector)) {
+        matches.push(child);
+      }
+      matches.push(...child.querySelectorAll(selector));
+    }
+
+    return matches;
+  }
+
   setAttribute(name: string, value: string) {
     if (name === 'id') {
       this.id = value;
@@ -137,12 +150,12 @@ test('createSelectionConfirmationPill renders the selected-state copy', () => {
 test('createPlacedNoteBadge renders a compact dark badge without innerHTML', () => {
   const fakeDocument = createFakeDocument();
 
-  const badge = createPlacedNoteBadge(fakeDocument, '1');
+  const badge = createPlacedNoteBadge(fakeDocument, 3);
 
   assert.equal(badge.tagName, 'DIV');
   assert.equal(badge.dataset.canopyOverlay, 'placed-note-badge');
-  assert.equal(badge.textContent, '1');
-  assert.equal(badge.title, 'DivNotes note');
+  assert.equal(badge.textContent, '3');
+  assert.equal(badge.title, '3 DivNotes notes');
 });
 
 test('createPageNoteCountPill renders the bottom-right note count copy', () => {
@@ -158,17 +171,28 @@ test('createNotePreviewCardShell renders metadata, tags, preview, and actions', 
   const fakeDocument = createFakeDocument();
 
   const card = createNotePreviewCardShell(fakeDocument, {
-    elementInfo: '<button.primary>',
-    displayDate: 'Mar 29, 10:15 AM',
-    title: 'Primary CTA',
-    previewText: 'Follow up on the button copy before launch.',
-    tags: ['launch', 'copy'],
+    notes: [
+      {
+        id: 'note-1',
+        elementInfo: '<button.primary>',
+        displayDate: 'Mar 29, 10:15 AM',
+        title: 'Primary CTA',
+        previewText: 'Follow up on the button copy before launch.',
+        tags: ['launch', 'copy'],
+      },
+      {
+        id: 'note-2',
+        elementInfo: '<button.primary>',
+        displayDate: 'Mar 29, 10:16 AM',
+        title: 'Secondary CTA',
+        previewText: 'Add a stronger contrast state for hover.',
+        tags: ['design'],
+      },
+    ],
   });
 
   assert.equal(card.dataset.canopyOverlay, 'note-preview-card');
-  assert.equal(card.querySelector('[data-canopy-element-info]'), null);
-  assert.equal(card.querySelector('[data-canopy-preview-date]'), null);
-  assert.equal(card.querySelector('[data-canopy-preview-title]'), null);
+  assert.equal(card.querySelectorAll('[data-canopy-preview-item]').length, 2);
   assert.equal(
     card.querySelector('[data-canopy-preview-body]')?.textContent,
     'Follow up on the button copy before launch.'
@@ -178,9 +202,9 @@ test('createNotePreviewCardShell renders metadata, tags, preview, and actions', 
       ?.textContent,
     '#launch'
   );
-  assert.equal(card.querySelector('[data-canopy-move]')?.textContent, 'Move');
-  assert.equal(card.querySelector('[data-canopy-edit]')?.textContent, 'Edit');
-  assert.equal(card.querySelector('[data-canopy-delete]')?.textContent, 'Delete');
+  assert.equal(card.querySelectorAll('[data-canopy-move]').length, 2);
+  assert.equal(card.querySelectorAll('[data-canopy-edit]').length, 2);
+  assert.equal(card.querySelectorAll('[data-canopy-delete]').length, 2);
   assert.equal(card.querySelector('[data-canopy-preview-panel]')?.dataset.canopyPreviewPanel, '');
   assert.equal(
     card.querySelector('[data-canopy-preview-panel]')?.style.background,
@@ -200,11 +224,16 @@ test('createNotePreviewCardShell keeps edit and move actions in the footer', () 
   const fakeDocument = createFakeDocument();
 
   const card = createNotePreviewCardShell(fakeDocument, {
-    elementInfo: '<div.hero>',
-    displayDate: 'Mar 30, 2:00 PM',
-    title: 'Hero section',
-    previewText: 'Check spacing',
-    tags: [],
+    notes: [
+      {
+        id: 'note-1',
+        elementInfo: '<div.hero>',
+        displayDate: 'Mar 30, 2:00 PM',
+        title: 'Hero section',
+        previewText: 'Check spacing',
+        tags: [],
+      },
+    ],
   });
 
   assert.equal(card.querySelector('[data-canopy-edit]')?.textContent, 'Edit');

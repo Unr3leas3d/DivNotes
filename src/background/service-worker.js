@@ -64,6 +64,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // Pending note targets keyed by tab id (for cross-page navigation)
 const pendingNoteTargets = new Map();
+const FOLDER_TAB_GROUP_STORAGE_KEY = 'divnotes_folder_tab_groups';
 
 function normalizeUrl(url) {
     try {
@@ -120,6 +121,30 @@ function hexToChromeColor(hex) {
         }
     }
     return closest;
+}
+
+function getFolderTabGroupMap(rawValue) {
+    if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+        return {};
+    }
+
+    return { ...rawValue };
+}
+
+function resolveTabGroupTitle(message, folder) {
+    if (typeof message.folderName === 'string' && message.folderName.trim()) {
+        return message.folderName.trim();
+    }
+
+    return folder.name;
+}
+
+function resolveTabGroupColor(message, folder) {
+    if (Object.prototype.hasOwnProperty.call(message, 'folderColor')) {
+        return message.folderColor;
+    }
+
+    return folder.color;
 }
 
 // Handle messages from popup and content scripts
@@ -438,7 +463,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'OPEN_FOLDER_AS_GROUP') {
         const { folderId } = message;
-        chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], async (result) => {
+        chrome.storage.local.get(['divnotes_folders', 'divnotes_notes', FOLDER_TAB_GROUP_STORAGE_KEY], async (result) => {
             const folders = result.divnotes_folders || [];
             const notes = result.divnotes_notes || [];
             const folder = folders.find(f => f.id === folderId);
@@ -446,6 +471,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ success: false, error: 'Folder not found' });
                 return;
             }
+            const folderTabGroups = getFolderTabGroupMap(result[FOLDER_TAB_GROUP_STORAGE_KEY]);
+            const tabGroupTitle = resolveTabGroupTitle(message, folder);
+            const tabGroupColor = resolveTabGroupColor(message, folder);
 
             // Determine if parent (has children) or leaf
             const hasChildren = folders.some(f => f.parentId === folderId);
@@ -483,10 +511,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             try {
+                const allTabs = await chrome.tabs.query({});
+                const mappedGroupId = folderTabGroups[folderId];
+                const existingGroupTab = Number.isInteger(mappedGroupId)
+                    ? allTabs.find((tab) => tab.groupId === mappedGroupId)
+                    : null;
+                const existingGroupWindowId = existingGroupTab?.windowId ?? null;
+
+                if (Number.isInteger(mappedGroupId) && !existingGroupTab) {
+                    delete folderTabGroups[folderId];
+                    await chrome.storage.local.set({ [FOLDER_TAB_GROUP_STORAGE_KEY]: folderTabGroups });
+                }
+
                 // Create tabs
                 const tabIds = [];
                 for (const url of uniqueUrls) {
-                    const tab = await chrome.tabs.create({ url });
+                    const tab = await chrome.tabs.create(
+                        existingGroupWindowId ? { url, windowId: existingGroupWindowId } : { url }
+                    );
                     if (tab.id) tabIds.push(tab.id);
                 }
 
@@ -496,12 +538,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
 
                 // Group tabs
-                const groupId = await chrome.tabs.group({ tabIds });
+                const groupId = existingGroupTab
+                    ? await chrome.tabs.group({ groupId: existingGroupTab.groupId, tabIds })
+                    : await chrome.tabs.group({ tabIds });
+
+                if (folderTabGroups[folderId] !== groupId) {
+                    await chrome.storage.local.set({
+                        [FOLDER_TAB_GROUP_STORAGE_KEY]: {
+                            ...folderTabGroups,
+                            [folderId]: groupId,
+                        },
+                    });
+                }
 
                 // Style the group
                 await chrome.tabGroups.update(groupId, {
-                    title: folder.name,
-                    color: hexToChromeColor(folder.color),
+                    title: tabGroupTitle,
+                    color: hexToChromeColor(tabGroupColor),
                 });
 
                 sendResponse({ success: true, tabCount: tabIds.length });
