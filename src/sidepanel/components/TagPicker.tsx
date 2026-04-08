@@ -3,7 +3,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Input } from '@/components/ui/input';
 import { assignRandomColor } from '@/lib/tag-utils';
 import type { StoredTag } from '@/lib/types';
-import { Tag, Plus, Check } from 'lucide-react';
+import { Tag, Plus, Check } from '@/lib/icon-aliases';
 import { TagPill } from './TagPill';
 
 interface TagPickerProps {

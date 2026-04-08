@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { PanelsTopLeft, Settings2 } from 'lucide-react';
+import { LeftToRightBlockQuoteIcon, Settings02Icon } from '@hugeicons/core-free-icons';
 
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
 import { WorkspaceNoteEditorDialog } from '@/components/workspace/WorkspaceNoteEditorDialog';
 import { TopNavPills } from '@/components/workspace/TopNavPills';
@@ -233,20 +234,20 @@ export function Dashboard({ email, onLogout, isLocalMode }: DashboardProps) {
                     variant="ghost"
                     size="icon"
                     onClick={() => void handleOpenSidePanel()}
-                    className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+                    className="h-9 w-9 rounded-[12px] border border-border bg-card text-muted-foreground hover:bg-muted"
                     aria-label="Open side panel"
                 >
-                    <PanelsTopLeft className="h-4 w-4" />
+                    <HugeIcon icon={LeftToRightBlockQuoteIcon} className="h-4 w-4" />
                 </Button>
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={handleOpenSettings}
-                    className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+                    className="h-9 w-9 rounded-[12px] border border-border bg-card text-muted-foreground hover:bg-muted"
                     aria-label="Open settings"
                 >
-                    <Settings2 className="h-4 w-4" />
+                    <HugeIcon icon={Settings02Icon} className="h-4 w-4" />
                 </Button>
             </>
         );

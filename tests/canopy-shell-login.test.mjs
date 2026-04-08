@@ -40,7 +40,10 @@ test('popup login and shell match the approved batch-1 structure', () => {
   assert.ok(!popupThisPageView.includes('Select an element and attach the first note for this page.'));
   assert.ok(popupDashboard.includes('WorkspaceActionDialog'));
   assert.ok(popupDashboard.includes('handleOpenSidePanel'));
-  assert.ok(popupDashboard.includes('PanelsTopLeft'));
+  assert.ok(
+    popupDashboard.includes('LeftToRightBlockQuoteIcon') ||
+      popupDashboard.includes('HugeIcon icon={LeftToRightBlockQuoteIcon}')
+  );
   assert.ok(popupDashboard.includes('This removes every saved note in this profile.'));
   assert.ok(manifest.permissions.includes('identity'));
   assert.ok(popupApp.includes('h-[500px]'));

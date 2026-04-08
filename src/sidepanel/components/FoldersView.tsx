@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { FolderPlus, Inbox, ChevronDown, ChevronRight, Search, StickyNote } from 'lucide-react';
+import { FolderPlus, Inbox, ChevronDown, ChevronRight, Search, StickyNote } from '@/lib/icon-aliases';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
@@ -711,22 +711,22 @@ export function FoldersView({
       />
 
       {/* Header with New Folder button */}
-      <div className="mb-4 rounded-[20px] border border-[#ece7de] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
+      <div className="mb-4 rounded-[20px] border border-border bg-card px-4 py-4 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6d7b70]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
               <Inbox className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Folders</p>
-              <p className="text-[13px] font-semibold text-[#173628]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Folders</p>
+              <p className="text-[13px] font-semibold text-foreground">
                 {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
               </p>
             </div>
           </div>
           <Button
             variant="ghost"
-            className="h-9 rounded-[12px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 text-[12px] font-medium text-[#526357] hover:bg-[#f1eee7]"
+            className="h-9 rounded-[12px] border border-border bg-secondary px-3 text-[12px] font-medium text-muted-foreground hover:bg-secondary/80"
             onClick={handleNewFolder}
             title="New folder"
           >
@@ -848,7 +848,7 @@ export function FoldersView({
           {bulkActionError ? (
             <p
               aria-live="polite"
-              className="rounded-[12px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.92)] px-3 py-2 text-[11px] text-[#b91c1c]"
+              className="rounded-[12px] border border-destructive/20 bg-destructive/5 px-3 py-2 text-[11px] text-destructive"
             >
               {bulkActionError}
             </p>
@@ -896,7 +896,7 @@ export function FoldersView({
         >
           {dialogState?.type === 'change-color' ? (
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Folder color
               </p>
               <div className="grid grid-cols-4 gap-2">
@@ -905,8 +905,8 @@ export function FoldersView({
                   className={cn(
                     'col-span-2 rounded-[12px] border px-3 py-2 text-left text-[12px] font-medium transition-colors',
                     dialogState.selectedColor === null
-                      ? 'border-[#173628] bg-[#f1eee7] text-[#173628]'
-                      : 'border-[#e7e2d8] bg-white text-[#526357] hover:bg-[#f8f6f1]'
+                      ? 'border-primary bg-secondary text-primary'
+                      : 'border-border bg-card text-muted-foreground hover:bg-muted'
                   )}
                   onClick={() => handleDialogSelectedColorChange(null)}
                 >
@@ -920,8 +920,8 @@ export function FoldersView({
                     className={cn(
                       'flex h-10 items-center justify-center rounded-[12px] border transition-transform hover:scale-[1.02]',
                       dialogState.selectedColor === color
-                        ? 'border-[#173628] ring-2 ring-[#173628]/20'
-                        : 'border-[#e7e2d8]'
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-border'
                     )}
                     style={{ backgroundColor: color }}
                     onClick={() => handleDialogSelectedColorChange(color)}

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Tag, X } from 'lucide-react';
+import { Tag, X } from '@/lib/icon-aliases';
 import type { StoredTag } from '@/lib/types';
 
 interface TagPillProps {

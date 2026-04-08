@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StickyNote } from 'lucide-react';
+import { StickyNote } from '@/lib/icon-aliases';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
@@ -115,7 +115,7 @@ export function AllNotesView({
         const isExpanded = expandedHostnames.has(group.hostname);
 
         return (
-          <section key={group.hostname} className="rounded-[20px] border border-[#ece7de] bg-[#f8f6f1] p-4">
+          <section key={group.hostname} className="rounded-[20px] border border-border bg-muted p-4">
             <button
               type="button"
               aria-expanded={isExpanded}
@@ -130,12 +130,12 @@ export function AllNotesView({
                   return next;
                 });
               }}
-              className="flex w-full items-center justify-between gap-3 rounded-[16px] bg-white px-3 py-2 text-left"
+              className="flex w-full items-center justify-between gap-3 rounded-[16px] bg-card px-3 py-2 text-left"
             >
-              <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#173628]">
+              <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold text-foreground">
                 {group.hostname}
               </h3>
-              <span className="rounded-full bg-[#f3f1eb] px-2.5 py-1 text-[10px] font-semibold text-[#6d7b70]">
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
                 {group.count}
               </span>
             </button>

@@ -1,5 +1,6 @@
 // Canopy Content Script
 // Pure DOM for inspector, note editor, and note badges
+import interFontCss from '@fontsource-variable/inter/index.css?inline';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import type { StoredFolder, StoredTag } from '../lib/types.ts';
@@ -32,6 +33,21 @@ import {
   createSelectionConfirmationPill,
   createSelectorGuide,
 } from './overlay-ui.ts';
+
+const CONTENT_FONT_STYLE_ID = 'canopy-content-fonts';
+
+function ensureContentFontStyles() {
+  if (document.getElementById(CONTENT_FONT_STYLE_ID)) {
+    return;
+  }
+
+  const fontStyle = document.createElement('style');
+  fontStyle.id = CONTENT_FONT_STYLE_ID;
+  fontStyle.textContent = interFontCss;
+  (document.head ?? document.documentElement).appendChild(fontStyle);
+}
+
+ensureContentFontStyles();
 
 console.log('[Canopy] Content script loaded');
 
@@ -96,30 +112,30 @@ const highlightStyle = document.createElement('style');
 highlightStyle.id = 'canopy-styles';
 highlightStyle.textContent = `
   .canopy-highlight {
-    outline: 2px solid rgba(26, 92, 46, 0.8) !important;
+    outline: 2px solid oklch(0.508 0.118 165.612 / 0.8) !important;
     outline-offset: 2px !important;
-    background-color: rgba(171, 255, 192, 0.08) !important;
+    background-color: oklch(0.865 0.127 207.078 / 0.08) !important;
     transition: outline 0.15s ease, background-color 0.15s ease !important;
     cursor: crosshair !important;
   }
   .canopy-selected {
-    outline: 2px solid #1a5c2e !important;
+    outline: 2px solid oklch(0.508 0.118 165.612) !important;
     outline-offset: 2px !important;
-    background-color: rgba(171, 255, 192, 0.12) !important;
+    background-color: oklch(0.865 0.127 207.078 / 0.12) !important;
   }
   .canopy-has-note {
     position: relative !important;
-    outline: 1px solid rgba(171, 255, 192, 0.28) !important;
+    outline: 1px solid oklch(0.865 0.127 207.078 / 0.28) !important;
     outline-offset: 1px !important;
   }
   ::highlight(canopy-text-selection) {
-    background-color: rgba(171, 255, 192, 0.3) !important;
-    border-bottom: 2px dashed rgba(26, 92, 46, 0.8);
+    background-color: oklch(0.865 0.127 207.078 / 0.3) !important;
+    border-bottom: 2px dashed oklch(0.508 0.118 165.612 / 0.8);
     color: inherit;
   }
   @keyframes canopy-pulse {
-    0%, 100% { box-shadow: 0 2px 8px rgba(5,36,21,0.2); }
-    50% { box-shadow: 0 2px 12px rgba(5,36,21,0.4); }
+    0%, 100% { box-shadow: 0 2px 8px oklch(0.148 0.004 228.8 / 0.2); }
+    50% { box-shadow: 0 2px 12px oklch(0.148 0.004 228.8 / 0.4); }
   }
   @keyframes canopy-fadein {
     from { opacity: 0; transform: scale(0.8) translateY(4px); }
@@ -416,12 +432,12 @@ function createNoteBadge(note: SavedNote) {
 
   badge.addEventListener('mouseenter', () => {
     badge.style.transform = 'scale(1.1)';
-    badge.style.boxShadow = '0 4px 16px rgba(5,36,21,0.3)';
+    badge.style.boxShadow = '0 4px 16px oklch(0.148 0.004 228.8 / 0.3)';
     hoverTimeout = setTimeout(() => showNoteCard(note), 150);
   });
   badge.addEventListener('mouseleave', () => {
     badge.style.transform = 'scale(1)';
-    badge.style.boxShadow = '0 2px 8px rgba(5,36,21,0.2)';
+    badge.style.boxShadow = '0 2px 8px oklch(0.148 0.004 228.8 / 0.2)';
     if (hoverTimeout) { clearTimeout(hoverTimeout); hoverTimeout = null; }
     // Grace period — don't close if cursor moves to the card
     setTimeout(() => {
@@ -452,8 +468,8 @@ function showNoteCard(note: SavedNote) {
   });
 
   const rect = note.element.getBoundingClientRect();
-  const cardWidth = 300;
-  const cardHeight = 260;
+  const cardWidth = 340;
+  const cardHeight = 240;
 
   const pos = computeAnchoredOverlayPosition({
     anchorRect: rect,
@@ -519,21 +535,19 @@ function showNoteCard(note: SavedNote) {
   // Hover effects on buttons
   [moveButton, editButton].filter(Boolean).forEach(btn => {
     btn.addEventListener('mouseenter', (e) => {
-      (e.target as HTMLElement).style.color = '#052415';
-      (e.target as HTMLElement).style.background = 'rgba(5,36,21,0.04)';
+      (e.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
+      (e.target as HTMLElement).style.background = 'oklch(0.148 0.004 228.8 / 0.34)';
     });
     btn.addEventListener('mouseleave', (e) => {
-      (e.target as HTMLElement).style.color = '#7a8a7d';
-      (e.target as HTMLElement).style.background = 'transparent';
+      (e.target as HTMLElement).style.color = 'oklch(0.987 0.002 197.1)';
+      (e.target as HTMLElement).style.background = 'oklch(0.274 0.006 286.033)';
     });
   });
   deleteButton?.addEventListener('mouseenter', (e) => {
-    (e.target as HTMLElement).style.opacity = '1';
-    (e.target as HTMLElement).style.background = 'rgba(220,38,38,0.08)';
+    (e.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.22)';
   });
   deleteButton?.addEventListener('mouseleave', (e) => {
-    (e.target as HTMLElement).style.opacity = '0.7';
-    (e.target as HTMLElement).style.background = 'transparent';
+    (e.target as HTMLElement).style.background = 'oklch(0.704 0.191 22.216 / 0.14)';
   });
 
   card.addEventListener('click', (e) => e.stopPropagation());
@@ -744,10 +758,13 @@ window.addEventListener('popstate', () => setTimeout(checkUrlChange, 0));
 // ==================== NOTE EDITOR (Pure DOM) ====================
 function applySaveButtonState(button: HTMLButtonElement, enabled: boolean) {
   button.disabled = !enabled;
-  button.style.background = enabled ? '#052415' : 'rgba(5,36,21,0.1)';
+  button.style.background = enabled
+    ? 'oklch(0.432 0.095 166.913)'
+    : 'oklch(0.148 0.004 228.8 / 0.18)';
   button.style.cursor = enabled ? 'pointer' : 'not-allowed';
   button.style.opacity = enabled ? '1' : '0.5';
-  button.style.color = enabled ? '#F5EFE9' : '#7a8a7d';
+  button.style.color = enabled ? 'oklch(0.979 0.021 166.113)' : 'oklch(0.723 0.014 214.4)';
+  button.style.boxShadow = enabled ? '0 14px 26px oklch(0.432 0.095 166.913 / 0.18)' : 'none';
 }
 
 function getStorageRuntimeError(): Error | undefined {
@@ -778,8 +795,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   selectedElement.classList.add('canopy-selected');
 
   const rect = element.getBoundingClientRect();
-  const editorWidth = 380;
-  const editorHeight = 430;
+  const editorWidth = 308;
+  const editorHeight = 385;
 
   const editorPos = computeAnchoredOverlayPosition({
     anchorRect: rect,
@@ -820,7 +837,7 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     left: `${editorPos.left}px`,
     width: `${editorWidth}px`,
     zIndex: '2147483647',
-    fontFamily: 'system-ui, sans-serif',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
   });
 
   document.body.appendChild(noteEditorContainer);
@@ -878,6 +895,42 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     applySaveButtonState(saveBtn, !editorState.saveDisabled);
   };
 
+  const applyHoverState = (
+    element: HTMLElement,
+    active: { background?: string; color?: string; borderColor?: string; boxShadow?: string },
+    idle: { background?: string; color?: string; borderColor?: string; boxShadow?: string }
+  ) => {
+    element.addEventListener('mouseenter', () => {
+      if (active.background) {
+        element.style.background = active.background;
+      }
+      if (active.color) {
+        element.style.color = active.color;
+      }
+      if (active.borderColor) {
+        element.style.borderColor = active.borderColor;
+      }
+      if (active.boxShadow) {
+        element.style.boxShadow = active.boxShadow;
+      }
+    });
+
+    element.addEventListener('mouseleave', () => {
+      if (idle.background) {
+        element.style.background = idle.background;
+      }
+      if (idle.color) {
+        element.style.color = idle.color;
+      }
+      if (idle.borderColor) {
+        element.style.borderColor = idle.borderColor;
+      }
+      if (idle.boxShadow) {
+        element.style.boxShadow = idle.boxShadow;
+      }
+    });
+  };
+
   const closeFolderDropdown = () => {
     if (folderDropdown) {
       folderDropdown.remove();
@@ -896,13 +949,18 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     Object.assign(option.style, {
       display: 'block',
       width: '100%',
-      padding: '6px 10px',
-      border: 'none',
-      background: editorState.folderId === folderId ? 'rgba(171,255,192,0.15)' : 'transparent',
-      color: '#052415',
-      fontSize: '11px',
+      padding: '9px 11px',
+      border: '1px solid transparent',
+      borderRadius: '12px',
+      background:
+        editorState.folderId === folderId
+          ? 'oklch(0.148 0.004 228.8 / 0.34)'
+          : 'transparent',
+      color: 'oklch(0.987 0.002 197.1)',
+      fontSize: '12px',
+      fontWeight: '600',
       cursor: 'pointer',
-      fontFamily: 'system-ui,sans-serif',
+      fontFamily: 'Inter Variable, system-ui, sans-serif',
       textAlign: 'left',
     });
     option.textContent = label;
@@ -918,34 +976,63 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     Object.assign(row.style, {
       display: 'flex',
       alignItems: 'center',
-      gap: '4px',
-      padding: '4px 10px',
+      gap: '8px',
+      padding: '6px 0 0',
     });
 
     const input = document.createElement('input');
     input.setAttribute('type', 'text');
     input.setAttribute('placeholder', parentLabel ? `Subfolder in ${parentLabel}` : 'New folder name');
     Object.assign(input.style, {
+      all: 'initial',
+      boxSizing: 'border-box',
       flex: '1',
-      padding: '4px 8px',
-      border: '1px solid rgba(5,36,21,0.1)',
-      borderRadius: '4px',
-      fontSize: '11px',
-      color: '#052415',
-      fontFamily: 'system-ui,sans-serif',
+      padding: '9px 11px',
+      border: '1px solid oklch(1 0 0 / 15%)',
+      borderRadius: '12px',
+      fontSize: '12px',
+      color: 'oklch(0.987 0.002 197.1)',
+      fontFamily: 'Inter Variable, system-ui, sans-serif',
+      lineHeight: '1.3',
+      background: 'oklch(0.148 0.004 228.8 / 0.62)',
+      appearance: 'none',
+      outline: 'none',
+      boxShadow: 'none',
+      transition: 'border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease',
+    });
+
+    input.addEventListener('focus', () => {
+      input.style.borderColor = 'oklch(0.432 0.095 166.913 / 0.75)';
+      input.style.boxShadow = '0 0 0 3px oklch(0.56 0.021 213.5 / 0.22)';
+      input.style.background = 'oklch(0.148 0.004 228.8 / 0.72)';
+    });
+
+    input.addEventListener('blur', () => {
+      input.style.borderColor = 'oklch(1 0 0 / 15%)';
+      input.style.boxShadow = 'none';
+      input.style.background = 'oklch(0.148 0.004 228.8 / 0.62)';
     });
 
     const confirmBtn = document.createElement('button');
     confirmBtn.textContent = 'Create';
     Object.assign(confirmBtn.style, {
-      padding: '4px 8px',
-      border: 'none',
-      borderRadius: '4px',
-      background: '#052415',
-      color: '#F5EFE9',
-      fontSize: '10px',
+      all: 'initial',
+      boxSizing: 'border-box',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '36px',
+      padding: '0 14px',
+      border: '1px solid oklch(1 0 0 / 10%)',
+      borderRadius: '12px',
+      background: 'oklch(0.432 0.095 166.913)',
+      color: 'oklch(0.979 0.021 166.113)',
+      fontSize: '12px',
+      fontWeight: '700',
       cursor: 'pointer',
-      fontFamily: 'system-ui,sans-serif',
+      fontFamily: 'Inter Variable, system-ui, sans-serif',
+      lineHeight: '1',
+      appearance: 'none',
     });
 
     const doCreate = () => {
@@ -998,12 +1085,13 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     Object.assign(folderDropdown.style, {
       maxHeight: '240px',
       overflow: 'auto',
-      background: '#FFFFFF',
-      border: '1px solid rgba(5,36,21,0.1)',
-      borderRadius: '6px',
+      background: 'oklch(0.218 0.008 223.9)',
+      border: '1px solid oklch(1 0 0 / 10%)',
+      borderRadius: '16px',
       marginTop: '8px',
-      padding: '4px 0',
+      padding: '8px',
       width: '100%',
+      boxShadow: '0 18px 48px oklch(0 0 0 / 0.28)',
     });
 
     // Inbox option (null folder)
@@ -1019,8 +1107,8 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
     const sep = document.createElement('div');
     Object.assign(sep.style, {
       height: '1px',
-      background: 'rgba(5,36,21,0.06)',
-      margin: '4px 0',
+      background: 'oklch(1 0 0 / 10%)',
+      margin: '8px 0',
     });
     folderDropdown.appendChild(sep);
 
@@ -1083,6 +1171,20 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
       }
     });
 
+    tagInput?.addEventListener('focus', () => {
+      if (!tagInput) return;
+      tagInput.style.borderColor = 'oklch(0.432 0.095 166.913 / 0.75)';
+      tagInput.style.boxShadow = '0 0 0 3px oklch(0.56 0.021 213.5 / 0.22)';
+      tagInput.style.background = 'oklch(0.148 0.004 228.8 / 0.72)';
+    });
+
+    tagInput?.addEventListener('blur', () => {
+      if (!tagInput) return;
+      tagInput.style.borderColor = 'oklch(1 0 0 / 15%)';
+      tagInput.style.boxShadow = 'none';
+      tagInput.style.background = 'oklch(0.148 0.004 228.8 / 0.62)';
+    });
+
     confirmButton?.addEventListener('click', (event) => {
       event.stopPropagation();
       commitTag();
@@ -1111,6 +1213,71 @@ function showNoteEditor(element: HTMLElement, existingNote?: SavedNote, selected
   updateFolderLabel();
   bindTagRow();
   updateSaveState();
+
+  bodyTextarea.addEventListener('focus', () => {
+    bodyTextarea.style.borderColor = 'oklch(0.432 0.095 166.913 / 0.75)';
+    bodyTextarea.style.boxShadow = '0 0 0 4px oklch(0.56 0.021 213.5 / 0.18)';
+    bodyTextarea.style.background = 'oklch(0.148 0.004 228.8 / 0.72)';
+  });
+
+  bodyTextarea.addEventListener('blur', () => {
+    bodyTextarea.style.borderColor = 'oklch(1 0 0 / 15%)';
+    bodyTextarea.style.boxShadow = '0 0 0 4px oklch(0.56 0.021 213.5 / 0.12)';
+    bodyTextarea.style.background = 'oklch(0.148 0.004 228.8 / 0.62)';
+  });
+
+  applyHoverState(
+    folderChangeButton,
+    {
+      background: 'oklch(0.148 0.004 228.8 / 0.34)',
+      color: 'oklch(0.987 0.002 197.1)',
+    },
+    {
+      background: 'transparent',
+      color: 'oklch(0.432 0.095 166.913)',
+    }
+  );
+
+  applyHoverState(
+    closeBtn,
+    {
+      background: 'oklch(0.148 0.004 228.8 / 0.34)',
+      color: 'oklch(0.987 0.002 197.1)',
+      borderColor: 'oklch(1 0 0 / 14%)',
+    },
+    {
+      background: 'oklch(0.274 0.006 286.033)',
+      color: 'oklch(0.987 0.002 197.1)',
+      borderColor: 'oklch(1 0 0 / 10%)',
+    }
+  );
+
+  deleteBtn &&
+    applyHoverState(
+      deleteBtn,
+      {
+        background: 'oklch(0.704 0.191 22.216 / 0.22)',
+        color: 'oklch(0.704 0.191 22.216)',
+      },
+      {
+        background: 'oklch(0.704 0.191 22.216 / 0.14)',
+        color: 'oklch(0.704 0.191 22.216)',
+      }
+    );
+
+  applyHoverState(
+    saveBtn,
+    {
+      background: saveBtn.disabled ? 'oklch(0.148 0.004 228.8 / 0.18)' : 'oklch(0.508 0.118 165.612)',
+      color: saveBtn.disabled ? 'oklch(0.723 0.014 214.4)' : 'oklch(0.979 0.021 166.113)',
+      boxShadow: saveBtn.disabled ? 'none' : '0 16px 30px oklch(0.432 0.095 166.913 / 0.24)',
+    },
+    {
+      background: saveBtn.disabled ? 'oklch(0.148 0.004 228.8 / 0.18)' : 'oklch(0.432 0.095 166.913)',
+      color: saveBtn.disabled ? 'oklch(0.723 0.014 214.4)' : 'oklch(0.979 0.021 166.113)',
+      boxShadow: saveBtn.disabled ? 'none' : '0 14px 26px oklch(0.432 0.095 166.913 / 0.18)',
+    }
+  );
 
   chrome.storage.local.get(['divnotes_folders', 'divnotes_notes'], (result) => {
     if (noteEditorContainer !== currentEditor) {
@@ -1514,9 +1681,9 @@ chrome.runtime.onMessage.addListener((message) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Flash highlight
         el.style.transition = 'outline 0.3s ease, background-color 0.3s ease';
-        el.style.outline = '2px solid rgba(26, 92, 46, 0.9)';
+        el.style.outline = '2px solid oklch(0.508 0.118 165.612 / 0.9)';
         el.style.outlineOffset = '3px';
-        el.style.backgroundColor = 'rgba(171, 255, 192, 0.08)';
+        el.style.backgroundColor = 'oklch(0.865 0.127 207.078 / 0.08)';
         setTimeout(() => {
           el.style.outline = '';
           el.style.outlineOffset = '';

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { Pin, Trash2 } from 'lucide-react';
+import { Pin, Trash2 } from '@/lib/icon-aliases';
 
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import { createTagResolver } from '@/lib/extension-selectors';
@@ -123,7 +123,7 @@ export function NoteCard({
   return (
     <div
       className={cn(
-        selected ? 'ring-2 ring-[#173628] ring-offset-2 ring-offset-[#fcfbf7]' : undefined
+        selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : undefined
       )}
       draggable={draggable}
       onDragStart={onDragStart}
@@ -154,7 +154,7 @@ export function NoteCard({
         details={
           expanded ? (
             <div
-              className="prose prose-sm max-w-none text-[12px] leading-[1.65] text-[#314339] prose-headings:text-[#173628] prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-[#173628] prose-strong:text-[#173628] prose-code:text-[#173628] prose-pre:bg-[#f8f6f1]"
+              className="prose prose-sm max-w-none text-[12px] leading-[1.65] text-foreground prose-headings:text-foreground prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-pre:bg-muted"
               dangerouslySetInnerHTML={{ __html: renderedContent }}
             />
           ) : undefined
@@ -168,7 +168,7 @@ export function NoteCard({
                   event.stopPropagation();
                   onEdit(note);
                 }}
-                className="inline-flex items-center justify-center rounded-[10px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+                className="inline-flex items-center justify-center rounded-[10px] border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Edit note
               </button>
@@ -179,7 +179,7 @@ export function NoteCard({
                 event.stopPropagation();
                 onNavigate(note);
               }}
-              className="inline-flex items-center justify-center rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+              className="inline-flex items-center justify-center rounded-[10px] bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/80"
             >
               Go to note
             </button>
@@ -190,7 +190,7 @@ export function NoteCard({
                   event.stopPropagation();
                   onTogglePin(note.id);
                 }}
-                className="inline-flex items-center gap-1 rounded-[10px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f1eee7]"
+                className="inline-flex items-center gap-1 rounded-[10px] border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-secondary/80"
               >
                 <Pin className={cn('h-3.5 w-3.5', note.pinned ? 'fill-current' : undefined)} />
                 {note.pinned ? 'Unpin' : 'Pin'}
@@ -202,7 +202,7 @@ export function NoteCard({
                 event.stopPropagation();
                 onDelete(note.id);
               }}
-              className="ml-auto inline-flex items-center gap-1 rounded-[10px] border border-[rgba(220,38,38,0.14)] bg-[rgba(254,242,242,0.7)] px-3 py-1.5 text-[11px] font-medium text-[#b91c1c] transition-colors hover:bg-[rgba(254,226,226,0.92)]"
+              className="ml-auto inline-flex items-center gap-1 rounded-[10px] border border-destructive/20 bg-destructive/5 px-3 py-1.5 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/10"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete

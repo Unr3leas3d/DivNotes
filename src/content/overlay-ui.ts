@@ -59,6 +59,36 @@ function createTextElement<TElement extends OverlayElement>(
   return element;
 }
 
+function createPreviewActionButton<TElement extends OverlayElement>(
+  documentRef: OverlayDocument<TElement>,
+  label: string,
+  dataName: string,
+  destructive = false
+) {
+  const button = createTextElement(documentRef, 'button', label, dataName);
+  applyStyles(button, {
+    minWidth: '74px',
+    height: '36px',
+    padding: '0 14px',
+    borderRadius: '12px',
+    border: destructive
+      ? '1px solid oklch(0.704 0.191 22.216 / 0.16)'
+      : '1px solid oklch(1 0 0 / 10%)',
+    background: destructive
+      ? 'oklch(0.704 0.191 22.216 / 0.14)'
+      : 'oklch(0.274 0.006 286.033)',
+    color: destructive ? 'oklch(0.704 0.191 22.216)' : 'oklch(0.987 0.002 197.1)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  });
+  return button;
+}
+
 export function createHoverSelectorPill<TElement extends OverlayElement>(
   documentRef: OverlayDocument<TElement>,
   options: HoverSelectorPillOptions
@@ -74,11 +104,11 @@ export function createHoverSelectorPill<TElement extends OverlayElement>(
     maxWidth: 'min(520px, calc(100vw - 24px))',
     padding: '8px 10px',
     borderRadius: '999px',
-    background: 'rgba(5,36,21,0.96)',
-    color: '#F5EFE9',
-    border: '1px solid rgba(171,255,192,0.18)',
-    boxShadow: '0 10px 30px rgba(5,36,21,0.22)',
-    fontFamily: 'system-ui, sans-serif',
+    background: 'oklch(0.148 0.004 228.8 / 0.96)',
+    color: 'oklch(0.979 0.021 166.113)',
+    border: '1px solid oklch(0.865 0.127 207.078 / 0.18)',
+    boxShadow: '0 10px 30px oklch(0.148 0.004 228.8 / 0.22)',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
     fontSize: '12px',
     lineHeight: '1.2',
     zIndex: '2147483646',
@@ -90,8 +120,8 @@ export function createHoverSelectorPill<TElement extends OverlayElement>(
     flexShrink: '0',
     padding: '4px 8px',
     borderRadius: '999px',
-    background: 'rgba(171,255,192,0.14)',
-    color: '#ABFFC0',
+    background: 'oklch(0.865 0.127 207.078 / 0.14)',
+    color: 'oklch(0.865 0.127 207.078)',
     fontSize: '10px',
     fontWeight: '700',
     letterSpacing: '0.08em',
@@ -111,7 +141,7 @@ export function createHoverSelectorPill<TElement extends OverlayElement>(
     fontFamily:
       "'SF Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
     fontSize: '11px',
-    color: 'rgba(245,239,233,0.84)',
+    color: 'oklch(0.979 0.021 166.113 / 0.84)',
   });
 
   pill.appendChild(tag);
@@ -139,11 +169,11 @@ export function createSelectorGuide<TElement extends OverlayElement>(
     maxWidth: 'min(540px, calc(100vw - 24px))',
     padding: '10px 16px',
     borderRadius: '999px',
-    background: 'rgba(5,36,21,0.96)',
-    color: '#F5EFE9',
-    border: '1px solid rgba(171,255,192,0.16)',
-    boxShadow: '0 12px 36px rgba(5,36,21,0.24)',
-    fontFamily: 'system-ui, sans-serif',
+    background: 'oklch(0.148 0.004 228.8 / 0.96)',
+    color: 'oklch(0.979 0.021 166.113)',
+    border: '1px solid oklch(0.865 0.127 207.078 / 0.16)',
+    boxShadow: '0 12px 36px oklch(0.148 0.004 228.8 / 0.24)',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
     fontSize: '13px',
     fontWeight: '500',
     letterSpacing: '0.01em',
@@ -161,9 +191,9 @@ export function createSelectionConfirmationPill<TElement extends OverlayElement>
   pill.className = 'canopy-selector-confirmation';
   setDataAttribute(pill, 'canopyOverlay', 'selector-confirmation');
   applyStyles(pill, {
-    background: 'rgba(26,92,46,0.98)',
-    border: '1px solid rgba(171,255,192,0.26)',
-    boxShadow: '0 12px 36px rgba(5,36,21,0.28)',
+    background: 'oklch(0.508 0.118 165.612 / 0.98)',
+    border: '1px solid oklch(0.865 0.127 207.078 / 0.26)',
+    boxShadow: '0 12px 36px oklch(0.148 0.004 228.8 / 0.28)',
   });
   return pill;
 }
@@ -182,7 +212,7 @@ export function createPlacedNoteBadge<TElement extends OverlayElement>(
     width: '22px',
     height: '22px',
     borderRadius: '7px',
-    background: '#052415',
+    background: 'oklch(0.148 0.004 228.8)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -190,12 +220,12 @@ export function createPlacedNoteBadge<TElement extends OverlayElement>(
     zIndex: '2147483645',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
     animation: 'canopy-pulse 2s infinite, canopy-fadein 0.25s ease-out',
-    boxShadow: '0 2px 8px rgba(5,36,21,0.2)',
+    boxShadow: '0 2px 8px oklch(0.148 0.004 228.8 / 0.2)',
     pointerEvents: 'auto',
     fontSize: '10px',
     fontWeight: '700',
-    color: '#ABFFC0',
-    fontFamily: 'system-ui, sans-serif',
+    color: 'oklch(0.865 0.127 207.078)',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
   });
   return badge;
 }
@@ -218,11 +248,11 @@ export function createPageNoteCountPill<TElement extends OverlayElement>(
     minHeight: '34px',
     padding: '0 14px',
     borderRadius: '999px',
-    background: 'rgba(5,36,21,0.94)',
-    color: '#F5EFE9',
-    border: '1px solid rgba(171,255,192,0.14)',
-    boxShadow: '0 12px 32px rgba(5,36,21,0.18)',
-    fontFamily: 'system-ui, sans-serif',
+    background: 'oklch(0.148 0.004 228.8 / 0.94)',
+    color: 'oklch(0.979 0.021 166.113)',
+    border: '1px solid oklch(0.865 0.127 207.078 / 0.14)',
+    boxShadow: '0 12px 32px oklch(0.148 0.004 228.8 / 0.18)',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
     fontSize: '12px',
     fontWeight: '500',
     zIndex: '2147483644',
@@ -242,7 +272,7 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
     position: 'fixed',
     width: '340px',
     zIndex: '2147483646',
-    fontFamily: 'system-ui, sans-serif',
+    fontFamily: 'Inter Variable, system-ui, sans-serif',
     animation: 'canopy-fadein 0.15s ease-out',
     pointerEvents: 'auto',
   });
@@ -250,73 +280,20 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
   const panel = documentRef.createElement('div');
   setDataAttribute(panel, 'canopyPreviewPanel', '');
   applyStyles(panel, {
-    background: '#FAFAF7',
-    border: '1px solid rgba(5,36,21,0.06)',
-    borderRadius: '14px',
-    boxShadow: '0 8px 32px rgba(5,36,21,0.12)',
+    background: 'oklch(0.218 0.008 223.9)',
+    border: '1px solid oklch(1 0 0 / 10%)',
+    borderRadius: '22px',
+    boxShadow: '0 24px 72px oklch(0 0 0 / 0.34)',
     overflow: 'hidden',
     width: '340px',
   });
 
-  const header = documentRef.createElement('div');
-  applyStyles(header, {
-    padding: '10px 14px',
-    borderBottom: '1px solid rgba(5,36,21,0.06)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '10px',
-  });
-
-  const elementInfo = createTextElement(
-    documentRef,
-    'span',
-    options.elementInfo,
-    'canopyElementInfo'
-  );
-  applyStyles(elementInfo, {
-    fontSize: '10px',
-    fontFamily:
-      "'SF Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
-    color: '#7a8a7d',
-    background: 'rgba(5,36,21,0.04)',
-    padding: '2px 6px',
-    borderRadius: '3px',
-  });
-
-  const date = createTextElement(
-    documentRef,
-    'span',
-    options.displayDate,
-    'canopyPreviewDate'
-  );
-  applyStyles(date, {
-    fontSize: '10px',
-    color: '#7a8a7d',
-    flexShrink: '0',
-  });
-
-  header.appendChild(elementInfo);
-  header.appendChild(date);
-
   const body = documentRef.createElement('div');
   applyStyles(body, {
-    padding: '14px',
+    padding: '18px 18px 16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
-  });
-
-  const title = createTextElement(
-    documentRef,
-    'div',
-    options.title,
-    'canopyPreviewTitle'
-  );
-  applyStyles(title, {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#052415',
+    gap: '14px',
   });
 
   const previewBody = createTextElement(
@@ -326,73 +303,62 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
     'canopyPreviewBody'
   );
   applyStyles(previewBody, {
-    fontSize: '13px',
-    lineHeight: '1.7',
-    color: '#052415',
+    fontSize: '14px',
+    lineHeight: '1.75',
+    color: 'oklch(0.987 0.002 197.1)',
     maxHeight: '200px',
     overflowY: 'auto',
   });
 
-  const tags = createTextElement(
-    documentRef,
-    'div',
-    options.tags.map((tag) => `#${tag}`).join(' '),
-    'canopyPreviewTags'
-  );
+  const tags = createTextElement(documentRef, 'div', '', 'canopyPreviewTags');
   applyStyles(tags, {
-    fontSize: '11px',
-    lineHeight: '1.5',
-    color: '#1a5c2e',
-    display: options.tags.length > 0 ? 'block' : 'none',
+    display: options.tags.length > 0 ? 'flex' : 'none',
+    flexWrap: 'wrap',
+    gap: '8px',
   });
 
-  body.appendChild(title);
+  options.tags.forEach((tag) => {
+    const chip = createTextElement(documentRef, 'span', `#${tag}`, 'canopyPreviewTagChip');
+    applyStyles(chip, {
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '7px 11px',
+      borderRadius: '999px',
+      background: 'oklch(0.432 0.095 166.913 / 0.14)',
+      color: 'oklch(0.432 0.095 166.913)',
+      fontSize: '11px',
+      fontWeight: '800',
+      letterSpacing: '0.05em',
+      textTransform: 'uppercase',
+    });
+    tags.appendChild(chip);
+  });
+
   body.appendChild(previewBody);
   body.appendChild(tags);
 
   const actions = documentRef.createElement('div');
   applyStyles(actions, {
-    padding: '8px 14px',
-    borderTop: '1px solid rgba(5,36,21,0.06)',
+    padding: '14px 16px 16px',
+    borderTop: '1px solid oklch(1 0 0 / 10%)',
     display: 'flex',
-    gap: '8px',
+    gap: '10px',
     justifyContent: 'flex-end',
   });
 
-  const moveButton = createTextElement(documentRef, 'button', 'Move', 'canopyMove');
-  const editButton = createTextElement(documentRef, 'button', 'Edit', 'canopyEdit');
-  const deleteButton = createTextElement(documentRef, 'button', 'Delete', 'canopyDelete');
-
-  for (const button of [moveButton, editButton]) {
-    applyStyles(button, {
-      fontSize: '11px',
-      color: '#7a8a7d',
-      background: 'transparent',
-      border: 'none',
-      cursor: 'pointer',
-      padding: '4px 10px',
-      borderRadius: '4px',
-      fontFamily: 'system-ui, sans-serif',
-    });
-  }
-
-  applyStyles(deleteButton, {
-    fontSize: '11px',
-    color: '#dc2626',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '4px 10px',
-    borderRadius: '4px',
-    fontFamily: 'system-ui, sans-serif',
-    opacity: '0.7',
-  });
+  const moveButton = createPreviewActionButton(documentRef, 'Move', 'canopyMove');
+  const editButton = createPreviewActionButton(documentRef, 'Edit', 'canopyEdit');
+  const deleteButton = createPreviewActionButton(
+    documentRef,
+    'Delete',
+    'canopyDelete',
+    true
+  );
 
   actions.appendChild(moveButton);
   actions.appendChild(editButton);
   actions.appendChild(deleteButton);
 
-  panel.appendChild(header);
   panel.appendChild(body);
   panel.appendChild(actions);
   card.appendChild(panel);

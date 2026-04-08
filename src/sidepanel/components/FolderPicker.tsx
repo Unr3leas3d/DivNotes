@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { buildFolderTree } from '@/lib/tree-utils';
 import type { StoredFolder, FolderTreeNode } from '@/lib/types';
-import { Folder, FolderPlus, Inbox, Check } from 'lucide-react';
+import { Folder, FolderPlus, Inbox, Check } from '@/lib/icon-aliases';
 
 interface FolderPickerProps {
   folders: StoredFolder[];

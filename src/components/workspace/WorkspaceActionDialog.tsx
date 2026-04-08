@@ -109,7 +109,7 @@ export function WorkspaceActionDialog({
             <div className="mt-4 space-y-1.5">
               <label
                 htmlFor={inputId}
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]"
+                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
               >
                 {promptLabel}
               </label>
@@ -118,7 +118,7 @@ export function WorkspaceActionDialog({
                 value={value}
                 onChange={(event) => handleValueChange(event.target.value)}
                 placeholder={promptPlaceholder}
-                className="h-10 rounded-[11px] border-[#e7e2d8] bg-white text-[13px] text-[#173628] placeholder:text-[#9aa294] focus-visible:ring-[#173628]/30"
+                className="h-10 rounded-[11px] border-border bg-card text-[13px] text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
             </div>
@@ -127,7 +127,7 @@ export function WorkspaceActionDialog({
           {children ? <div className="mt-4">{children}</div> : null}
 
           {errorMessage ? (
-            <p className="mt-3 rounded-[10px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.75)] px-2.5 py-2 text-[11px] text-[#b91c1c]">
+            <p className="mt-3 rounded-[10px] border border-destructive/20 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive">
               {errorMessage}
             </p>
           ) : null}
@@ -136,7 +136,7 @@ export function WorkspaceActionDialog({
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-[11px] border-[#e7e2d8] bg-white text-[#445348] hover:bg-[#f8f6f1]"
+              className="h-9 rounded-[11px] border-border bg-card text-foreground hover:bg-muted"
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
@@ -147,8 +147,8 @@ export function WorkspaceActionDialog({
               disabled={isSubmitting}
               className={
                 destructive
-                  ? 'h-9 rounded-[11px] bg-[#b91c1c] text-white hover:bg-[#991b1b]'
-                  : 'h-9 rounded-[11px] bg-[#173628] text-[#f5efe9] hover:bg-[#10271d]'
+                  ? 'h-9 rounded-[11px] bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  : 'h-9 rounded-[11px] bg-primary text-primary-foreground hover:bg-primary/80'
               }
             >
               {isSubmitting ? 'Working...' : confirmLabel}

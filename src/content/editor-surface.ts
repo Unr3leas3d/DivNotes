@@ -43,17 +43,34 @@ function createButton(
 ) {
   const button = applyDataAttr(doc.createElement('button'), dataKey);
   button.textContent = label;
-  button.style.cssText = styleText;
+  button.style.cssText = [
+    'all:initial',
+    'box-sizing:border-box',
+    'display:inline-flex',
+    'align-items:center',
+    'justify-content:center',
+    'font-family:Inter Variable,system-ui,sans-serif',
+    'line-height:1',
+    'appearance:none',
+    '-webkit-appearance:none',
+    styleText,
+  ].join(';');
   return button;
 }
 
 export function createEditorShell(doc: EditorSurfaceDocument) {
   const shell = applyDataAttr(doc.createElement('div'), 'canopy-editor-shell');
   shell.style.cssText = [
-    'background:#FAFAF7',
-    'border:1px solid rgba(5,36,21,0.06)',
-    'border-radius:14px',
-    'box-shadow:0 8px 32px rgba(5,36,21,0.12)',
+    'all:initial',
+    'box-sizing:border-box',
+    'display:block',
+    'font-family:Inter Variable,system-ui,sans-serif',
+    'color:oklch(0.987 0.002 197.1)',
+    'line-height:1.4',
+    'background:oklch(0.218 0.008 223.9)',
+    'border:1px solid oklch(1 0 0 / 10%)',
+    'border-radius:20px',
+    'box-shadow:0 22px 64px oklch(0 0 0 / 0.34)',
     'overflow:hidden',
     'animation:canopy-fadein 0.15s ease-out',
   ].join(';');
@@ -63,27 +80,32 @@ export function createEditorShell(doc: EditorSurfaceDocument) {
 export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurfaceState) {
   const header = applyDataAttr(doc.createElement('div'), 'canopy-editor-header');
   header.style.cssText =
-    'padding:12px 16px;border-bottom:1px solid rgba(5,36,21,0.06);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;';
+    'padding:12px 12px 11px;border-bottom:1px solid oklch(1 0 0 / 10%);display:flex;align-items:center;justify-content:space-between;gap:10px;';
 
   const infoBlock = doc.createElement('div');
-  infoBlock.style.cssText = 'display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1;';
+  infoBlock.style.cssText = 'display:flex;align-items:center;gap:10px;min-width:0;flex:1;';
 
   const accent = doc.createElement('div');
   accent.style.cssText =
-    'width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#052415,#1a5c2e);flex-shrink:0;margin-top:1px;';
+    'width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg, oklch(0.432 0.095 166.913), oklch(0.56 0.12 176));flex-shrink:0;box-shadow:0 8px 16px oklch(0.432 0.095 166.913 / 0.16);';
 
   const textBlock = doc.createElement('div');
-  textBlock.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;';
+  textBlock.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0;';
 
   const heading = applyDataAttr(doc.createElement('span'), 'canopy-editor-heading');
   heading.textContent = state.isNew ? 'New note' : 'Edit note';
-  heading.style.cssText = 'font-size:12px;font-weight:600;color:#052415;';
+  heading.style.cssText = 'font-size:18px;font-weight:700;line-height:1;color:oklch(0.987 0.002 197.1);letter-spacing:-0.03em;';
 
-  textBlock.appendChild(heading);
+  const subheading = doc.createElement('span');
+  subheading.textContent = 'Anchored to selection';
+  subheading.style.cssText =
+    'font-size:9px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:oklch(0.723 0.014 214.4);';
+
+  appendChildren(textBlock, [heading, subheading]);
   appendChildren(infoBlock, [accent, textBlock]);
 
   const actions = doc.createElement('div');
-  actions.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+  actions.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;';
 
   if (!state.isNew) {
     actions.appendChild(
@@ -91,7 +113,7 @@ export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurf
         doc,
         'Delete',
         'canopy-delete',
-        'padding:7px 12px;border:none;border-radius:10px;background:rgba(220,38,38,0.08);color:#b91c1c;font-size:12px;cursor:pointer;'
+        'height:34px;padding:0 12px;border:1px solid oklch(0.704 0.191 22.216 / 0.16);border-radius:11px;background:oklch(0.704 0.191 22.216 / 0.14);color:oklch(0.704 0.191 22.216);font-size:12px;font-weight:700;cursor:pointer;'
       )
     );
   }
@@ -101,7 +123,7 @@ export function createEditorHeader(doc: EditorSurfaceDocument, state: EditorSurf
       doc,
       'Close',
       'canopy-close',
-      'padding:7px 12px;border:1px solid rgba(5,36,21,0.06);border-radius:10px;background:rgba(5,36,21,0.04);color:#7a8a7d;font-size:12px;cursor:pointer;'
+      'height:34px;padding:0 12px;border:1px solid oklch(1 0 0 / 10%);border-radius:11px;background:oklch(0.274 0.006 286.033);color:oklch(0.987 0.002 197.1);font-size:12px;font-weight:700;cursor:pointer;'
     )
   );
 
@@ -117,17 +139,22 @@ export function createBodyTextarea(doc: EditorSurfaceDocument, value: string) {
   textarea.setAttribute('placeholder', 'Write your note in Markdown...');
   textarea.value = value;
   textarea.style.cssText = [
+    'all:initial',
     'width:100%',
-    'min-height:140px',
-    'max-height:300px',
+    'min-height:180px',
+    'max-height:264px',
     'box-sizing:border-box',
     'padding:12px',
-    'border:1px solid rgba(5,36,21,0.1)',
-    'border-radius:8px',
-    'background:#FFFFFF',
+    'border:1px solid oklch(1 0 0 / 15%)',
+    'border-radius:16px',
+    'background:oklch(0.148 0.004 228.8 / 0.62)',
+    'font-family:Inter Variable,system-ui,sans-serif',
     'font-size:13px',
-    'line-height:1.6',
-    'color:#052415',
+    'line-height:1.65',
+    'color:oklch(0.987 0.002 197.1)',
+    'outline:none',
+    'box-shadow:0 0 0 3px oklch(0.56 0.021 213.5 / 0.12)',
+    'transition:border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease',
     'resize:vertical',
   ].join(';');
 
@@ -138,74 +165,115 @@ export function createBodyTextarea(doc: EditorSurfaceDocument, value: string) {
 export function createFolderControl(doc: EditorSurfaceDocument, folderLabel: string) {
   const row = applyDataAttr(doc.createElement('div'), 'canopy-folder-control');
   row.style.cssText =
-    'display:flex;align-items:center;gap:8px;padding:0 12px 12px;border-bottom:1px solid rgba(5,36,21,0.06);';
+    'margin:0 12px;padding:10px 11px;border-radius:14px;background:oklch(0.274 0.006 286.033);border:1px solid oklch(1 0 0 / 10%);';
+
+  const rowTop = doc.createElement('div');
+  rowTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+
+  const infoBlock = doc.createElement('div');
+  infoBlock.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;';
+
+  const metaLabel = doc.createElement('span');
+  metaLabel.textContent = 'Folder';
+  metaLabel.style.cssText =
+    'font-size:10px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:oklch(0.723 0.014 214.4);';
 
   const label = applyDataAttr(doc.createElement('span'), 'canopy-folder-label');
   label.textContent = folderLabel;
   label.style.cssText =
-    'font-size:11px;color:#052415;background:rgba(5,36,21,0.04);padding:4px 10px;border-radius:999px;';
+    'font-size:12px;font-weight:700;color:oklch(0.987 0.002 197.1);';
 
   const changeButton = createButton(
     doc,
     'Change',
     'canopy-folder-change',
-    'padding:4px 8px;border:none;background:none;color:#1a5c2e;font-size:11px;cursor:pointer;'
+    'padding:0;border:none;background:transparent;color:oklch(0.432 0.095 166.913);font-size:12px;font-weight:700;cursor:pointer;'
   );
 
-  appendChildren(row, [label, changeButton]);
+  appendChildren(infoBlock, [metaLabel, label]);
+  appendChildren(rowTop, [infoBlock, changeButton]);
+  row.appendChild(rowTop);
   return row;
 }
 
 export function createTagRow(doc: EditorSurfaceDocument, tagLabels: readonly string[]) {
   const row = applyDataAttr(doc.createElement('div'), 'canopy-tag-row');
-  row.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:12px 12px 0;';
+  row.style.cssText =
+    'display:flex;flex-direction:column;gap:10px;margin:10px 12px 0;padding:10px 11px;border-radius:14px;background:oklch(0.274 0.006 286.033);border:1px solid oklch(1 0 0 / 10%);';
 
-  tagLabels.forEach((tagLabel) => {
-    const chip = applyDataAttr(doc.createElement('span'), 'canopy-tag-chip');
-    chip.textContent = tagLabel;
-    chip.style.cssText =
-      'font-size:11px;color:#052415;background:rgba(171,255,192,0.28);padding:4px 8px;border-radius:999px;';
-    row.appendChild(chip);
-  });
+  const header = doc.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
+
+  const metaCopy = doc.createElement('div');
+  metaCopy.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;';
+
+  const metaLabel = doc.createElement('span');
+  metaLabel.textContent = 'Tags';
+  metaLabel.style.cssText =
+    'font-size:10px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:oklch(0.723 0.014 214.4);';
+
+  const metaValue = doc.createElement('span');
+  metaValue.textContent = tagLabels.length > 0 ? tagLabels.join(', ') : 'No tags yet';
+  metaValue.style.cssText = 'font-size:12px;font-weight:700;color:oklch(0.987 0.002 197.1);';
+
+  appendChildren(metaCopy, [metaLabel, metaValue]);
 
   const addTagButton = createButton(
     doc,
     '+ Tag',
     'canopy-add-tag',
-    'padding:4px 8px;border:none;background:none;color:#1a5c2e;font-size:11px;cursor:pointer;'
+    'padding:0;border:none;background:transparent;color:oklch(0.432 0.095 166.913);font-size:12px;font-weight:700;cursor:pointer;'
   );
-  row.appendChild(addTagButton);
+
+  appendChildren(header, [metaCopy, addTagButton]);
+
+  const chips = doc.createElement('div');
+  chips.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+
+  tagLabels.forEach((tagLabel) => {
+    const chip = applyDataAttr(doc.createElement('span'), 'canopy-tag-chip');
+    chip.textContent = tagLabel;
+    chip.style.cssText =
+      'display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;background:oklch(0.432 0.095 166.913 / 0.14);font-size:10px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:oklch(0.432 0.095 166.913);';
+    chips.appendChild(chip);
+  });
 
   const tagInput = doc.createElement('input');
   tagInput.setAttribute('data-canopy-tag-input', '');
   tagInput.setAttribute('type', 'text');
   tagInput.setAttribute('placeholder', 'tag name');
   tagInput.style.cssText =
-    'display:none;padding:4px 8px;border:1px solid rgba(5,36,21,0.1);border-radius:6px;font-size:11px;color:#052415;width:100px;';
-  row.appendChild(tagInput);
+    'all:initial;display:none;box-sizing:border-box;padding:7px 9px;border:1px solid oklch(1 0 0 / 15%);border-radius:10px;font-family:Inter Variable,system-ui,sans-serif;font-size:11px;line-height:1.3;color:oklch(0.987 0.002 197.1);background:oklch(0.148 0.004 228.8 / 0.62);appearance:none;-webkit-appearance:none;outline:none;box-shadow:none;transition:border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;width:120px;';
 
   const confirmButton = createButton(
     doc,
     'Add tag',
     'canopy-add-tag-confirm',
-    'display:none;padding:4px 8px;border:none;background:rgba(5,36,21,0.08);color:#1a5c2e;font-size:11px;border-radius:6px;cursor:pointer;'
+    'display:none;height:32px;padding:0 12px;border:1px solid oklch(1 0 0 / 10%);background:oklch(0.148 0.004 228.8 / 0.34);color:oklch(0.432 0.095 166.913);font-size:11px;font-weight:700;border-radius:10px;cursor:pointer;'
   );
-  row.appendChild(confirmButton);
+
+  const inputRow = doc.createElement('div');
+  inputRow.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+  appendChildren(inputRow, [tagInput, confirmButton]);
+
+  appendChildren(row, [header, chips, inputRow]);
 
   return row;
 }
 
 export function createPinnedRow(doc: EditorSurfaceDocument, pinned: boolean) {
   const row = applyDataAttr(doc.createElement('div'), 'canopy-pinned-row');
-  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 12px 0;';
+  row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 12px 0;color:oklch(0.987 0.002 197.1);font-size:13px;';
 
   const input = applyDataAttr(doc.createElement('input'), 'canopy-pinned-input');
   input.setAttribute('type', 'checkbox');
   input.checked = pinned;
+  input.style.cssText =
+    'all:initial;display:inline-block;box-sizing:border-box;width:16px;height:16px;margin:0;accent-color:oklch(0.432 0.095 166.913);appearance:auto;-webkit-appearance:checkbox;cursor:pointer;';
 
   const label = doc.createElement('span');
   label.textContent = 'Pinned';
-  label.style.cssText = 'font-size:12px;color:#052415;';
+  label.style.cssText = 'font-size:13px;color:oklch(0.987 0.002 197.1);';
 
   appendChildren(row, [input, label]);
   return row;
@@ -214,7 +282,7 @@ export function createPinnedRow(doc: EditorSurfaceDocument, pinned: boolean) {
 export function createInlineErrorText(doc: EditorSurfaceDocument, errorMessage: string) {
   const error = applyDataAttr(doc.createElement('div'), 'canopy-error');
   error.textContent = errorMessage;
-  error.style.cssText = 'min-height:18px;padding:12px 12px 0;font-size:11px;color:#b91c1c;';
+  error.style.cssText = 'min-height:16px;padding:10px 12px 0;font-size:10px;color:oklch(0.704 0.191 22.216);';
   return error;
 }
 
@@ -224,15 +292,18 @@ export function createPrimarySaveButton(doc: EditorSurfaceDocument, state: Edito
     state.isNew ? 'Save Note' : 'Update Note',
     'canopy-save',
     [
-      'padding:7px 20px',
-      'font-size:12px',
-      'font-weight:600',
+      'padding:0 16px',
+      'min-width:112px',
+      'height:40px',
+      'font-size:13px',
+      'font-weight:800',
       'border:none',
-      'border-radius:10px',
-      `background:${state.saveDisabled ? 'rgba(5,36,21,0.1)' : '#052415'}`,
-      `color:${state.saveDisabled ? '#7a8a7d' : '#F5EFE9'}`,
+      'border-radius:12px',
+      `background:${state.saveDisabled ? 'oklch(0.148 0.004 228.8 / 0.18)' : 'oklch(0.432 0.095 166.913)'}`,
+      `color:${state.saveDisabled ? 'oklch(0.723 0.014 214.4)' : 'oklch(0.979 0.021 166.113)'}`,
       `cursor:${state.saveDisabled ? 'not-allowed' : 'pointer'}`,
       `opacity:${state.saveDisabled ? '0.5' : '1'}`,
+      `box-shadow:${state.saveDisabled ? 'none' : '0 14px 26px oklch(0.432 0.095 166.913 / 0.18)'}`,
     ].join(';')
   );
   button.disabled = state.saveDisabled;
@@ -242,7 +313,7 @@ export function createPrimarySaveButton(doc: EditorSurfaceDocument, state: Edito
 function createFooter(doc: EditorSurfaceDocument, state: EditorSurfaceState) {
   const footer = applyDataAttr(doc.createElement('div'), 'canopy-footer');
   footer.style.cssText =
-    'padding:12px;display:flex;align-items:center;justify-content:flex-end;gap:8px;';
+    'padding:0 12px 12px;display:flex;align-items:center;justify-content:flex-end;gap:8px;';
 
   const saveButton = createPrimarySaveButton(doc, state);
   footer.appendChild(saveButton);

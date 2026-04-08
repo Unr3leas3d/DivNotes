@@ -138,7 +138,7 @@ export function WorkspaceNoteEditorDialog({
             <div className="space-y-1.5">
               <label
                 htmlFor="workspace-note-editor-content"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]"
+                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
               >
                 Note
               </label>
@@ -146,7 +146,7 @@ export function WorkspaceNoteEditorDialog({
                 id="workspace-note-editor-content"
                 value={state.body}
                 onChange={(event) => dispatch({ type: 'SET_BODY', body: event.target.value })}
-                className="min-h-[160px] rounded-[14px] border-[#e7e2d8] bg-white text-[13px] leading-[1.6] text-[#173628] focus-visible:ring-[#173628]/30"
+                className="min-h-[160px] rounded-[14px] border-border bg-card text-[13px] leading-[1.6] text-foreground"
                 autoFocus
               />
             </div>
@@ -154,7 +154,7 @@ export function WorkspaceNoteEditorDialog({
             <div className="space-y-1.5">
               <label
                 htmlFor="workspace-note-editor-folder"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b968f]"
+                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
               >
                 Folder
               </label>
@@ -162,7 +162,7 @@ export function WorkspaceNoteEditorDialog({
                 id="workspace-note-editor-folder"
                 value={state.folderId ?? ''}
                 onChange={(event) => dispatch({ type: 'SET_FOLDER', folderId: event.target.value || null })}
-                className="flex h-10 w-full rounded-[11px] border border-[#e7e2d8] bg-white px-3 text-[13px] text-[#173628] outline-none transition-colors focus:border-[#173628]/30"
+                className="flex h-10 w-full rounded-[11px] border border-border bg-card px-3 text-[13px] text-foreground outline-none transition-colors focus:border-ring"
               >
                 <option value="">No folder</option>
                 {folderOptions.map((folder) => (
@@ -174,7 +174,7 @@ export function WorkspaceNoteEditorDialog({
             </div>
 
             {state.errorMessage ? (
-              <p className="rounded-[10px] border border-[rgba(220,38,38,0.15)] bg-[rgba(254,242,242,0.75)] px-2.5 py-2 text-[11px] text-[#b91c1c]">
+              <p className="rounded-[10px] border border-destructive/20 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive">
                 {state.errorMessage}
               </p>
             ) : null}
@@ -184,7 +184,7 @@ export function WorkspaceNoteEditorDialog({
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-[11px] border-[#e7e2d8] bg-white text-[#445348] hover:bg-[#f8f6f1]"
+              className="h-9 rounded-[11px] border-border bg-card text-foreground hover:bg-muted"
               onClick={() => onOpenChange(false)}
               disabled={state.saving}
             >
@@ -193,7 +193,7 @@ export function WorkspaceNoteEditorDialog({
             <Button
               type="submit"
               disabled={state.saving}
-              className="h-9 rounded-[11px] bg-[#173628] text-[#f5efe9] hover:bg-[#10271d]"
+              className="h-9 rounded-[11px] bg-primary text-primary-foreground hover:bg-primary/80"
             >
               {state.saving ? 'Saving...' : 'Save changes'}
             </Button>

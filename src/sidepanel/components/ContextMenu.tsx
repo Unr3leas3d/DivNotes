@@ -9,7 +9,7 @@ import {
 import {
   FolderPlus, StickyNote, Pencil, Palette, Star,
   Trash2, ExternalLink, Folder, Tag, Copy, MoreVertical,
-} from 'lucide-react';
+} from '@/lib/icon-aliases';
 import type { StoredFolder, StoredNote } from '@/lib/types';
 
 interface FolderContextMenuProps {

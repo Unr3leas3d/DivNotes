@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Trash2, Check, GitMerge } from 'lucide-react';
+import { X, Trash2, Check, GitMerge } from '@/lib/icon-aliases';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WorkspaceActionDialog } from '@/components/workspace/WorkspaceActionDialog';
