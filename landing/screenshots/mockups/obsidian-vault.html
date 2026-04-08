@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Obsidian Vault Mockup</title>
+    <link rel="stylesheet" href="./mockup.css" />
+  </head>
+  <body>
+    <div class="frame obsidian-shell">
+      <div class="obsidian-banner" style="margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 12px; font-weight: 700;">Canopy vault connected</div>
+          <div style="font-size: 11px; opacity: 0.7;">Two-way sync is active for work-vault</div>
+        </div>
+        <div class="status-chip" style="background: rgba(255,255,255,0.12); color: var(--accent);">
+          Markdown ready
+        </div>
+      </div>
+
+      <div class="vault-layout">
+        <aside class="vault-sidebar">
+          <p class="brand-title" style="font-size: 18px;">work-vault</p>
+          <p class="brand-subtitle">Canopy / domains / developer.chrome.com</p>
+          <div class="vault-list">
+            <div class="vault-item">Canopy <span>24</span></div>
+            <div class="vault-item active">domains <span>8</span></div>
+            <div class="vault-item">folders <span>5</span></div>
+            <div class="vault-item">tags <span>14</span></div>
+          </div>
+        </aside>
+
+        <main class="vault-main">
+          <div class="note-sheet">
+            <p class="section-label">developer.chrome.com.md</p>
+            <div class="frontmatter">
+              ---<br />
+              title: developer.chrome.com<br />
+              canopy_tags: [research, mv3, launch]<br />
+              source_url: https://developer.chrome.com<br />
+              backlinks: 12<br />
+              ---
+            </div>
+
+            <div class="markdown-line full"></div>
+            <div class="markdown-line medium"></div>
+            <div class="markdown-line full"></div>
+            <div class="markdown-line short"></div>
+
+            <div class="callout">
+              Backlinks are generated per domain and note file, making the vault navigable even
+              after the original web page changes.
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

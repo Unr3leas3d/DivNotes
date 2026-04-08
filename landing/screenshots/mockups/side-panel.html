@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Side Panel Mockup</title>
+    <link rel="stylesheet" href="./mockup.css" />
+  </head>
+  <body>
+    <div class="frame panel-shell">
+      <div class="window">
+        <div class="window-header">
+          <div>
+            <p class="brand-title">Canopy</p>
+            <p class="brand-subtitle">All Notes workspace</p>
+          </div>
+          <div class="icon-row">
+            <div class="icon-button">⌕</div>
+            <div class="icon-button">＋</div>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="tabs">
+            <div class="tab">This Page</div>
+            <div class="tab active">All Notes</div>
+            <div class="tab">Folders</div>
+            <div class="tab">Tags</div>
+          </div>
+
+          <div class="selection-bar" style="margin-top: 14px;">
+            <span style="font-size: 11px; font-weight: 700;">2 selected</span>
+            <div class="selection-actions">
+              <span>Move</span>
+              <span>Tag</span>
+              <span style="color: #ffb7b1;">Delete</span>
+            </div>
+          </div>
+
+          <p class="section-label" style="margin-top: 16px;">developer.chrome.com</p>
+          <div class="stack">
+            <div class="note-card" style="border-width: 2px; border-color: var(--primary);">
+              <div class="note-header">
+                <span class="note-type"><span class="dot purple"></span>&lt;h1&gt;</span>
+                <span class="muted-copy">Pinned</span>
+              </div>
+              <p class="note-body">Review Manifest V3 migration guide</p>
+              <p class="card-subtitle">Extensions &gt; Getting Started</p>
+            </div>
+            <div class="note-card" style="border-width: 2px; border-color: var(--primary);">
+              <div class="note-header">
+                <span class="note-type"><span class="dot blue"></span>&lt;code&gt;</span>
+                <span class="muted-copy">Selected</span>
+              </div>
+              <p class="note-body">Simplify message passing pattern between background and popup.</p>
+              <div class="mini-tags">
+                <span class="mini-tag">research</span>
+                <span class="mini-tag">sync</span>
+              </div>
+            </div>
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-type"><span class="dot orange"></span>&lt;section&gt;</span>
+                <span class="muted-copy">Yesterday</span>
+              </div>
+              <p class="note-body">Add onboarding note badges to the docs page walkthrough.</p>
+              <p class="card-subtitle">Grouped under Release Planning</p>
+            </div>
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-type"><span class="dot green"></span>&lt;button&gt;</span>
+                <span class="muted-copy">Today</span>
+              </div>
+              <p class="note-body">Re-check disabled state copy after entitlement refresh finishes.</p>
+              <p class="card-subtitle">Tagged with ui, polish</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
