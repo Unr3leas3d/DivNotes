@@ -26,6 +26,8 @@ export interface WorkspaceAuth {
   billingProvider: BillingProvider;
   subscriptionInterval: SubscriptionInterval;
   cloudSyncEnabled: boolean;
+  avatarUrl: string | null;
+  fullName: string | null;
 }
 
 export interface CurrentPageState {

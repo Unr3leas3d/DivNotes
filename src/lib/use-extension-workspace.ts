@@ -90,13 +90,16 @@ function buildLoginAuth(): WorkspaceAuth {
     billingProvider: null,
     subscriptionInterval: null,
     cloudSyncEnabled: false,
+    avatarUrl: null,
+    fullName: null,
   };
 }
 
 function buildWorkspaceAuth(
   storedAuth: StoredWorkspaceAuth | null | undefined,
   storedAccount: StoredAccountState | null | undefined,
-  fallbackEmail = ''
+  fallbackEmail = '',
+  userMetadata?: { avatar_url?: string; full_name?: string } | null,
 ): WorkspaceAuth {
   const account = storedAccount ?? buildStoredAccountFallback(storedAuth, fallbackEmail);
 
@@ -112,6 +115,8 @@ function buildWorkspaceAuth(
       billingProvider: null,
       subscriptionInterval: null,
       cloudSyncEnabled: false,
+      avatarUrl: null,
+      fullName: null,
     };
   }
 
@@ -128,6 +133,8 @@ function buildWorkspaceAuth(
       billingProvider: account.billingProvider,
       subscriptionInterval: account.subscriptionInterval,
       cloudSyncEnabled: account.cloudSyncEnabled,
+      avatarUrl: userMetadata?.avatar_url ?? null,
+      fullName: userMetadata?.full_name ?? null,
     };
   }
 
@@ -434,7 +441,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
             storedAccount?.authMode === 'authenticated'
               ? { ...storedAccount, email }
               : buildStoredAccountFallback(storedAuth, email);
-          setAuth(buildWorkspaceAuth(storedAuth, account, email));
+          setAuth(buildWorkspaceAuth(storedAuth, account, email, session?.user?.user_metadata));
           if (session?.user) {
             await chrome.storage.local.set({
               divnotes_auth: { mode: 'authenticated', email },
@@ -451,7 +458,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
                   email,
                   profile: null,
                 });
-          setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, account, email));
+          setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, account, email, session.user.user_metadata));
           await chrome.storage.local.set({
             divnotes_auth: { mode: 'authenticated', email },
             divnotes_account: account,
@@ -501,7 +508,7 @@ export function useExtensionWorkspace(options: { shell: ShellType }) {
           divnotes_auth: { mode: 'authenticated', email },
           divnotes_account: account,
         });
-        setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, account, email));
+        setAuth(buildWorkspaceAuth({ mode: 'authenticated', email }, account, email, session.user.user_metadata));
       } else if (authModeRef.current === 'authenticated') {
         void chrome.storage.local.remove(['divnotes_auth', 'divnotes_account']);
         setAuth(buildLoginAuth());
