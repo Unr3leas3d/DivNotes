@@ -1,7 +1,8 @@
 import React from 'react';
-import { Hash } from 'lucide-react';
+import { HashtagIcon } from '@hugeicons/core-free-icons';
 
 import type { TagSummary } from '@/lib/extension-selectors';
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { cn } from '@/lib/utils';
 
 interface WorkspaceTagFilterBarProps {
@@ -25,14 +26,14 @@ export function WorkspaceTagFilterBar({
   return (
     <div
       className={cn(
-        'rounded-[20px] border border-[#ece7de] bg-white shadow-[0_1px_2px_rgba(5,36,21,0.04)]',
+        'rounded-[20px] border border-border bg-card shadow-card',
         density === 'compact' ? 'px-3 py-3' : 'px-4 py-4'
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Tags</p>
-          <p className="mt-1 text-[13px] font-semibold text-[#173628]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</p>
+          <p className="mt-1 text-[13px] font-semibold text-foreground">
             {tagSummaries.length} {tagSummaries.length === 1 ? 'tag' : 'tags'} available
           </p>
         </div>
@@ -44,8 +45,8 @@ export function WorkspaceTagFilterBar({
           className={cn(
             'rounded-[12px] border px-3 py-1.5 text-[11px] font-medium transition-colors',
             hasActiveFilters
-              ? 'border-[#e7e2d8] bg-[#f8f6f1] text-[#526357] hover:bg-[#f1eee7]'
-              : 'cursor-not-allowed border-[#eee8de] bg-[#faf8f4] text-[#b0b8b0]'
+              ? 'border-border bg-secondary text-muted-foreground hover:bg-secondary/80'
+              : 'cursor-not-allowed border-border bg-muted/60 text-muted-foreground/60'
           )}
         >
           Clear filters
@@ -65,11 +66,11 @@ export function WorkspaceTagFilterBar({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors',
                 active
-                  ? 'border-[#173628] bg-[#173628] text-[#f5efe9]'
-                  : 'border-[#e7e2d8] bg-[#f8f6f1] text-[#637267] hover:bg-[#f1eee7]'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-secondary text-muted-foreground hover:bg-secondary/80'
               )}
             >
-              <Hash className="h-3 w-3" />
+              <HugeIcon icon={HashtagIcon} className="h-3 w-3" />
               <span className="truncate">{summary.tag.name}</span>
               <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[9px] leading-none">
                 {summary.count}
@@ -79,7 +80,7 @@ export function WorkspaceTagFilterBar({
         })}
       </div>
 
-      <p className="mt-3 text-[11px] leading-[1.5] text-[#8c978f]">
+      <p className="mt-3 text-[11px] leading-[1.5] text-muted-foreground">
         {hasActiveFilters
           ? `Filtering by ${selectedCount} ${selectedCount === 1 ? 'tag' : 'tags'}.`
           : 'Select one or more tags to see matching notes.'}

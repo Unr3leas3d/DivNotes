@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, Tag, Star, Trash2, X } from 'lucide-react';
+import { Folder, Tag, Star, Trash2, X } from '@/lib/icon-aliases';
 import { Button } from '@/components/ui/button';
 
 interface BulkActionBarProps {

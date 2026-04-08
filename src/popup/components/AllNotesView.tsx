@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, StickyNote } from 'lucide-react';
+import { Search01Icon, StickyNote01Icon } from '@hugeicons/core-free-icons';
 
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import { reconcileWorkspaceGroupExpansion } from '@/components/workspace/workspace-group-expansion';
@@ -59,7 +60,7 @@ export function AllNotesView({
     return (
       <WorkspaceEmptyState
         loading
-        icon={<StickyNote className="h-5 w-5" />}
+        icon={<HugeIcon icon={StickyNote01Icon} className="h-5 w-5" />}
         title="Loading notes"
         description="Grouping every saved note by site."
       />
@@ -69,7 +70,7 @@ export function AllNotesView({
   if (error) {
     return (
       <WorkspaceEmptyState
-        icon={<StickyNote className="h-5 w-5" />}
+        icon={<HugeIcon icon={StickyNote01Icon} className="h-5 w-5" />}
         title="Notes are unavailable"
         description={error}
       />
@@ -79,18 +80,18 @@ export function AllNotesView({
   return (
     <div className="space-y-4">
       <label className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#95a097]" />
+        <HugeIcon icon={Search01Icon} className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search all notes"
-          className="h-[42px] w-full rounded-[14px] border border-[#e7e2d8] bg-white pl-10 pr-3 text-[13px] text-[#173628] outline-none transition-colors placeholder:text-[#a0a89f] focus:border-[#c9d3ca]"
+          className="h-[42px] w-full rounded-[14px] border border-border bg-card pl-10 pr-3 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
         />
       </label>
 
       {visibleGroups.length === 0 ? (
         <WorkspaceEmptyState
-          icon={<StickyNote className="h-5 w-5" />}
+          icon={<HugeIcon icon={StickyNote01Icon} className="h-5 w-5" />}
           title={query.trim() ? 'No notes match that search' : 'Your notes will appear here'}
           description={
             query.trim()
@@ -106,7 +107,7 @@ export function AllNotesView({
             return (
               <section
                 key={group.hostname}
-                className="rounded-[18px] border border-[#ece7de] bg-[#f8f6f1] p-3"
+                className="rounded-[18px] border border-border bg-muted p-3"
               >
                 <button
                   type="button"
@@ -122,12 +123,12 @@ export function AllNotesView({
                       return next;
                     });
                   }}
-                  className="flex w-full items-center justify-between gap-3 rounded-[14px] bg-white px-3 py-2 text-left"
+                  className="flex w-full items-center justify-between gap-3 rounded-[14px] bg-card px-3 py-2 text-left"
                 >
-                  <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#173628]">
+                  <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
                     {group.hostname}
                   </h3>
-                  <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
+                  <span className="rounded-full bg-secondary px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                     {group.count}
                   </span>
                 </button>

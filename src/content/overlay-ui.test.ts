@@ -166,18 +166,34 @@ test('createNotePreviewCardShell renders metadata, tags, preview, and actions', 
   });
 
   assert.equal(card.dataset.canopyOverlay, 'note-preview-card');
-  assert.equal(card.querySelector('[data-canopy-element-info]')?.textContent, '<button.primary>');
-  assert.equal(card.querySelector('[data-canopy-preview-date]')?.textContent, 'Mar 29, 10:15 AM');
-  assert.equal(card.querySelector('[data-canopy-preview-title]')?.textContent, 'Primary CTA');
+  assert.equal(card.querySelector('[data-canopy-element-info]'), null);
+  assert.equal(card.querySelector('[data-canopy-preview-date]'), null);
+  assert.equal(card.querySelector('[data-canopy-preview-title]'), null);
   assert.equal(
     card.querySelector('[data-canopy-preview-body]')?.textContent,
     'Follow up on the button copy before launch.'
   );
-  assert.equal(card.querySelector('[data-canopy-preview-tags]')?.textContent, '#launch #copy');
+  assert.equal(
+    card.querySelector('[data-canopy-preview-tags]')?.querySelector('[data-canopy-preview-tag-chip]')
+      ?.textContent,
+    '#launch'
+  );
   assert.equal(card.querySelector('[data-canopy-move]')?.textContent, 'Move');
   assert.equal(card.querySelector('[data-canopy-edit]')?.textContent, 'Edit');
   assert.equal(card.querySelector('[data-canopy-delete]')?.textContent, 'Delete');
   assert.equal(card.querySelector('[data-canopy-preview-panel]')?.dataset.canopyPreviewPanel, '');
+  assert.equal(
+    card.querySelector('[data-canopy-preview-panel]')?.style.background,
+    'oklch(0.218 0.008 223.9)'
+  );
+  assert.equal(
+    card.querySelector('[data-canopy-preview-body]')?.style.color,
+    'oklch(0.987 0.002 197.1)'
+  );
+  assert.equal(
+    card.querySelector('[data-canopy-delete]')?.style.background,
+    'oklch(0.704 0.191 22.216 / 0.14)'
+  );
 });
 
 test('createNotePreviewCardShell keeps edit and move actions in the footer', () => {

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { cn } from '@/lib/utils';
 
 const Dialog = DialogPrimitive.Root;
@@ -32,7 +33,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-[18px] border border-[#ece7de] bg-[#fcfbf7] p-5 shadow-[0_20px_40px_rgba(5,36,21,0.2)]',
+        'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-5 shadow-elevated',
         className
       )}
       {...props}
@@ -40,10 +41,10 @@ const DialogContent = React.forwardRef<
       {children}
       {showCloseButton ? (
         <DialogPrimitive.Close
-          className="absolute right-3 top-3 rounded-[10px] p-1.5 text-[#7a867e] transition-colors hover:bg-[#f1eee7] hover:text-[#173628] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173628]/30 disabled:pointer-events-none disabled:opacity-50"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
           disabled={closeButtonDisabled}
         >
-          <X className="h-4 w-4" />
+          <HugeIcon icon={Cancel01Icon} className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       ) : null}
@@ -66,7 +67,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-[16px] font-semibold tracking-[-0.01em] text-[#173628]', className)}
+    className={cn('text-[16px] font-semibold tracking-[-0.01em] text-foreground', className)}
     {...props}
   />
 ));
@@ -78,7 +79,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('text-[13px] leading-[1.5] text-[#6f7c73]', className)}
+    className={cn('text-[13px] leading-[1.5] text-muted-foreground', className)}
     {...props}
   />
 ));

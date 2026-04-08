@@ -1,5 +1,5 @@
 import React, { DragEvent } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Folder, FolderPlus, MoreVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Folder, FolderPlus, MoreVertical } from '@/lib/icon-aliases';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
 import { FolderContextMenu } from './ContextMenu';
@@ -133,7 +133,7 @@ export function FolderTreeNodeItem({
           {onOpenAsTabGroup && noteCount > 0 && (
             <button
               type="button"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#526357] opacity-0 transition-all hover:bg-muted group-hover:opacity-100"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground opacity-0 transition-all hover:bg-muted group-hover:opacity-100"
               onClick={(event) => {
                 event.stopPropagation();
                 onOpenAsTabGroup(node.folder.id);
@@ -147,7 +147,7 @@ export function FolderTreeNodeItem({
 
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#526357] transition-colors hover:bg-muted"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted"
             onClick={(event) => {
               event.stopPropagation();
               onNewSubfolder?.(node.folder.id);

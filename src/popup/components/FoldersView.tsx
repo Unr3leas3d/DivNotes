@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { ExternalLink, Folder, FolderOpen } from 'lucide-react';
+import { Folder01Icon, FolderOpenIcon, LinkSquare02Icon } from '@hugeicons/core-free-icons';
 
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import { createTagResolver, type FolderSummary } from '@/lib/extension-selectors';
@@ -46,7 +47,7 @@ export function FoldersView({
     return (
       <WorkspaceEmptyState
         loading
-        icon={<Folder className="h-5 w-5" />}
+        icon={<HugeIcon icon={Folder01Icon} className="h-5 w-5" />}
         title="Loading folders"
         description="Preparing your folder index."
       />
@@ -56,7 +57,7 @@ export function FoldersView({
   if (error) {
     return (
       <WorkspaceEmptyState
-        icon={<Folder className="h-5 w-5" />}
+        icon={<HugeIcon icon={Folder01Icon} className="h-5 w-5" />}
         title="Folders are unavailable"
         description={error}
       />
@@ -66,12 +67,12 @@ export function FoldersView({
   if (selectedSummary) {
     return (
       <div className="space-y-4">
-        <div className="rounded-[20px] border border-[#ece7de] bg-[#f8f6f1] px-4 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">
+        <div className="rounded-[20px] border border-border bg-muted px-4 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Folder Detail
           </p>
-          <h2 className="mt-2 text-[16px] font-semibold text-[#173628]">{selectedSummary.folder.name}</h2>
-          <p className="mt-1 text-[11px] text-[#8c978f]">
+          <h2 className="mt-2 text-[16px] font-semibold text-foreground">{selectedSummary.folder.name}</h2>
+          <p className="mt-1 text-[11px] text-muted-foreground">
             {selectedSummary.count} {selectedSummary.count === 1 ? 'note' : 'notes'} saved here.
           </p>
           {selectedSummary.count > 0 && onOpenAsTabGroup && (
@@ -84,9 +85,9 @@ export function FoldersView({
                 }
                 onOpenAsTabGroup(selectedSummary.folder.id);
               }}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-[10px] bg-[#173628] px-3 py-1.5 text-[11px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#10271d]"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-[10px] bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/80"
             >
-              <ExternalLink className="h-3 w-3" />
+              <HugeIcon icon={LinkSquare02Icon} className="h-3 w-3" />
               Open All
             </button>
           )}
@@ -94,7 +95,7 @@ export function FoldersView({
 
         {selectedSummary.count === 0 ? (
           <WorkspaceEmptyState
-            icon={<FolderOpen className="h-5 w-5" />}
+            icon={<HugeIcon icon={FolderOpenIcon} className="h-5 w-5" />}
             title="This folder is empty"
             description="Move notes here from the page editor or keep saving new notes into it."
           />
@@ -130,12 +131,12 @@ export function FoldersView({
         <button
           type="button"
           onClick={onCreateFolder}
-          className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-[#d8ddd3] bg-[#f8f6f1] px-4 py-4 text-[13px] font-semibold text-[#536457] transition-colors hover:bg-[#f1eee7]"
+          className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-border bg-muted px-4 py-4 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-secondary"
         >
           New Folder
         </button>
         <WorkspaceEmptyState
-          icon={<Folder className="h-5 w-5" />}
+          icon={<HugeIcon icon={Folder01Icon} className="h-5 w-5" />}
           title="Organize notes into folders"
           description="Create a folder to keep related notes together."
         />
@@ -148,7 +149,7 @@ export function FoldersView({
       <button
         type="button"
         onClick={onCreateFolder}
-        className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-[#d8ddd3] bg-[#f8f6f1] px-4 py-4 text-[13px] font-semibold text-[#536457] transition-colors hover:bg-[#f1eee7]"
+        className="flex w-full items-center justify-center rounded-[18px] border border-dashed border-border bg-muted px-4 py-4 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-secondary"
       >
         New Folder
       </button>
@@ -160,26 +161,26 @@ export function FoldersView({
             <button
               type="button"
               onClick={() => onSelectFolder(summary.folder.id)}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-[18px] border border-[#ece7de] bg-white px-4 py-4 text-left shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6]"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-[18px] border border-border bg-card px-4 py-4 text-left shadow-card transition-colors hover:bg-muted"
             >
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3f1eb] text-[#6e7c72]"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"
                 style={{
                   backgroundColor: summary.folder.color ? `${summary.folder.color}22` : undefined,
                   color: summary.folder.color || undefined,
                 }}
               >
-                <Folder className="h-4 w-4" />
+                <HugeIcon icon={Folder01Icon} className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold text-[#173628]">{summary.folder.name}</p>
-                <p className="truncate text-[11px] text-[#8c978f]">
+                <p className="truncate text-[13px] font-semibold text-foreground">{summary.folder.name}</p>
+                <p className="truncate text-[11px] text-muted-foreground">
                   {parentFolder ? `${parentFolder.name} / ` : ''}
                   {summary.count} {summary.count === 1 ? 'note' : 'notes'}
                 </p>
-                <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-[#6d7b70]">
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                   <span
-                    className="h-2.5 w-2.5 rounded-full border border-[#d9d4ca]"
+                    className="h-2.5 w-2.5 rounded-full border border-border"
                     style={{ backgroundColor: summary.folder.color || '#f3f1eb' }}
                   />
                   <span>
@@ -187,7 +188,7 @@ export function FoldersView({
                   </span>
                 </div>
               </div>
-              <span className="rounded-full bg-[#f3f1eb] px-2 py-1 text-[10px] font-semibold text-[#6d7b70]">
+              <span className="rounded-full bg-secondary px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                 Open
               </span>
             </button>
@@ -195,10 +196,10 @@ export function FoldersView({
               <button
                 type="button"
                 onClick={() => onOpenAsTabGroup(summary.folder.id)}
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[14px] border border-[#ece7de] bg-white text-[#6e7c72] shadow-[0_1px_2px_rgba(5,36,21,0.04)] transition-colors hover:bg-[#fbfaf6] hover:text-[#173628]"
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[14px] border border-border bg-card text-muted-foreground shadow-card transition-colors hover:bg-muted hover:text-foreground"
                 title="Open all as tab group"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <HugeIcon icon={LinkSquare02Icon} className="h-3.5 w-3.5" />
               </button>
             )}
           </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, ChevronDown, ChevronRight, Folder } from 'lucide-react';
+import { Star, ChevronDown, ChevronRight, Folder } from '@/lib/icon-aliases';
 import { cn } from '@/lib/utils';
 import { NoteCard } from './NoteCard';
 import type { StoredNote, StoredFolder, StoredTag } from '@/lib/types';

@@ -206,11 +206,11 @@ export default function App() {
 
     if (authMode === 'loading') {
         return (
-            <div className="h-[500px] w-[380px] overflow-hidden bg-[#fcfbf7] text-[#173628]">
+            <div className="h-[500px] w-[380px] overflow-hidden bg-background text-foreground">
                 <div className="flex h-full flex-col items-center justify-center gap-3">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#d9e3dc] border-t-[#173628]" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-foreground" />
                     {authError ? (
-                        <p className="max-w-[280px] text-center text-[12px] text-[#7b5f5f]">{authError}</p>
+                        <p className="max-w-[280px] text-center text-[12px] text-destructive">{authError}</p>
                     ) : null}
                 </div>
             </div>
@@ -221,9 +221,9 @@ export default function App() {
     const displayEmail = authMode === 'local' ? 'Local Mode' : accountState.email;
 
     return (
-        <div className="relative h-[500px] w-[380px] overflow-hidden bg-[#fcfbf7] text-[#173628]">
+        <div className="relative h-[500px] w-[380px] overflow-hidden bg-background text-foreground">
             {authError && !isLoggedIn ? (
-                <div className="pointer-events-none absolute left-4 right-4 top-4 z-20 rounded-[12px] border border-[rgba(185,28,28,0.16)] bg-[rgba(254,242,242,0.96)] px-3 py-2 text-center text-[11px] text-[#b91c1c]">
+                <div className="pointer-events-none absolute left-4 right-4 top-4 z-20 rounded-[12px] border border-destructive/20 bg-destructive/5 px-3 py-2 text-center text-[11px] text-destructive">
                     {authError}
                 </div>
             ) : null}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FilePlus2, MapPinned } from 'lucide-react';
+import { FilePlus2, MapPinned } from '@/lib/icon-aliases';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import type { CurrentPageState } from '@/lib/extension-workspace-types';
@@ -50,23 +50,23 @@ export function ThisPageView({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[22px] border border-[#ece7de] bg-white px-5 py-5 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">This Page</p>
-        <h2 className="mt-2 text-[18px] font-semibold leading-[1.3] text-[#173628]">
+      <div className="rounded-[22px] border border-border bg-card px-5 py-5 shadow-card">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">This Page</p>
+        <h2 className="mt-2 text-[18px] font-semibold leading-[1.3] text-foreground">
           {currentPage.title || currentPage.hostname || 'Untitled page'}
         </h2>
-        <p className="mt-1 text-[12px] text-[#8c978f]">
+        <p className="mt-1 text-[12px] text-muted-foreground">
           {currentPage.hostname || 'Open a regular page to save and revisit anchored notes.'}
         </p>
-        <div className="mt-4 flex items-center justify-between rounded-[16px] bg-[#f8f6f1] px-4 py-3">
+        <div className="mt-4 flex items-center justify-between rounded-[16px] bg-secondary px-4 py-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9aa294]">Anchors on this page</p>
-            <p className="mt-1 text-[22px] font-semibold text-[#173628]">{notes.length}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Anchors on this page</p>
+            <p className="mt-1 text-[22px] font-semibold text-foreground">{notes.length}</p>
           </div>
           <button
             type="button"
             onClick={onAddNote}
-            className="flex h-[46px] items-center justify-center rounded-[14px] bg-[#173628] px-5 text-[14px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+            className="flex h-[46px] items-center justify-center rounded-[14px] bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary/80"
           >
             + Add Note
           </button>
@@ -82,7 +82,7 @@ export function ThisPageView({
             <button
               type="button"
               onClick={onAddNote}
-              className="rounded-[12px] bg-[#173628] px-4 py-2 text-[12px] font-semibold text-[#f5efe9] transition-colors hover:bg-[#0f2d20]"
+              className="rounded-[12px] bg-primary px-4 py-2 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary/80"
             >
               + Add Note
             </button>

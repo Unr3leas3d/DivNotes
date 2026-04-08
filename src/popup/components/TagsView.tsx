@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Tags } from 'lucide-react';
+import { Tag01Icon } from '@hugeicons/core-free-icons';
 
+import { HugeIcon } from '@/components/ui/huge-icon';
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceNoteCard } from '@/components/workspace/WorkspaceNoteCard';
 import { WorkspaceTagFilterBar } from '@/components/workspace/WorkspaceTagFilterBar';
@@ -46,7 +47,7 @@ export function TagsView({
     return (
       <WorkspaceEmptyState
         loading
-        icon={<Tags className="h-5 w-5" />}
+        icon={<HugeIcon icon={Tag01Icon} className="h-5 w-5" />}
         title="Loading tags"
         description="Preparing the latest tag filters."
       />
@@ -56,7 +57,7 @@ export function TagsView({
   if (error) {
     return (
       <WorkspaceEmptyState
-        icon={<Tags className="h-5 w-5" />}
+        icon={<HugeIcon icon={Tag01Icon} className="h-5 w-5" />}
         title="Tags are unavailable"
         description={error}
       />
@@ -66,7 +67,7 @@ export function TagsView({
   if (tagSummaries.length === 0) {
     return (
       <WorkspaceEmptyState
-        icon={<Tags className="h-5 w-5" />}
+        icon={<HugeIcon icon={Tag01Icon} className="h-5 w-5" />}
         title="Tag your notes for easy filtering"
         description="Tags are added when you create notes."
       />
@@ -84,20 +85,20 @@ export function TagsView({
 
       {selectedTagIds.length === 0 ? (
         <WorkspaceEmptyState
-          icon={<Tags className="h-5 w-5" />}
+          icon={<HugeIcon icon={Tag01Icon} className="h-5 w-5" />}
           title="Select tags to see matching notes"
           description="Pick one or more tags above to filter the notes list."
         />
       ) : filteredNotes.length === 0 ? (
         <WorkspaceEmptyState
-          icon={<Tags className="h-5 w-5" />}
+          icon={<HugeIcon icon={Tag01Icon} className="h-5 w-5" />}
           title="No notes match these tags"
           description="Choose another tag combination or clear the filters."
           action={
             <button
               type="button"
               onClick={onClearFilters}
-              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+              className="rounded-[12px] border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
             >
               Clear filters
             </button>

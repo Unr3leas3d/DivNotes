@@ -23,7 +23,7 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
     const [activeTab, setActiveTab] = useState('login');
     const [showEmailForm, setShowEmailForm] = useState(false);
     const authIntentGuardRef = useRef(createAuthIntentGuard());
-    const authOptionBaseClass = 'h-[50px] w-full rounded-[12px] border border-[#e7e2d8] bg-white px-4 text-[15px] font-medium text-[#314339] shadow-[0_1px_2px_rgba(5,36,21,0.03)] transition-colors hover:bg-[#f8f6f1] disabled:cursor-wait disabled:opacity-70';
+    const authOptionBaseClass = 'h-[50px] w-full rounded-[12px] border border-border bg-card px-4 text-[15px] font-medium text-foreground shadow-card transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70';
     const authOptionContentClass = 'flex items-center gap-3';
 
     const handleSignIn = async (e: React.FormEvent) => {
@@ -109,9 +109,9 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
 
     if (showEmailForm) {
         return (
-            <div className="flex min-h-[500px] flex-col bg-[#fcfbf7]">
+            <div className="flex min-h-[500px] flex-col bg-background text-foreground">
                 <div className="flex items-center px-4 pt-4">
-                    <button type="button" onClick={() => setShowEmailForm(false)} className="rounded-[10px] p-2 transition-colors hover:bg-[#f1eee7]">
+                    <button type="button" onClick={() => setShowEmailForm(false)} className="rounded-[10px] p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="m15 18-6-6 6-6"/>
                         </svg>
@@ -165,24 +165,24 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
     }
 
     return (
-        <div className="flex min-h-[500px] flex-col bg-[#fcfbf7]">
+        <div className="flex min-h-[500px] flex-col bg-background text-foreground">
             <div className="mx-auto flex w-full max-w-[316px] flex-1 flex-col justify-center px-7 pb-4 pt-8">
                 <div className="flex flex-col items-center">
-                    <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#0b2417] shadow-[0_10px_24px_rgba(5,36,21,0.14)]">
+                    <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-[14px] bg-primary text-primary-foreground shadow-elevated">
                         <svg width="28" height="28" viewBox="0 0 68 68" fill="none">
-                            <path d="M32 62 C33 52 33 44 33 36" stroke="#F5EFE9" strokeWidth="4.5" strokeLinecap="round"/>
-                            <path d="M33 36 C26 24 14 12 6 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C42 22 54 10 62 6" stroke="#F5EFE9" strokeWidth="4" strokeLinecap="round"/>
-                            <path d="M33 36 C44 28 56 20 62 18" stroke="#F5EFE9" strokeWidth="3.5" strokeLinecap="round"/>
-                            <circle cx="6" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="6" r="5" fill="#ABFFC0"/>
-                            <circle cx="62" cy="18" r="4.5" fill="#ABFFC0"/>
+                            <path d="M32 62 C33 52 33 44 33 36" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+                            <path d="M33 36 C26 24 14 12 6 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C42 22 54 10 62 6" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+                            <path d="M33 36 C44 28 56 20 62 18" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"/>
+                            <circle cx="6" cy="6" r="5" fill="var(--chart-1)"/>
+                            <circle cx="62" cy="6" r="5" fill="var(--chart-1)"/>
+                            <circle cx="62" cy="18" r="4.5" fill="var(--chart-1)"/>
                         </svg>
                     </div>
-                    <h1 className="text-center font-serif text-[32px] font-semibold leading-[1.12] tracking-[-0.7px] text-[#173628]">
+                    <h1 className="text-center font-serif text-[32px] font-semibold leading-[1.12] tracking-[-0.7px] text-foreground">
                         Think on top of the web.
                     </h1>
-                    <p className="mt-5 max-w-[260px] text-center text-[14px] leading-[1.45] text-[#9aa294]">
+                    <p className="mt-5 max-w-[260px] text-center text-[14px] leading-[1.45] text-muted-foreground">
                         Attach notes to any element on any page.
                     </p>
                 </div>
@@ -220,15 +220,15 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
                     </button>
 
                     <div className="flex items-center gap-3 py-1.5">
-                        <Separator className="flex-1 bg-[#ece7de]" />
-                        <span className="text-[12px] text-[#aca89e]">or</span>
-                        <Separator className="flex-1 bg-[#ece7de]" />
+                        <Separator className="flex-1 bg-border" />
+                        <span className="text-[12px] text-muted-foreground">or</span>
+                        <Separator className="flex-1 bg-border" />
                     </div>
 
                     <button
                         type="button"
                         onClick={handleUseLocalOnly}
-                        className="h-[50px] w-full rounded-[12px] bg-[#f3f1eb] text-[15px] font-semibold text-[#314339] transition-colors hover:bg-[#ece8df]"
+                        className="h-[50px] w-full rounded-[12px] border border-border bg-secondary text-[15px] font-semibold text-foreground transition-colors hover:bg-secondary/80"
                     >
                         Use Local Only
                     </button>
@@ -238,7 +238,7 @@ export function LoginForm({ onLogin, onUseLocally, onGoogleSessionPromotionChang
             </div>
 
             <div className="px-10 pb-3 text-center">
-                <p className="text-[10px] leading-[1.45] text-[#aba79c]">
+                <p className="text-[10px] leading-[1.45] text-muted-foreground">
                     By continuing, you agree to our Terms of Service and Privacy Policy.
                 </p>
             </div>

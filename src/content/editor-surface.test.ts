@@ -169,6 +169,22 @@ test('createEditorSurface renders header actions for an existing note and keeps 
     ?.textContent, 'Update Note');
   assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-delete]'), null);
   assert.equal(surface.querySelector?.('[data-canopy-footer]')?.querySelector?.('[data-canopy-cancel]'), null);
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-shell]')?.style.cssText.includes('background:oklch(0.218 0.008 223.9)'),
+    true
+  );
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-body]')?.style.cssText.includes('background:oklch(0.148 0.004 228.8 / 0.62)'),
+    true
+  );
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-body]')?.style.cssText.includes('min-height:180px'),
+    true
+  );
+  assert.equal(
+    surface.querySelector?.('[data-canopy-editor-heading]')?.style.cssText.includes('font-size:18px'),
+    true
+  );
 });
 
 test('createEditorSurface hides raw element info and removes the title input', () => {
@@ -179,6 +195,14 @@ test('createEditorSurface hides raw element info and removes the title input', (
   assert.equal(surface.querySelector('[data-canopy-editor-title]'), null);
   assert.equal(surface.querySelector('[data-canopy-editor-element-info]'), null);
   assert.equal(surface.querySelector('[data-canopy-folder-control]')?.querySelector('[data-canopy-folder-change]')?.textContent, 'Change');
+  assert.equal(
+    surface.querySelector('[data-canopy-folder-control]')?.style.cssText.includes('background:oklch(0.274 0.006 286.033)'),
+    true
+  );
+  assert.equal(
+    surface.querySelector('[data-canopy-tag-row]')?.style.cssText.includes('background:oklch(0.274 0.006 286.033)'),
+    true
+  );
 });
 
 test('createEditorSurface renders inline tag entry controls instead of relying on browser prompts', () => {
@@ -209,4 +233,8 @@ test('createEditorSurface disables save, omits delete for new notes, and still p
   assert.equal(surface.querySelector?.('[data-canopy-editor-header]')?.querySelector?.('[data-canopy-close]')
     ?.textContent, 'Close');
   assert.equal(surface.querySelector?.('[data-canopy-error]')?.textContent, '');
+  assert.equal(
+    surface.querySelector?.('[data-canopy-save]')?.style.cssText.includes('background:oklch(0.148 0.004 228.8 / 0.18)'),
+    true
+  );
 });

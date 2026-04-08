@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Tags } from 'lucide-react';
+import { Tags } from '@/lib/icon-aliases';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { WorkspaceTagFilterBar } from '@/components/workspace/WorkspaceTagFilterBar';
@@ -118,17 +118,17 @@ export function TagsView({
     <div className="relative space-y-4">
       {showManager ? <TagManager tags={tags} onClose={() => setShowManager(false)} /> : null}
 
-      <div className="rounded-[20px] border border-[#ece7de] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(5,36,21,0.04)]">
+      <div className="rounded-[20px] border border-border bg-card px-4 py-4 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa294]">Tags</p>
-            <p className="text-[13px] font-semibold text-[#173628]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tags</p>
+            <p className="text-[13px] font-semibold text-foreground">
               {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
             </p>
           </div>
           <Button
             variant="ghost"
-            className="h-9 rounded-[12px] border border-[#e7e2d8] bg-[#f8f6f1] px-3 text-[12px] font-medium text-[#526357] hover:bg-[#f1eee7]"
+            className="h-9 rounded-[12px] border border-border bg-secondary px-3 text-[12px] font-medium text-muted-foreground hover:bg-secondary/80"
             title="Manage tags"
             onClick={() => setShowManager(true)}
           >
@@ -137,15 +137,15 @@ export function TagsView({
         </div>
 
         {activeTags.length > 0 ? (
-          <div className="mt-4 rounded-[16px] bg-[#f8f6f1] px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9aa294]">
+          <div className="mt-4 rounded-[16px] bg-secondary px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Filtering by
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {activeTags.map((summary) => (
                 <span
                   key={summary.tag.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#173628] bg-[#173628] px-3 py-1.5 text-[11px] font-medium text-[#f5efe9]"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground"
                 >
                   {summary.tag.name}
                 </span>
@@ -178,7 +178,7 @@ export function TagsView({
             <button
               type="button"
               onClick={onClearFilters}
-              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+              className="rounded-[12px] border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
             >
               Clear filters
             </button>
@@ -193,7 +193,7 @@ export function TagsView({
             <button
               type="button"
               onClick={onClearFilters}
-              className="rounded-[12px] border border-[#e7e2d8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#526357] transition-colors hover:bg-[#f8f6f1]"
+              className="rounded-[12px] border border-border bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
             >
               Clear filters
             </button>

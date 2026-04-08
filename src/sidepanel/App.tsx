@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FilePlus2, Search, Settings2, LogIn } from 'lucide-react';
+import { FilePlus2, Search, Settings2, LogIn } from '@/lib/icon-aliases';
 
 import { WorkspaceEmptyState } from '@/components/workspace/WorkspaceEmptyState';
 import { Input } from '@/components/ui/input';
@@ -141,7 +141,7 @@ export default function App() {
         variant="ghost"
         size="icon"
         onClick={() => void handleAddNote()}
-        className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+        className="h-9 w-9 rounded-[12px] border border-border bg-card text-muted-foreground hover:bg-muted"
         aria-label="Add note"
         title="Add note"
       >
@@ -153,7 +153,7 @@ export default function App() {
           variant="ghost"
           size="icon"
           onClick={handleOpenSettings}
-          className="h-9 w-9 rounded-[12px] border border-[#e7e2d8] bg-white text-[#637267] hover:bg-[#f8f6f1]"
+          className="h-9 w-9 rounded-[12px] border border-border bg-card text-muted-foreground hover:bg-muted"
           aria-label="Open settings"
           title="Open settings"
         >
@@ -166,12 +166,12 @@ export default function App() {
   const toolbar =
     workspace.view.active === 'settings' ? undefined : (
       <label className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#95a097]" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder={searchPlaceholders[activeMainView]}
-          className="h-[42px] rounded-[14px] border border-[#e7e2d8] bg-white pl-10 text-[13px] text-[#173628] placeholder:text-[#a0a89f] focus-visible:ring-0"
+          className="h-[42px] rounded-[14px] border border-border bg-card pl-10 text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
         />
       </label>
     );
@@ -216,10 +216,10 @@ export default function App() {
         navigation={navigation}
         statusBanner={
           screenShareMode ? (
-            <div className="flex items-center gap-2 rounded-[14px] border border-[rgba(220,38,38,0.14)] bg-[rgba(220,38,38,0.08)] px-3 py-2 text-[11px] font-medium text-[#991b1b]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[#dc2626]" />
+            <div className="flex items-center gap-2 rounded-[14px] border border-destructive/20 bg-destructive/5 px-3 py-2 text-[11px] font-medium text-destructive">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
               Screen Share Mode active. Notes stay hidden on the page until you turn it off.
-              <span className="ml-auto text-[10px] font-normal text-[#b45309]">Cmd+Shift+P</span>
+              <span className="ml-auto text-[10px] font-normal text-muted-foreground">Cmd+Shift+P</span>
             </div>
           ) : null
         }
@@ -345,7 +345,7 @@ export default function App() {
         }}
         onConfirm={() => void workspace.reconciliation.confirm()}
       >
-        <p className="text-[12px] leading-[1.5] text-[#5b6a5f]">
+        <p className="text-[12px] leading-[1.5] text-muted-foreground">
           Conflicts detected: {workspace.reconciliation.conflicts.length}
         </p>
       </WorkspaceActionDialog>
