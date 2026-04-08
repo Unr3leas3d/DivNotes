@@ -64,14 +64,6 @@ export default function App() {
       : workspace.auth.plan === 'pro'
         ? 'Inactive'
         : 'Free';
-  const billingStatusText = workspace.auth.isLocalMode
-    ? 'Saving only on this browser.'
-    : billingStatusLabel === 'Pro'
-      ? 'Cloud sync is active for this account.'
-      : billingStatusLabel === 'Inactive'
-        ? 'Billing needs attention before cloud sync resumes.'
-        : 'Signed in on the free plan. Upgrade to unlock cloud sync.';
-
   useEffect(() => {
     chrome.storage.local.get(['divnotes_screen_share'], (result) => {
       setScreenShareMode(Boolean(result.divnotes_screen_share));
@@ -274,9 +266,11 @@ export default function App() {
         {workspace.view.active === 'settings' ? (
           <SettingsView
             email={workspace.auth.email}
+            avatarUrl={workspace.auth.avatarUrl}
+            fullName={workspace.auth.fullName}
             isLocalMode={workspace.auth.isLocalMode}
             billingStatusLabel={billingStatusLabel}
-            billingStatusText={billingStatusText}
+            cloudSyncEnabled={workspace.auth.cloudSyncEnabled}
             version={chrome.runtime.getManifest().version}
             noteCount={workspace.data.notes.length}
             folderCount={workspace.data.folders.length}
@@ -290,9 +284,10 @@ export default function App() {
               setClearAllDialogError(null);
               setClearAllDialogOpen(true);
             }}
-            onUpgradeMonthly={() => void workspace.actions.startUpgrade('monthly')}
-            onUpgradeYearly={() => void workspace.actions.startUpgrade('yearly')}
-            onManageBilling={() => void workspace.actions.manageBilling()}
+            onUpgrade={() => void workspace.actions.startUpgrade('monthly')}
+            onContactSupport={() => {
+              window.open('mailto:support@divnotes.com', '_blank');
+            }}
           />
         ) : null}
       </SidePanelShell>
