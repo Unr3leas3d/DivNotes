@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloud Sync Mockup</title>
+    <link rel="stylesheet" href="./mockup.css" />
+  </head>
+  <body>
+    <div class="frame panel-shell">
+      <div class="window">
+        <div class="window-header">
+          <div>
+            <p class="brand-title">Canopy Pro</p>
+            <p class="brand-subtitle">Sync status</p>
+          </div>
+          <div class="icon-row">
+            <div class="icon-button">☁</div>
+            <div class="icon-button">⚙</div>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="sync-banner">
+            <div>
+              <div style="font-size: 12px; font-weight: 700;">All changes synced</div>
+              <div style="font-size: 11px; opacity: 0.7;">Last upload 14 seconds ago</div>
+            </div>
+            <div class="status-chip" style="background: rgba(255,255,255,0.12); color: var(--accent);">
+              Online
+            </div>
+          </div>
+
+          <div class="device-row" style="margin-top: 14px; flex-wrap: wrap;">
+            <span class="status-chip">MacBook Pro</span>
+            <span class="status-chip">Chrome</span>
+            <span class="status-chip">iPhone</span>
+            <span class="status-chip">Offline queue empty</span>
+          </div>
+
+          <div class="stack" style="margin-top: 16px;">
+            <div class="note-card">
+              <div class="note-header">
+                <div>
+                  <p class="card-title">Release planning workspace</p>
+                  <p class="card-subtitle">Synced to 3 devices</p>
+                </div>
+                <span class="inline-pill">Live</span>
+              </div>
+              <p class="note-body">
+                New notes from the side panel appear instantly on desktop and mobile browsers.
+              </p>
+            </div>
+
+            <div class="note-card">
+              <div class="note-header">
+                <div>
+                  <p class="card-title">Offline fallback</p>
+                  <p class="card-subtitle">2 local edits queued during reconnect</p>
+                </div>
+                <span class="inline-pill">Recovered</span>
+              </div>
+              <p class="note-body">
+                Canopy keeps editing responsive, then replays the queue once network access returns.
+              </p>
+            </div>
+
+            <div class="info-card">
+              <p class="section-label">Recent device activity</p>
+              <div class="stack" style="gap: 8px;">
+                <div class="sync-row">
+                  <span class="dot green"></span>
+                  <span style="font-size: 12px;">MacBook Pro pushed 4 updates</span>
+                </div>
+                <div class="sync-row">
+                  <span class="dot blue"></span>
+                  <span style="font-size: 12px;">iPhone pulled latest folder changes</span>
+                </div>
+                <div class="sync-row">
+                  <span class="dot orange"></span>
+                  <span style="font-size: 12px;">Chrome on Windows restored from backup</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

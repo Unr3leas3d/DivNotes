@@ -25,6 +25,28 @@
     --ring: 147 55% 23%;
     --radius: 0.875rem;
   }
+
+  .dark {
+    --background: 152 40% 7%;
+    --foreground: 150 15% 90%;
+    --card: 152 35% 10%;
+    --card-foreground: 150 15% 90%;
+    --popover: 152 35% 10%;
+    --popover-foreground: 150 15% 90%;
+    --primary: 140 100% 80%;
+    --primary-foreground: 152 75% 8%;
+    --secondary: 0 0% 100% / 0.04;
+    --secondary-foreground: 150 15% 90%;
+    --muted: 0 0% 100% / 0.04;
+    --muted-foreground: 150 15% 42%;
+    --accent: 140 100% 80%;
+    --accent-foreground: 152 75% 8%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 100% / 0.06;
+    --input: 0 0% 100% / 0.1;
+    --ring: 140 60% 40%;
+  }
 }
 
 @layer base {
@@ -34,5 +56,9 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }

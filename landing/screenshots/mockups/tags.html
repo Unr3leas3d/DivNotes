@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tags Mockup</title>
+    <link rel="stylesheet" href="./mockup.css" />
+  </head>
+  <body>
+    <div class="frame popup-shell">
+      <div class="window">
+        <div class="window-header">
+          <div>
+            <p class="brand-title">Canopy</p>
+            <p class="brand-subtitle">Tags</p>
+          </div>
+          <div class="icon-row">
+            <div class="icon-button">#</div>
+            <div class="icon-button">⌕</div>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="tabs">
+            <div class="tab">This Page</div>
+            <div class="tab">All Notes</div>
+            <div class="tab">Folders</div>
+            <div class="tab active">Tags</div>
+          </div>
+
+          <div class="tag-row" style="flex-wrap: wrap; margin-top: 16px;">
+            <span class="pill" style="background: var(--primary); color: var(--primary-foreground);">research</span>
+            <span class="pill">launch</span>
+            <span class="pill">obsidian</span>
+            <span class="pill">billing</span>
+            <span class="pill">polish</span>
+          </div>
+
+          <div class="stack" style="margin-top: 16px;">
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-type"><span class="dot blue"></span>research</span>
+                <span class="muted-copy">developer.chrome.com</span>
+              </div>
+              <p class="note-body">
+                Compare service worker wake-up strategies for long-running sync jobs.
+              </p>
+            </div>
+
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-type"><span class="dot teal"></span>research</span>
+                <span class="muted-copy">obsidian.md</span>
+              </div>
+              <p class="note-body">
+                Capture how backlinks and domain indexes should render inside exported markdown.
+              </p>
+              <div class="mini-tags">
+                <span class="mini-tag">obsidian</span>
+                <span class="mini-tag">markdown</span>
+              </div>
+            </div>
+
+            <div class="note-card">
+              <div class="note-header">
+                <span class="note-type"><span class="dot purple"></span>research</span>
+                <span class="muted-copy">supabase.com</span>
+              </div>
+              <p class="note-body">
+                Revisit offline queue conflict behavior before opening cloud sync to more users.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
