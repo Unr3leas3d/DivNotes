@@ -209,7 +209,7 @@ export function createPlacedNoteBadge<TElement extends OverlayElement>(
 ) {
   const badge = documentRef.createElement('div');
   badge.className = 'canopy-badge';
-  badge.title = `${noteCount} DivNotes ${noteCount === 1 ? 'note' : 'notes'}`;
+  badge.title = `${noteCount} Canopy ${noteCount === 1 ? 'note' : 'notes'}`;
   badge.textContent = String(noteCount);
   setDataAttribute(badge, 'canopyOverlay', 'placed-note-badge');
   applyStyles(badge, {
@@ -318,25 +318,9 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
     const meta = documentRef.createElement('div');
     applyStyles(meta, {
       display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-    });
-
-    const titleRow = documentRef.createElement('div');
-    applyStyles(titleRow, {
-      display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: '12px',
-    });
-
-    const title = createTextElement(documentRef, 'div', note.title, 'canopyPreviewTitle');
-    applyStyles(title, {
-      fontSize: '14px',
-      fontWeight: '700',
-      lineHeight: '1.4',
-      color: 'oklch(0.987 0.002 197.1)',
-      flex: '1',
     });
 
     const date = createTextElement(documentRef, 'div', note.displayDate, 'canopyPreviewDate');
@@ -346,6 +330,7 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
       lineHeight: '1.4',
       color: 'oklch(0.865 0.127 207.078 / 0.76)',
       whiteSpace: 'nowrap',
+      flexShrink: '0',
     });
 
     const elementInfo = createTextElement(
@@ -355,17 +340,20 @@ export function createNotePreviewCardShell<TElement extends OverlayElement>(
       'canopyElementInfo'
     );
     applyStyles(elementInfo, {
+      flex: '1',
+      minWidth: '0',
       fontSize: '11px',
       lineHeight: '1.4',
       color: 'oklch(0.865 0.127 207.078 / 0.66)',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
       fontFamily:
         "'SF Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
     });
 
-    titleRow.appendChild(title);
-    titleRow.appendChild(date);
-    meta.appendChild(titleRow);
     meta.appendChild(elementInfo);
+    meta.appendChild(date);
 
     const previewBody = createTextElement(
       documentRef,

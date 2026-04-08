@@ -155,7 +155,7 @@ test('createPlacedNoteBadge renders a compact dark badge without innerHTML', () 
   assert.equal(badge.tagName, 'DIV');
   assert.equal(badge.dataset.canopyOverlay, 'placed-note-badge');
   assert.equal(badge.textContent, '3');
-  assert.equal(badge.title, '3 DivNotes notes');
+  assert.equal(badge.title, '3 Canopy notes');
 });
 
 test('createPageNoteCountPill renders the bottom-right note count copy', () => {
@@ -193,6 +193,11 @@ test('createNotePreviewCardShell renders metadata, tags, preview, and actions', 
 
   assert.equal(card.dataset.canopyOverlay, 'note-preview-card');
   assert.equal(card.querySelectorAll('[data-canopy-preview-item]').length, 2);
+  assert.equal(card.querySelectorAll('[data-canopy-preview-title]').length, 0);
+  assert.equal(
+    card.querySelector('[data-canopy-element-info]')?.parentElement?.style.justifyContent,
+    'space-between'
+  );
   assert.equal(
     card.querySelector('[data-canopy-preview-body]')?.textContent,
     'Follow up on the button copy before launch.'
